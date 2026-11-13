@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\QueueStatus;
 use App\Support\HospitalTime;
 use Database\Factories\PatientFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -59,6 +60,30 @@ class Patient extends Model
         $parts = preg_split('/\s+/', trim($this->full_name));
 
         return count($parts) > 1 ? $parts[0].' '.mb_substr(end($parts), 0, 1).'.' : $parts[0];
+    }
+
+    /** Digits with the 62 country code, so "0812-3456-7890" and "+62 812 3456 7890" match. */
+    public static function normalizePhone(string $phone): string
+    {
+        $digits = preg_replace('/\D/', '', $phone);
+
+        return str_starts_with($digits, '0') ? '62'.substr($digits, 1) : $digits;
+    }
+
+    /** "6281234567890" → "+62 812-3456-7890", the format the rest of the data uses. */
+    public static function formatPhone(string $digits): string
+    {
+        $local = substr($digits, 2);
+
+        return '+62 '.substr($local, 0, 3).'-'.substr($local, 3, 4).'-'.substr($local, 7);
+    }
+
+    /** Matches a normalized number against phone_number whatever its separators. */
+    public function scopeWherePhone(Builder $query, string $digits): void
+    {
+        $column = "replace(replace(replace(replace(replace(replace(phone_number, ' ', ''), '-', ''), '+', ''), '.', ''), '(', ''), ')', '')";
+        // ponytail: a full-table expression scan, fine for one hospital; add a normalized indexed column if patients grow large.
+        $query->whereRaw("$column = ?", [$digits]);
     }
 
     /** Last four digits only, e.g. "•••• 0842". */
