@@ -12,6 +12,7 @@ export function Shell({
   queue = false,
   bare = false,
   guide,
+  decor,
 }: {
   title: string;
   subtitle?: string;
@@ -22,6 +23,8 @@ export function Shell({
   /** No navigation, bell or Hya: for the sign-in screen and the public companion link. */
   bare?: boolean;
   guide?: GuideStep;
+  /** Background accent from the design: mint waves above the nav, or a corner wave behind Hya. */
+  decor?: 'waves' | 'corner';
 }) {
   const { url, props, flash } = usePage();
   const path = url.split('?')[0];
@@ -34,7 +37,7 @@ export function Shell({
         : 'ticket';
   return (
     <div
-      className={`app-shell ${hya ? 'chat-shell' : ''} ${queue ? 'queue-shell' : ''} ${guiding ? 'guide-active' : ''}`}
+      className={`app-shell ${hya ? 'chat-shell' : ''} ${queue ? 'queue-shell' : ''} ${guiding ? 'guide-active' : ''} ${decor ? `decor-${decor}` : ''}`}
     >
       <div className="demo-banner">Data contoh · Tidak terhubung ke sistem rumah sakit</div>
       <header className="page-header">
@@ -107,8 +110,8 @@ export function HyaHelp() {
   return (
     <Link href="/hya" className="hya-help">
       <span>
-        <strong>Perlu bantuan layanan?</strong>
-        <small>Tanya Hya lewat tombol di kanan.</small>
+        <strong>Ada yang bisa Hya bantu?</strong>
+        <small>Tanya Hya</small>
       </span>
     </Link>
   );

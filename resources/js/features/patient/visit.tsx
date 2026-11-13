@@ -101,7 +101,7 @@ export function Visit() {
           perjalanan Anda.
         </p>
       </section>
-      <div className="metrics">
+      <div className="metrics ticket-metrics">
         <div>
           <strong>{visit.ahead} pasien</strong>
           <small>sedang menunggu</small>
