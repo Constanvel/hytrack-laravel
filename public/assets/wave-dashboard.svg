@@ -1,0 +1,16 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="1208" height="180" viewBox="0 0 1208 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Decor &#194;&#183; dashboard wave layers" clip-path="url(#clip0_0_4)">
+<path id="Vector" opacity="0.72" d="M0 75C145 28 251 47 370 91C488 136 596 126 710 78C824 31 951 38 1080 82C1131 100 1175 98 1208 84V180H0V75Z" fill="#E8F5EF"/>
+<path id="Vector_2" opacity="0.46" d="M0 110C146 65 254 80 372 119C491 158 600 152 715 108C831 65 956 73 1082 115C1135 132 1176 131 1208 117V180H0V110Z" fill="#CFE9DE"/>
+<path id="Vector_3" opacity="0.27" d="M0 142C146 105 258 115 376 145C496 176 604 174 721 140C840 105 963 111 1085 145C1138 159 1178 158 1208 146V180H0V142Z" fill="#A9D8C9"/>
+<g id="Group" opacity="0.26">
+<path id="Vector_4" d="M0 62C145 15 251 34 370 78C488 123 596 113 710 65C824 18 951 25 1080 69C1131 87 1175 85 1208 71" stroke-width="1.5" stroke="#66B5A2"/>
+<path id="Vector_5" d="M0 80C145 33 251 52 370 96C488 141 596 131 710 83C824 36 951 43 1080 87C1131 105 1175 103 1208 89" stroke-width="1.5" stroke="#66B5A2"/>
+</g>
+</g>
+<defs>
+<clipPath id="clip0_0_4">
+<rect width="1208" height="180" fill="white"/>
+</clipPath>
+</defs>
+</svg>

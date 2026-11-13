@@ -5,7 +5,7 @@
   background: var(--bg);
 }
 .dashboard-sidebar {
-  background: #173d3b;
+  background: #173d3b url('/assets/wave-sidebar.svg') left bottom / 100% 250px no-repeat;
   color: white;
   padding: 32px 24px 16px;
   display: flex;
@@ -49,17 +49,56 @@
 }
 .sidebar-footer {
   margin-top: auto;
-  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 17px;
+  padding: 0 5px 26px;
 }
-.sidebar-footer p {
-  color: #bdd4cc;
-  margin: 8px 0;
+.sidebar-footer .avatar {
+  width: 45px;
+  height: 45px;
+  border: 3.5px solid white;
+  box-shadow: 0 0 0 1px #d6e6de;
 }
-.sidebar-footer .button {
-  min-height: 44px;
+.sidebar-footer .avatar img {
+  width: 59px;
+  height: 56px;
+  left: -11px;
+  object-fit: cover;
+}
+.sidebar-account {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  color: #c9dad4;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.sidebar-account strong {
+  font-weight: inherit;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-account button {
+  border: 0;
+  background: none;
+  color: inherit;
+  padding: 2px 0;
+  min-height: 24px;
+  font-weight: inherit;
+  cursor: pointer;
+}
+.sidebar-account button:hover {
+  color: white;
+  text-decoration: underline;
 }
 .dashboard-body {
   min-width: 0;
+  background: url('/assets/wave-dashboard.svg') left bottom / 100% 180px no-repeat;
 }
 .dashboard-topbar {
   height: 88px;
@@ -484,14 +523,19 @@ td .text-button {
   .sidebar-footer {
     margin: 0;
   }
-  .sidebar-footer > strong,
-  .sidebar-footer > p {
+  .dashboard-sidebar {
+    background-image: none;
+  }
+  .sidebar-footer {
+    padding: 0;
+  }
+  .sidebar-footer .avatar,
+  .sidebar-account strong {
     display: none;
   }
-  .sidebar-footer > .button {
-    max-width: 220px;
+  .sidebar-account button {
     font-size: 12px;
-    min-height: 40px;
+    min-height: 44px;
   }
   .dashboard-topbar {
     padding: 12px 16px;
