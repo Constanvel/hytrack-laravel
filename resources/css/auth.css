@@ -75,8 +75,13 @@
   background: white;
   border: 1px solid #dce3dd;
   border-radius: 14px;
+  transition: border-color 0.15s;
+}
+.auth-input:hover {
+  border-color: #b7c7c0;
 }
 .auth-input:has(input:focus-visible) {
+  border-color: #086f65;
   outline: 3px solid #bc6748;
   outline-offset: 4px;
 }
@@ -102,6 +107,19 @@
 }
 .auth-input input:focus-visible {
   outline: none;
+}
+/* Chrome paints saved credentials with its own pale-blue :-webkit-autofill background, which
+   beats `background: transparent` and shows as a blue slab inside the rounded field. Keep
+   autofill working; repaint it in the field's own colours instead. */
+.auth-input input:-webkit-autofill,
+.auth-input input:-webkit-autofill:hover,
+.auth-input input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 100px white inset;
+  box-shadow: 0 0 0 100px white inset;
+  -webkit-text-fill-color: #173d3b;
+  caret-color: #173d3b;
+  border-radius: 14px;
+  transition: background-color 600000s 0s;
 }
 .auth-input input::placeholder {
   color: #5c706c;
