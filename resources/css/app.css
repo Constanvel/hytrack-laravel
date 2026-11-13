@@ -1,4 +1,5 @@
 @import './dashboard.css';
+@import './auth.css';
 :root {
   --bg: #f8f7f1;
   --text: #183d39;

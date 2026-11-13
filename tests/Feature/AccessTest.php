@@ -54,12 +54,70 @@ class AccessTest extends TestCase
         $user = Patient::factory()->create()->user;
 
         $this->post('/masuk', ['username' => $user->username, 'password' => 'salah'])
-            ->assertSessionHasErrors(['username' => 'Nama pengguna atau kata sandi salah.']);
+            ->assertSessionHasErrors(['username' => 'Nomor ponsel atau kata sandi salah.']);
 
         $user->update(['is_active' => false]);
         $this->post('/masuk', ['username' => $user->username, 'password' => 'password'])
             ->assertSessionHasErrors('username');
         $this->assertGuest();
+    }
+
+    public function test_patients_sign_in_with_their_phone_number_in_any_format(): void
+    {
+        $user = Patient::factory()->create(['phone_number' => '+62 812-1111-2222'])->user;
+
+        foreach (['0812 1111 2222', '+62 812-1111-2222', '6281211112222'] as $phone) {
+            $this->post('/masuk', ['username' => $phone, 'password' => 'password'])->assertRedirect('/');
+            $this->assertAuthenticatedAs($user);
+            $this->post('/keluar');
+        }
+
+        $this->post('/masuk', ['username' => '0812 9999 0000', 'password' => 'password'])
+            ->assertSessionHasErrors(['username' => 'Nomor ponsel atau kata sandi salah.']);
+    }
+
+    public function test_sign_up_creates_a_patient_account_and_signs_in(): void
+    {
+        $this->get('/daftar')->assertInertia(fn (AssertableInertia $page) => $page->component('Register'));
+
+        $this->post('/daftar', [
+            'name' => '  Budi Santoso ',
+            'phone' => '0813-2222-3333',
+            'password' => 'rahasia-123',
+            'password_confirmation' => 'rahasia-123',
+            'terms' => true,
+        ])->assertRedirect('/');
+
+        $user = User::where('username', '6281322223333')->firstOrFail();
+        $this->assertAuthenticatedAs($user);
+        $this->assertSame('patient', $user->role->value);
+        $this->assertSame('Budi Santoso', $user->patient->full_name);
+        $this->assertSame('+62 813-2222-3333', $user->patient->phone_number);
+
+        $this->post('/keluar');
+        $this->post('/masuk', ['username' => '+62 813 2222 3333', 'password' => 'rahasia-123'])->assertRedirect('/');
+    }
+
+    public function test_sign_up_validates_its_fields_and_rejects_a_registered_phone(): void
+    {
+        $this->post('/daftar', [])->assertSessionHasErrors([
+            'name' => 'Nama lengkap wajib diisi.',
+            'phone' => 'Nomor ponsel wajib diisi.',
+            'password' => 'Kata sandi wajib diisi.',
+            'terms' => 'Setujui Syarat & Ketentuan dan Kebijakan Privasi untuk melanjutkan.',
+        ]);
+
+        $valid = ['name' => 'Budi', 'phone' => '0813-2222-3333', 'password' => 'rahasia-123', 'password_confirmation' => 'rahasia-123', 'terms' => '1'];
+        $this->post('/daftar', [...$valid, 'phone' => '12345'])->assertSessionHasErrors('phone');
+        $this->post('/daftar', [...$valid, 'password' => 'pendek', 'password_confirmation' => 'pendek'])
+            ->assertSessionHasErrors(['password' => 'Kata sandi minimal 8 karakter.']);
+        $this->post('/daftar', [...$valid, 'password_confirmation' => 'lain-lagi'])
+            ->assertSessionHasErrors(['password' => 'Konfirmasi kata sandi tidak sama.']);
+
+        Patient::factory()->create(['phone_number' => '+62 813-2222-3333']);
+        $this->post('/daftar', $valid)->assertSessionHasErrors(['phone' => 'Nomor ponsel sudah terdaftar. Silakan masuk.']);
+        $this->assertGuest();
+        $this->assertSame(1, Patient::count());
     }
 
     public function test_roles_cannot_open_each_others_pages(): void

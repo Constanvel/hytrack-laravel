@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
 import { Login } from '@/features/auth/login';
+import { Register } from '@/features/auth/register';
 import { ErrorPage } from '@/features/errors/error-page';
 import { CheckInGuide, Directions, Help, Notifications, QueueGuide } from '@/features/help/help';
 import { Hya } from '@/features/help/hya';
@@ -18,6 +19,7 @@ import './types';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const pages: Record<string, ComponentType<any>> = {
   Login,
+  Register,
   ErrorPage,
   Home,
   Account,

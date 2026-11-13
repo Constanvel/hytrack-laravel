@@ -14,6 +14,8 @@ use Inertia\Inertia;
 Route::middleware('guest')->group(function () {
     Route::get('/masuk', [AuthController::class, 'create'])->name('login');
     Route::post('/masuk', [AuthController::class, 'store'])->middleware('throttle:6,1');
+    Route::get('/daftar', [AuthController::class, 'createAccount']);
+    Route::post('/daftar', [AuthController::class, 'storeAccount'])->middleware('throttle:6,1');
 });
 
 // Family Companion: the link itself is the credential, so these stay public but throttled.
