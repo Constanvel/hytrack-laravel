@@ -27,7 +27,15 @@ describe('vendored assets', () => {
       expect(root).toContain(`width="${width}"`);
       expect(root).toContain(`height="${height}"`);
     });
-  for (const name of ['hya.png', 'hya-avatar-source.png', 'decor-corner.png', 'decor-dots.png'])
+  for (const name of [
+    'hya.png',
+    'hya-avatar-source.png',
+    'decor-corner.png',
+    'decor-dots.png',
+    'logo-hytrack.png',
+    'phone.png',
+    'eye.png',
+  ])
     it(`${name} is a non-empty PNG`, () => {
       const path = resolve('public/assets', name);
       expect(statSync(path).size).toBeGreaterThan(1000);

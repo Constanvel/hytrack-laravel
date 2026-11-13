@@ -14,10 +14,10 @@ test.beforeEach(() =>
 const password = process.env.HYTRACK_DEMO_PASSWORD ?? 'hytrack-demo';
 const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
 
-async function login(page: Page, username = 'siti') {
+async function login(page: Page, username = 'siti', secret = password) {
   await page.goto('/masuk');
-  await page.getByLabel('Nama pengguna').fill(username);
-  await page.getByLabel('Kata sandi').fill(password);
+  await page.getByLabel('Nomor ponsel').fill(username);
+  await page.getByLabel('Kata sandi', { exact: true }).fill(secret);
   await page.getByRole('button', { name: 'Masuk' }).click();
   await expect(page).not.toHaveURL(/\/masuk$/);
 }
@@ -38,14 +38,66 @@ async function asStaff(browser: Browser, username: string) {
 test('sign-in keeps each role on its own pages', async ({ page }) => {
   await page.goto('/kunjungan');
   await expect(page).toHaveURL(/\/masuk$/);
-  await page.getByLabel('Nama pengguna').fill('siti');
-  await page.getByLabel('Kata sandi').fill('salah');
+  await page.getByLabel('Nomor ponsel').fill('0812-5550-0842');
+  await page.getByLabel('Kata sandi', { exact: true }).fill('salah');
   await page.getByRole('button', { name: 'Masuk' }).click();
-  await expect(page.getByRole('alert')).toHaveText('Nama pengguna atau kata sandi salah.');
+  await expect(page.getByRole('alert')).toHaveText('Nomor ponsel atau kata sandi salah.');
   await login(page, 'dina');
   await expect(page).toHaveURL(/\/petugas$/);
   await page.goto('/kunjungan');
   await expect(page.getByRole('heading', { name: 'Akses ditolak' })).toBeVisible();
+});
+
+test('sign-up validates, toggles password visibility and signs the new patient in', async ({
+  page,
+}) => {
+  await page.goto('/masuk');
+  await page.getByRole('link', { name: 'Daftar sekarang' }).click();
+  await expect(page).toHaveURL(/\/daftar$/);
+  await page.getByRole('button', { name: 'Buat akun' }).click();
+  await expect(page.locator('#auth-name-error')).toHaveText('Nama lengkap wajib diisi.');
+  await expect(page.locator('#auth-terms-error')).toBeVisible();
+
+  const secret = page.getByLabel('Kata sandi', { exact: true });
+  await page.getByLabel('Nama lengkap').fill('Budi Santoso');
+  await page.getByLabel('Nomor ponsel').fill('0813-2222-3333');
+  await secret.fill('rahasia-123');
+  await expect(secret).toHaveAttribute('type', 'password');
+  await page.getByRole('button', { name: 'Tampilkan kata sandi' }).first().click();
+  await expect(secret).toHaveAttribute('type', 'text');
+  await expect(page.getByRole('button', { name: 'Sembunyikan kata sandi' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await page.getByLabel('Konfirmasi kata sandi').fill('rahasia-123');
+  await page.getByRole('checkbox').check();
+  await page.getByRole('button', { name: 'Buat akun' }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('heading', { name: 'Budi Santoso' })).toBeVisible();
+
+  await page.goto('/akun');
+  await page.getByRole('button', { name: 'Keluar' }).click();
+  await login(page, '+62 813 2222 3333', 'rahasia-123');
+  await expect(page.getByRole('heading', { name: 'Budi Santoso' })).toBeVisible();
+});
+
+test('sign-in and sign-up pages fit every width and pass accessibility checks', async ({
+  page,
+}) => {
+  for (const width of [320, 412, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const route of ['/masuk', '/daftar']) {
+      await page.goto(route);
+      await expect(page.locator('h1')).toHaveCount(1);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+      const scan = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
+        .analyze();
+      expect(scan.violations, `${route} at ${width}px`).toEqual([]);
+    }
+  }
 });
 
 test('patient flow, companion revocation and pharmacy completion', async ({ page }) => {

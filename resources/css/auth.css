@@ -1,0 +1,256 @@
+/* Sign-in and sign-up (Figma 00a · Login, 00b · Sign up). Values follow the 412px frames;
+   line heights are Figma's pixel-snapped text boxes (font size × 1.4, rounded). */
+.auth-page {
+  min-height: 100dvh;
+  /* The waves end under the Android gesture bar in the frame, hence the -24px. */
+  background: var(--bg) url('/assets/wave-mint.svg') left 0 bottom -24px / 100% 170px no-repeat;
+  font-family: 'Inter', sans-serif;
+  color: #173d3b;
+}
+.auth-main {
+  max-width: 412px;
+  margin: 0 auto;
+  /* Bottom padding keeps the last line above the waves when the form is taller than the screen. */
+  padding: 32px 24px 116px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+.auth-compact .auth-main {
+  padding-top: 20px;
+  gap: 24px;
+}
+.auth-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.auth-brand img {
+  flex: none;
+  width: 72px;
+  height: 54px;
+  object-fit: contain;
+}
+.auth-brand-name {
+  color: #086f65;
+  font-size: 23px;
+  line-height: 32px;
+  font-weight: 700;
+}
+.auth-brand-tagline {
+  color: #5c706c;
+  font-size: 9px;
+  line-height: 13px;
+  font-weight: 600;
+}
+.auth-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.auth-intro h1 {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 36px;
+  letter-spacing: 0;
+  text-wrap: wrap;
+}
+.auth-intro p {
+  color: #5c706c;
+  font-size: 15px;
+  line-height: 21px;
+}
+.auth-form,
+.auth-help {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.auth-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.auth-compact .auth-fields {
+  gap: 12px;
+}
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.auth-field > label[for] {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.auth-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 52px;
+  padding: 0 16px;
+  background: white;
+  border: 1px solid #dce3dd;
+  border-radius: 14px;
+}
+.auth-input:has(input:focus-visible) {
+  outline: 3px solid #bc6748;
+  outline-offset: 4px;
+}
+.auth-input:has([aria-invalid='true']) {
+  border-color: #9b3b1f;
+}
+.auth-input img {
+  flex: none;
+  width: 31px;
+  height: 20px;
+  object-fit: contain;
+}
+.auth-input input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #173d3b;
+  font-size: 15px;
+  line-height: 21px;
+}
+.auth-input input:focus-visible {
+  outline: none;
+}
+.auth-input input::placeholder {
+  color: #5c706c;
+  opacity: 1;
+}
+.auth-eye {
+  flex: none;
+  display: flex;
+  /* 44px tall hit area without changing the 52px field. */
+  padding: 12px 6px;
+  margin: -12px -6px;
+  border: 0;
+  background: none;
+}
+.auth-recovery {
+  display: flex;
+  justify-content: flex-end;
+}
+.auth-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #086f65;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.auth-link:hover,
+.auth-switch a:hover {
+  text-decoration: underline;
+}
+.auth-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.auth-submit {
+  width: 100%;
+  height: 52px;
+  border: 0;
+  border-radius: 12px;
+  background: #086f65;
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 22px;
+}
+.auth-submit:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+.auth-switch {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+  padding: 10px 0;
+  font-size: 14px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+.auth-switch span {
+  color: #5c706c;
+}
+.auth-switch a {
+  color: #086f65;
+  font-weight: 600;
+}
+.auth-benefit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  background: #e1efe7;
+  border-radius: 14px;
+}
+.auth-benefit h2 {
+  color: #086f65;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  letter-spacing: 0;
+  text-wrap: wrap;
+}
+.auth-benefit p {
+  /* Figma #5c706c is 4.43:1 on this card; one step darker reaches WCAG AA 4.5:1. */
+  color: #5b6f6b;
+  font-size: 13px;
+  line-height: 18px;
+}
+.auth-contact {
+  width: 100%;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+  text-align: center;
+}
+.auth-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: #5c706c;
+  font-size: 12px;
+  line-height: 17px;
+  cursor: pointer;
+}
+.auth-consent strong {
+  color: #086f65;
+  font-weight: 600;
+}
+.auth-consent input {
+  flex: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  background: white;
+  border: 1px solid #dce3dd;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.auth-consent input:checked {
+  border-color: #086f65;
+  background: #086f65
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 10'%3E%3Cpath d='M1 5l3.5 3.5L11 1.5' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    center / 12px 10px no-repeat;
+}
+.auth-consent input[aria-invalid='true'] {
+  border-color: #9b3b1f;
+}
