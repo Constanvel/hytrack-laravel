@@ -17,11 +17,11 @@ export function AuthPage({
     <div className={`auth-page ${compact ? 'auth-compact' : ''}`}>
       <main id="main" className="auth-main">
         <header className="auth-identity">
-          <div className="auth-brand">
+          <div className="lockup">
             <img src="/assets/logo-hytrack.png" alt="" width={72} height={54} />
             <div>
-              <p className="auth-brand-name">HyTrack</p>
-              <p className="auth-brand-tagline">TEMAN PERJALANAN BEROBAT</p>
+              <p className="lockup-name">HyTrack</p>
+              <p className="lockup-tagline">TEMAN PERJALANAN BEROBAT</p>
             </div>
           </div>
           <div className="auth-intro">

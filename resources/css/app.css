@@ -189,6 +189,43 @@ summary:focus-visible {
   min-width: 0;
   flex: 1;
 }
+/* Logo + name + tagline shared by the auth screens and the patient home header. */
+.lockup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.lockup img {
+  flex: none;
+  width: 72px;
+  height: 54px;
+  object-fit: contain;
+}
+.lockup-name {
+  color: #086f65;
+  font-size: 23px;
+  line-height: 32px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.lockup-tagline {
+  color: #5c706c;
+  font-size: 9px;
+  line-height: 13px;
+  font-weight: 600;
+}
+.page-header .lockup {
+  flex: 1;
+}
+.page-header .lockup img {
+  width: 56px;
+  height: 42px;
+}
+.page-header .lockup-name {
+  font-size: 21px;
+  line-height: 28px;
+}
 .heading p {
   font-size: 11px;
   color: var(--muted);

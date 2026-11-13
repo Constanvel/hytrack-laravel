@@ -13,6 +13,7 @@ export function Shell({
   bare = false,
   guide,
   decor,
+  brand = false,
 }: {
   title: string;
   subtitle?: string;
@@ -25,6 +26,8 @@ export function Shell({
   guide?: GuideStep;
   /** Background accent from the design: mint waves above the nav, or a corner wave behind Hya. */
   decor?: 'waves' | 'corner';
+  /** Header shows the HyTrack logo and tagline (as on sign-in) instead of title and subtitle. */
+  brand?: boolean;
 }) {
   const { url, props, flash } = usePage();
   const path = url.split('?')[0];
@@ -47,10 +50,20 @@ export function Shell({
           </Link>
         )}
         {hya && <Avatar />}
-        <div className="heading">
-          <h1>{title}</h1>
-          {subtitle && <p>{subtitle}</p>}
-        </div>
+        {brand ? (
+          <div className="lockup">
+            <img src="/assets/logo-hytrack.png" alt="" width={72} height={54} />
+            <div>
+              <h1 className="lockup-name">{title}</h1>
+              <p className="lockup-tagline">TEMAN PERJALANAN BEROBAT</p>
+            </div>
+          </div>
+        ) : (
+          <div className="heading">
+            <h1>{title}</h1>
+            {subtitle && <p>{subtitle}</p>}
+          </div>
+        )}
         {hya ? (
           <Link href="/kunjungan" className="icon-button close" aria-label="Tutup Hya">
             <Icon name="close" />
