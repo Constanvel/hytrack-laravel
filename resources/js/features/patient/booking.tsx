@@ -17,7 +17,13 @@ export function Clinics({ clinics }: { clinics: Clinic[] }) {
     clinic.name.toLowerCase().includes(query.toLowerCase().trim()),
   );
   return (
-    <Shell title="Pilih poliklinik" subtitle="KUNJUNGAN BARU · 1 / 2" back="/" guide="poli">
+    <Shell
+      title="Pilih poliklinik"
+      subtitle="KUNJUNGAN BARU · 1 / 2"
+      back="/"
+      guide="poli"
+      decor="waves"
+    >
       <h2>Mau berobat ke mana?</h2>
       <label className="search-field">
         <Icon name="search" />
@@ -94,6 +100,7 @@ export function DoctorSchedule({
       subtitle="KUNJUNGAN BARU · 2 / 2"
       back="/poliklinik"
       guide={doctors.length ? 'dokter' : undefined}
+      decor="waves"
     >
       <Notice>
         {clinic.name}

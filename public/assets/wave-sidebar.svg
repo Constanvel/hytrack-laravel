@@ -1,0 +1,15 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="232" height="250" viewBox="0 0 232 250" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Decor &#194;&#183; sidebar wave" clip-path="url(#clip0_0_4)">
+<path id="Vector" opacity="0.24" d="M0 115C50 82 94 92 130 123C165 154 197 149 232 123V250H0V115Z" fill="#3D8F80"/>
+<path id="Vector_2" opacity="0.16" d="M0 153C49 122 95 129 133 156C168 182 200 179 232 157V250H0V153Z" fill="#69B9A7"/>
+<g id="Group" opacity="0.24">
+<path id="Vector_3" d="M-5 101C47 68 94 79 132 110C168 139 200 137 237 109" stroke-width="1.5" stroke="#8AD0C0"/>
+<path id="Vector_4" d="M-5 117C47 84 94 95 132 126C168 155 200 153 237 125" stroke-width="1.5" stroke="#8AD0C0"/>
+</g>
+</g>
+<defs>
+<clipPath id="clip0_0_4">
+<rect width="232" height="250" fill="white"/>
+</clipPath>
+</defs>
+</svg>

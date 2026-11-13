@@ -1,6 +1,6 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
-import { Notice } from '@/components/ui';
+import { Avatar, Notice } from '@/components/ui';
 import { useLive } from '@/lib/live';
 
 export function DashboardShell({
@@ -15,7 +15,7 @@ export function DashboardShell({
   children: ReactNode;
 }) {
   const { props, flash } = usePage();
-  const { auth, hospital, today } = props;
+  const { auth, today } = props;
   const live = useLive();
   const items = management
     ? ['Ringkasan layanan', 'Waktu tunggu', 'Kinerja poliklinik', 'Laporan']
@@ -39,15 +39,11 @@ export function DashboardShell({
           ))}
         </nav>
         <div className="sidebar-footer">
-          <strong>{hospital}</strong>
-          <p>
-            {auth?.name}
-            <br />
-            {auth?.unit ?? (management ? 'Akses data agregat' : 'Petugas')}
-          </p>
-          <button className="button secondary" onClick={() => router.post('/keluar')}>
-            Keluar
-          </button>
+          <Avatar />
+          <div className="sidebar-account">
+            <strong>{auth?.name}</strong>
+            <button onClick={() => router.post('/keluar')}>Keluar</button>
+          </div>
         </div>
       </aside>
       <div className="dashboard-body">

@@ -8,7 +8,7 @@ export function Home() {
   const { visit, auth, hospital } = usePage().props;
   const active = isActive(visit);
   return (
-    <Shell title="HyTrack" subtitle={hospital} guide={active ? undefined : 'pasien'}>
+    <Shell title="HyTrack" subtitle={hospital} guide={active ? undefined : 'pasien'} decor="corner">
       <section className="intro">
         <h2>Berobat lebih tenang.</h2>
         <p>Pantau antrean. Datang tepat waktu.</p>

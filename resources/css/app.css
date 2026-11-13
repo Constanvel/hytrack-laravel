@@ -144,6 +144,30 @@ summary:focus-visible {
   min-height: 100dvh;
   /* Bottom nav (80) + gap (16) + Hya bubble (76): keeps the last control clear of the bubble. */
   padding-bottom: calc(172px + env(safe-area-inset-bottom));
+  /* Lets the decorative accents (z-index: -1) sit behind content but above the shell background. */
+  isolation: isolate;
+}
+/* Background accents from the design, pinned like the bottom nav. */
+.decor-waves::before,
+.decor-corner::before {
+  content: '';
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: inherit;
+  bottom: env(safe-area-inset-bottom);
+  z-index: -1;
+  pointer-events: none;
+}
+.decor-waves::before {
+  height: 170px;
+  background: url('/assets/wave-mint.svg') center bottom / 100% 170px no-repeat;
+}
+.decor-corner::before {
+  height: 354px;
+  background: url('/assets/decor-corner.png') right -32px bottom -12px / 250px 354px no-repeat;
+  opacity: 0.8;
 }
 .demo-banner {
   font-size: 10px;
@@ -493,6 +517,21 @@ hr {
   color: var(--muted);
   margin-top: 5px;
 }
+.ticket-metrics {
+  position: relative;
+}
+/* Dot-grid accent at the right edge of the ticket estimate, behind the text. */
+.ticket-metrics::after {
+  content: '';
+  position: absolute;
+  top: -9px;
+  right: -23px;
+  width: 86px;
+  height: 121px;
+  background: url('/assets/decor-dots.png') center / cover no-repeat;
+  z-index: -1;
+  pointer-events: none;
+}
 .ticket-number {
   font-size: 72px;
   letter-spacing: -2px;
@@ -592,12 +631,12 @@ hr {
 }
 .hya-help {
   background: var(--pale);
-  border-radius: 16px;
-  min-height: 66px;
+  border-radius: 14px;
+  min-height: 65px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
+  padding: 10px 16px 10px 21px;
   margin-top: 22px;
   position: relative;
   gap: 8px;
@@ -668,8 +707,9 @@ hr {
 .hya-help small {
   display: block;
   margin-top: 4px;
-  font-size: 12px;
-  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
 }
 .avatar {
   width: 44px;
@@ -691,17 +731,18 @@ hr {
   object-fit: contain;
 }
 .avatar-large {
-  width: 76px;
-  height: 76px;
+  width: 65px;
+  height: 65px;
   border: 5px solid white;
-  box-shadow: 0 0 0 1px var(--border);
+  box-shadow: 0 0 0 1px #d6e6de;
   margin: -16px -16px -16px 0;
 }
 .avatar-large img {
-  width: 104px;
-  height: 78px;
-  left: -19px;
+  width: 85px;
+  height: 81px;
+  left: -15px;
   top: 0;
+  object-fit: cover;
 }
 .steps {
   list-style: none;
@@ -1046,7 +1087,10 @@ details p {
     padding-inline: 12px;
   }
   .hya-help small {
-    font-size: 10px;
+    font-size: 12px;
+  }
+  .ticket-metrics::after {
+    right: -15px;
   }
   .heading h1 {
     font-size: 21px;
