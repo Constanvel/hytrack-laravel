@@ -1,5 +1,6 @@
 @import './dashboard.css';
 @import './auth.css';
+@import './schedule.css';
 :root {
   --bg: #f8f7f1;
   --text: #183d39;
@@ -143,21 +144,26 @@ summary:focus-visible {
   max-width: 540px;
   margin: auto;
   min-height: 100dvh;
-  /* Bottom nav (80) + gap (16) + Hya bubble (76): keeps the last control clear of the bubble. */
-  padding-bottom: calc(172px + env(safe-area-inset-bottom));
+  /*
+    With the page's own 28px bottom padding this clears the bottom nav (80) and the Hya bubble
+    (16 above the nav, 65 tall) with ~10px to spare, without an extra empty band at the end.
+  */
+  padding-bottom: calc(144px + env(safe-area-inset-bottom));
+  position: relative;
   /* Lets the decorative accents (z-index: -1) sit behind content but above the shell background. */
   isolation: isolate;
 }
-/* Background accents from the design, pinned like the bottom nav. */
+/*
+  Background accents from the design. They belong to the page, not the viewport: placed at the
+  end of the page, just above the bottom nav, behind the last section, and scroll with it.
+*/
 .decor-waves::before,
 .decor-corner::before {
   content: '';
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
+  position: absolute;
+  left: 0;
   width: 100%;
-  max-width: inherit;
-  bottom: env(safe-area-inset-bottom);
+  bottom: calc(80px + env(safe-area-inset-bottom));
   z-index: -1;
   pointer-events: none;
 }
@@ -278,6 +284,19 @@ summary:focus-visible {
   gap: 5px;
   flex-direction: column;
   font-size: 12px;
+}
+/* A screen's main action pinned in place of the bottom nav, same frame and height. */
+.action-bar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 540px;
+  height: calc(80px + env(safe-area-inset-bottom));
+  padding: 14px 24px calc(14px + env(safe-area-inset-bottom));
+  background: var(--bg);
+  z-index: 10;
 }
 .nav-marker {
   width: 76px;
@@ -496,50 +515,6 @@ hr {
 .clinic-list .row-link:hover {
   background: var(--pale);
 }
-.date-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-.date-grid button {
-  background: #fff;
-  border: 0;
-  border-radius: 12px;
-  padding: 12px 8px;
-  min-height: 68px;
-}
-.date-grid button strong {
-  display: block;
-  font-size: 17px;
-  margin-top: 2px;
-}
-.date-grid button[aria-pressed='true'] {
-  background: var(--primary);
-  color: white;
-}
-.doctor-option {
-  border: 2px solid transparent;
-  width: 100%;
-  text-align: left;
-  padding: 18px;
-  background: white;
-  border-radius: 20px;
-}
-.doctor-option[aria-pressed='true'] {
-  border-color: var(--primary);
-}
-.doctor-option > strong {
-  font-size: 18px;
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-.doctor-option > * + * {
-  margin-top: 14px;
-}
-.doctor-option:hover {
-  background: #fcfffd;
-}
 .metrics {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -675,9 +650,12 @@ hr {
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px 10px 21px;
-  margin-top: 22px;
   position: relative;
   gap: 8px;
+}
+/* The queue screen has no page gap, so the card brings its own spacing there. */
+.queue-shell .hya-help {
+  margin-top: 22px;
 }
 .guide-hint {
   background: #fff;
@@ -1029,6 +1007,7 @@ details p {
     max-width: 720px;
   }
   .bottom-nav,
+  .action-bar,
   .chat-composer {
     max-width: 720px;
   }
@@ -1060,7 +1039,8 @@ details p {
     display: grid;
     grid-template-columns: 1fr 1fr;
   }
-  .chat-composer {
+  .chat-composer,
+  .action-bar {
     padding-inline: 40px;
   }
   .hya-illustration {
@@ -1079,6 +1059,7 @@ details p {
     min-height: 100dvh;
   }
   .bottom-nav,
+  .action-bar,
   .chat-composer {
     max-width: 800px;
   }
@@ -1095,13 +1076,15 @@ details p {
   .queue-hero {
     padding: 24px 28px;
   }
-  .chat-composer {
+  .chat-composer,
+  .action-bar {
     padding-inline: 56px;
   }
 }
 @media (max-width: 359px) {
   .page-content,
-  .page-header {
+  .page-header,
+  .action-bar {
     padding-inline: 16px;
   }
   .demo-banner {

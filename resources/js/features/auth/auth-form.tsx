@@ -1,4 +1,11 @@
-import { useState, type InputHTMLAttributes, type ReactNode } from 'react';
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type Ref,
+} from 'react';
 
 /** Shared frame of the sign-in and sign-up screens (Figma 00a / 00b). */
 export function AuthPage({
@@ -41,6 +48,7 @@ type InputProps = InputHTMLAttributes<HTMLInputElement> & {
   error?: string;
   icon?: 'phone';
   children?: ReactNode;
+  ref?: Ref<HTMLInputElement>;
 };
 
 export function AuthInput({ label, name, error, icon, children, ...input }: InputProps) {
@@ -68,16 +76,31 @@ export function AuthInput({ label, name, error, icon, children, ...input }: Inpu
   );
 }
 
-export function PasswordInput(props: Omit<InputProps, 'type' | 'icon' | 'children'>) {
+export function PasswordInput(props: Omit<InputProps, 'type' | 'icon' | 'children' | 'ref'>) {
   const [visible, setVisible] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
+  const caret = useRef<[number | null, number | null]>(null);
+  // Switching the input type can reset the selection; put the caret back where it was.
+  useLayoutEffect(() => {
+    const field = input.current;
+    if (field && caret.current && document.activeElement === field)
+      field.setSelectionRange(...caret.current);
+    caret.current = null;
+  }, [visible]);
   return (
-    <AuthInput {...props} type={visible ? 'text' : 'password'}>
+    <AuthInput {...props} ref={input} type={visible ? 'text' : 'password'}>
       <button
         type="button"
         className="auth-eye"
         aria-label={visible ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
         aria-pressed={visible}
-        onClick={() => setVisible((shown) => !shown)}
+        // A pointer press keeps focus (and the caret) in the field; keyboard users still tab here.
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => {
+          const field = input.current;
+          if (field) caret.current = [field.selectionStart, field.selectionEnd];
+          setVisible((shown) => !shown);
+        }}
       >
         <img src="/assets/eye.png" alt="" width={31} height={20} />
       </button>

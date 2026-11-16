@@ -70,6 +70,8 @@ class PatientController extends Controller
                     'day' => $day->translatedFormat('D'),
                     'weekday' => $day->translatedFormat('l'),
                     'label' => $day->translatedFormat('j M'),
+                    'medium' => $day->translatedFormat('l, j M Y'),
+                    'month' => $day->translatedFormat('F Y'),
                 ];
             }, $dates),
             'doctors' => $clinic->doctors
@@ -83,7 +85,8 @@ class PatientController extends Controller
                         'quota' => max(0, config('hytrack.daily_quota') - $count($doctor, $date)),
                         'wait' => $estimator->range($this->estimate(
                             $count($doctor, $date, [QueueStatus::Booked, QueueStatus::Waiting]),
-                            (int) $doctor->delay_minutes,
+                            // A reported delay is about today's practice, not later dates.
+                            $date === $dates[0] ? (int) $doctor->delay_minutes : 0,
                         )),
                     ]]),
                 ])->values(),

@@ -14,6 +14,8 @@ export function Shell({
   guide,
   decor,
   brand = false,
+  action,
+  className = '',
 }: {
   title: string;
   subtitle?: string;
@@ -28,6 +30,9 @@ export function Shell({
   decor?: 'waves' | 'corner';
   /** Header shows the HyTrack logo and tagline (as on sign-in) instead of title and subtitle. */
   brand?: boolean;
+  /** The screen's main action, pinned at the bottom in place of the bottom nav (Figma 22:2). */
+  action?: ReactNode;
+  className?: string;
 }) {
   const { url, props, flash } = usePage();
   const path = url.split('?')[0];
@@ -40,7 +45,7 @@ export function Shell({
         : 'ticket';
   return (
     <div
-      className={`app-shell ${hya ? 'chat-shell' : ''} ${queue ? 'queue-shell' : ''} ${guiding ? 'guide-active' : ''} ${decor ? `decor-${decor}` : ''}`}
+      className={`app-shell ${hya ? 'chat-shell' : ''} ${queue ? 'queue-shell' : ''} ${guiding ? 'guide-active' : ''} ${decor ? `decor-${decor}` : ''} ${className}`}
     >
       <div className="demo-banner">Data contoh · Tidak terhubung ke sistem rumah sakit</div>
       <header className="page-header">
@@ -96,25 +101,30 @@ export function Shell({
           <Avatar large />
         </Link>
       )}
-      {!hya && !bare && (
-        <nav className="bottom-nav" aria-label="Navigasi utama">
-          {[
-            { href: '/', icon: 'home', label: 'Beranda' },
-            { href: '/kunjungan', icon: 'ticket', label: 'Kunjungan' },
-            { href: '/akun', icon: 'user', label: 'Akun' },
-          ].map((item) => (
-            <Link
-              href={item.href}
-              key={item.href}
-              aria-current={active === item.icon ? 'page' : undefined}
-            >
-              <span className="nav-marker">
-                <Icon name={item.icon} />
-              </span>
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </nav>
+      {action ? (
+        <div className="action-bar">{action}</div>
+      ) : (
+        !hya &&
+        !bare && (
+          <nav className="bottom-nav" aria-label="Navigasi utama">
+            {[
+              { href: '/', icon: 'home', label: 'Beranda' },
+              { href: '/kunjungan', icon: 'ticket', label: 'Kunjungan' },
+              { href: '/akun', icon: 'user', label: 'Akun' },
+            ].map((item) => (
+              <Link
+                href={item.href}
+                key={item.href}
+                aria-current={active === item.icon ? 'page' : undefined}
+              >
+                <span className="nav-marker">
+                  <Icon name={item.icon} />
+                </span>
+                <span>{item.label}</span>
+              </Link>
+            ))}
+          </nav>
+        )
       )}
     </div>
   );

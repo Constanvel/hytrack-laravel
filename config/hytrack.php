@@ -18,7 +18,7 @@ return [
 
     // Booking rules.
     'daily_quota' => (int) env('HYTRACK_DAILY_QUOTA', 30), // tickets per doctor per service date
-    'booking_days' => 3,                                   // today plus the next two days
+    'booking_days' => (int) env('HYTRACK_BOOKING_DAYS', 60), // bookable service dates, today included
     'check_in_lead_minutes' => 15,                         // check in this long before practice starts
 
     // Time to Go: assumed travel time. The patient's real route is not known yet.
