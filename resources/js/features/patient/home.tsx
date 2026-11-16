@@ -1,11 +1,11 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { Shell, HyaHelp } from '@/components/shell';
-import { ActionLink, Icon } from '@/components/ui';
+import { ActionLink, Icon, RowLink } from '@/components/ui';
 import { GuideRestart } from '@/features/guide/guide';
 import { isActive, useAction } from '@/lib/live';
 
 export function Home() {
-  const { visit, auth } = usePage().props;
+  const { visit, auth, following } = usePage().props;
   const active = isActive(visit);
   return (
     <Shell title="HyTrack" brand guide={active ? undefined : 'pasien'} decor="corner">
@@ -43,6 +43,14 @@ export function Home() {
           {active ? 'Lihat kunjungan' : '+ Ambil antrean'}
         </Link>
       </section>
+      {following > 0 && (
+        <RowLink
+          href="/pendampingan"
+          detail={`${following} kunjungan keluarga sedang Anda dampingi`}
+        >
+          Pantauan keluarga
+        </RowLink>
+      )}
       <section className="profile-row" data-guide={active ? undefined : ''}>
         <div>
           <p className="eyebrow">PASIEN TERPILIH</p>
@@ -71,23 +79,30 @@ export function Home() {
     </Shell>
   );
 }
+/** Akun (Figma 27:248). */
 export function Account() {
   const { visit, auth, demo } = usePage().props;
   const { busy, destroy } = useAction();
   return (
-    <Shell title="Akun" subtitle="Profil dan bantuan">
-      <section className="card">
+    <Shell title="Akun" subtitle="Profil dan bantuan" className="inter-shell account-shell">
+      <section className="account-card">
         <p className="eyebrow">AKUN PASIEN</p>
         <h2>{auth?.name}</h2>
-        {auth?.phone && <p className="muted">Telp {auth.phone}</p>}
-        <p>Satu akun untuk satu profil pasien. Hubungi petugas untuk memperbarui data Anda.</p>
+        {auth?.phone && <p className="phone">Telp {auth.phone}</p>}
+        <p>Kelola data Anda dan pasien yang Anda dampingi untuk kebutuhan kunjungan.</p>
       </section>
-      <ActionLink href="/bantuan" secondary>
-        Bantuan & panduan kunjungan
-      </ActionLink>
-      <ActionLink href="/hya" secondary>
-        Tanya Hya
-      </ActionLink>
+      <nav className="account-menu" aria-label="Menu akun">
+        <ActionLink href="/data-pasien">Data pasien</ActionLink>
+        <ActionLink href="/bantuan" secondary>
+          Bantuan & panduan kunjungan
+        </ActionLink>
+        <ActionLink href="/hya" secondary>
+          Tanya Hya
+        </ActionLink>
+        <button className="button secondary" onClick={() => router.post('/keluar')}>
+          Keluar
+        </button>
+      </nav>
       {demo && isActive(visit) && (
         <fieldset className="demo-controls">
           <legend>Kontrol demo</legend>
@@ -96,9 +111,6 @@ export function Account() {
           </button>
         </fieldset>
       )}
-      <button className="button secondary" onClick={() => router.post('/keluar')}>
-        Keluar
-      </button>
     </Shell>
   );
 }

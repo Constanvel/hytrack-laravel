@@ -1,7 +1,7 @@
 import { usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { Shell, HyaHelp } from '@/components/shell';
-import { ActionLink, Icon, Notice, RowLink, Steps } from '@/components/ui';
+import { ActionLink, Icon, Notice, RowLink, Steps, TicketQr } from '@/components/ui';
 import { splitRoom, useAction, useLive } from '@/lib/live';
 import type { Visit as VisitData } from '@/types';
 
@@ -149,12 +149,9 @@ export function CheckIn() {
         <h3>
           {visit.ticket} · {visit.patientName}
         </h3>
-        <img
-          className="qr-example"
-          src="/assets/qr-example.svg"
-          width={232}
-          height={232}
-          alt="Gambar QR contoh; gunakan nomor check-in di bawahnya"
+        <TicketQr
+          value={visit.checkInQr}
+          label={`QR check-in ${visit.ticket}; nomor check-in ${visit.checkInCode}`}
         />
         <p className="small muted">{visit.checkInCode} · Nomor check-in</p>
       </section>
@@ -171,8 +168,8 @@ export function CheckIn() {
         <li>Status berubah setelah petugas mengonfirmasi.</li>
       </ol>
       <p className="muted">
-        Gambar QR masih contoh dan belum dapat dipindai. Petugas mengonfirmasi kedatangan dengan
-        nomor check-in.
+        QR hanya berlaku untuk kunjungan ini pada tanggal layanannya. Bila sulit terbaca, sebutkan
+        nomor check-in kepada petugas.
       </p>
       <button
         className="button secondary"

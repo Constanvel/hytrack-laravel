@@ -7,8 +7,14 @@ import { Hya } from '@/features/help/hya';
 import { Management } from '@/features/operations/management';
 import { Staff } from '@/features/operations/staff';
 import { Clinics, DoctorSchedule } from '@/features/patient/booking';
-import { CompanionAccess, CompanionView } from '@/features/patient/companion';
+import {
+  CompanionAccess,
+  CompanionDashboard,
+  CompanionInvite,
+  CompanionList,
+} from '@/features/patient/companion';
 import { Account, Home } from '@/features/patient/home';
+import { PatientData, PatientForm } from '@/features/patient/patient-data';
 import { CheckIn, Visit } from '@/features/patient/visit';
 import './types';
 
@@ -28,7 +34,11 @@ export const pages: Record<string, ComponentType<any>> = {
   Visit,
   CheckIn,
   CompanionAccess,
-  CompanionView,
+  CompanionInvite,
+  CompanionList,
+  CompanionDashboard,
+  PatientData,
+  PatientForm,
   Hya,
   Help,
   CheckInGuide,

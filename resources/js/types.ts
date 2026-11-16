@@ -24,11 +24,34 @@ export interface Visit extends VisitProgress {
   time: string;
   isToday: boolean;
   checkInCode: string;
+  /** Signed payload drawn as the check-in QR (App\Support\CheckInTicket). */
+  checkInQr: string;
   checkInBy: string | null;
   leaveBy: string | null;
   leadMinutes: number;
   travelMinutes: number;
   companionActive: boolean;
+}
+/** What an accepted companion sees (VisitView::forCompanion, Figma 27:303). */
+export interface CompanionProgress extends VisitProgress {
+  phone: string | null;
+  checkedInAt: string | null;
+  place: string;
+  placeDetail: string | null;
+  timeline: { label: string; time: string | null; current: boolean }[];
+  next: string;
+  endsAt: string;
+}
+/** A ticket identified by the staff scanner, before check-in is confirmed. */
+export interface ScannedTicket {
+  code: string;
+  name: string;
+  ticket: string;
+  clinic: string;
+  doctor: string;
+  schedule: string;
+  date: string;
+  deadline: string | null;
 }
 
 declare module '@inertiajs/core' {
@@ -47,7 +70,9 @@ declare module '@inertiajs/core' {
       } | null;
       visit: Visit | null;
       unread: number;
+      /** Visits this account accompanies right now. */
+      following: number;
     };
-    flashDataType: { status?: string; error?: string; shareLink?: string };
+    flashDataType: { status?: string; error?: string; shareLink?: string; scan?: ScannedTicket };
   }
 }

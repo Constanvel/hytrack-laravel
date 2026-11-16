@@ -160,7 +160,7 @@ class OperationsTest extends TestCase
     {
         $this->seed(DatabaseSeeder::class);
         $siti = User::where('username', 'siti')->firstOrFail();
-        $rina = Doctor::where('doctor_name', 'like', 'dr. Rina%')->firstOrFail();
+        $rina = Doctor::where('doctor_name', 'dr. Rina Kusuma, Sp.PD')->firstOrFail();
 
         $this->post('/masuk', ['username' => 'siti', 'password' => config('hytrack.demo_password')])->assertRedirect('/');
 

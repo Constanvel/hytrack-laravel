@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 import { Avatar, Notice } from '@/components/ui';
 import { useLive } from '@/lib/live';
 
+export const SCAN = 'Scan QR kedatangan';
+
 export function DashboardShell({
   management = false,
   section,
@@ -19,7 +21,7 @@ export function DashboardShell({
   const live = useLive();
   const items = management
     ? ['Ringkasan layanan', 'Waktu tunggu', 'Kinerja poliklinik', 'Laporan']
-    : ['Antrean poli', 'Alur pelayanan', 'Farmasi', 'Riwayat aktivitas'];
+    : [SCAN, 'Antrean poli', 'Alur pelayanan', 'Farmasi', 'Riwayat aktivitas'];
   return (
     <div className="dashboard">
       <aside className="dashboard-sidebar">
@@ -48,14 +50,21 @@ export function DashboardShell({
       </aside>
       <div className="dashboard-body">
         <header className="dashboard-topbar">
-          <span>{management ? 'Analitik / Ringkasan layanan' : 'Pelayanan / Rawat jalan'}</span>
+          <span>
+            {management
+              ? 'Analitik / Ringkasan layanan'
+              : section === SCAN
+                ? 'Pelayanan / Check-in kedatangan'
+                : 'Pelayanan / Rawat jalan'}
+          </span>
           <strong role="status">
             {live.online ? `● Terhubung · Diperbarui ${live.syncedAt}` : '○ Koneksi terputus'}
           </strong>
           <span>{today}</span>
         </header>
         <main id="main" className="dashboard-main">
-          {flash.error && (
+          {/* The scanner shows its own errors next to the camera. */}
+          {flash.error && section !== SCAN && (
             <Notice tone="warning" role="alert">
               {flash.error}
             </Notice>

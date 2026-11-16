@@ -19,7 +19,7 @@ class User extends Authenticatable
 
     protected $guarded = [];
 
-    protected $hidden = ['password_hash'];
+    protected $hidden = ['password_hash', 'api_token_hash'];
 
     protected function casts(): array
     {

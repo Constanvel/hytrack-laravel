@@ -22,9 +22,26 @@ class Patient extends Model
 
     protected $guarded = [];
 
+    protected function casts(): array
+    {
+        return ['birth_date' => 'date'];
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id', 'user_id');
+    }
+
+    /** The account holder who added this family member. */
+    public function manager(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'managed_by_patient_id', 'patient_id');
+    }
+
+    /** Family members this account holder manages. */
+    public function dependents(): HasMany
+    {
+        return $this->hasMany(self::class, 'managed_by_patient_id', 'patient_id');
     }
 
     public function queues(): HasMany
@@ -92,5 +109,34 @@ class Patient extends Model
         $digits = preg_replace('/\D/', '', (string) $this->phone_number);
 
         return strlen($digits) >= 4 ? '•••• '.substr($digits, -4) : null;
+    }
+
+    /** Data pasien card and form values (Figma 27:61 / 27:179). */
+    public function record(): array
+    {
+        $digits = preg_replace('/\D/', '', (string) $this->medical_record_number);
+
+        return [
+            'id' => $this->patient_id,
+            'self' => $this->user_id !== null,
+            'name' => $this->full_name,
+            'recordNumber' => strlen($digits) >= 4 ? '•••• '.substr($digits, -4) : null,
+            'birthDate' => $this->birth_date?->toDateString(),
+            'birthLabel' => $this->birth_date?->locale('id')->translatedFormat('j F Y'),
+            'age' => $this->birth_date ? (int) $this->birth_date->diffInYears(HospitalTime::now()) : null,
+            'gender' => $this->gender,
+            'phone' => $this->phone_number ? self::localPhone($this->phone_number) : null,
+            'address' => $this->address,
+            'city' => $this->city,
+            'postalCode' => $this->postal_code,
+        ];
+    }
+
+    /** "+62 812-3456-7890" → "0812 3456 7890", how the Figma shows numbers. */
+    public static function localPhone(string $phone): string
+    {
+        $local = '0'.substr(self::normalizePhone($phone), 2);
+
+        return trim(substr($local, 0, 4).' '.substr($local, 4, 4).' '.substr($local, 8));
     }
 }

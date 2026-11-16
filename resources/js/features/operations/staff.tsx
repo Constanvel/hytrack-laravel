@@ -1,6 +1,7 @@
 import { router, usePage } from '@inertiajs/react';
 import { useState, type FormEvent } from 'react';
-import { DashboardShell } from './dashboard-shell';
+import { DashboardShell, SCAN } from './dashboard-shell';
+import { QrScanner } from './scanner';
 import { Notice } from '@/components/ui';
 import { useAction } from '@/lib/live';
 
@@ -27,6 +28,7 @@ interface StaffProps {
     next: string | null;
   }[];
   history: string[];
+  checkInDesk: string;
 }
 export function Staff({
   clinics,
@@ -38,6 +40,7 @@ export function Staff({
   laboratory,
   pharmacy,
   history,
+  checkInDesk,
 }: StaffProps) {
   const { flash, props } = usePage();
   const [section, setSection] = useState('Antrean poli');
@@ -61,14 +64,18 @@ export function Staff({
   }
   return (
     <DashboardShell section={section} onSection={setSection}>
-      <div className="dashboard-title">
-        <div>
-          <h1>{section}</h1>
-          <p className="muted">Kelola panggilan dan bantu pasien melanjutkan pelayanan.</p>
+      {section !== SCAN && (
+        <div className="dashboard-title">
+          <div>
+            <h1>{section}</h1>
+            <p className="muted">Kelola panggilan dan bantu pasien melanjutkan pelayanan.</p>
+          </div>
+          <Notice>Data hari ini · {props.now}</Notice>
         </div>
-        <Notice>Data hari ini · {props.now}</Notice>
-      </div>
-      {section === 'Antrean poli' ? (
+      )}
+      {section === SCAN ? (
+        <QrScanner desk={checkInDesk} />
+      ) : section === 'Antrean poli' ? (
         <>
           <div className="dashboard-filters">
             <label>

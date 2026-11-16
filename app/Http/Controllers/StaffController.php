@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Enums\QueueStatus;
 use App\Enums\StageStatus;
-use App\Exceptions\QueueRuleException;
 use App\Models\Doctor;
 use App\Models\PatientJourney;
 use App\Models\PharmacyOrder;
@@ -12,6 +11,7 @@ use App\Models\Polyclinic;
 use App\Models\Queue;
 use App\Models\Staff;
 use App\Services\QueueService;
+use App\Support\CheckInTicket;
 use App\Support\HospitalTime;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -81,22 +81,37 @@ class StaffController extends Controller
                     'next' => $order->prescription_status->next()?->label(),
                 ]),
             'history' => $this->history($today),
+            'checkInDesk' => config('hytrack.rooms.check_in'),
         ]);
     }
 
-    /** Arrival confirmation with the number shown under the patient's QR. */
+    /**
+     * Scan QR kedatangan (Figma 27:360), step 1: identify the ticket without changing it,
+     * so staff can match the patient before confirming.
+     */
+    public function scan(Request $request): RedirectResponse
+    {
+        $queue = CheckInTicket::resolve($this->code($request))->load(['patient', 'doctor', 'polyclinic']);
+        Inertia::flash('scan', CheckInTicket::summary($queue));
+
+        return back();
+    }
+
+    /** Step 2, or the manual number: record the arrival. A ticket is never checked in twice. */
     public function checkIn(Request $request): RedirectResponse
     {
-        $code = $request->validate(
-            ['code' => ['required', 'string', 'max:20']],
-            ['code.required' => 'Masukkan nomor check-in pasien.'],
-        )['code'];
-
-        $queue = Queue::findByCheckInCode($code)
-            ?? throw new QueueRuleException('Nomor check-in tidak ditemukan.');
+        $queue = CheckInTicket::resolve($this->code($request));
         $this->queues->checkIn($queue, $this->staff($request));
 
         return $this->done("{$queue->queue_number} berhasil check-in.");
+    }
+
+    private function code(Request $request): string
+    {
+        return $request->validate(
+            ['code' => ['required', 'string', 'max:120']],
+            ['code.required' => 'Masukkan nomor check-in pasien.'],
+        )['code'];
     }
 
     public function callNext(Request $request, Doctor $doctor): RedirectResponse

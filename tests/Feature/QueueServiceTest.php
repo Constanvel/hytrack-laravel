@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\InvitationStatus;
 use App\Enums\QueueStatus;
 use App\Enums\StageStatus;
 use App\Exceptions\QueueRuleException;
@@ -122,6 +123,7 @@ class QueueServiceTest extends TestCase
         $share = CompanionShare::create([
             'queue_id' => $queue->queue_id,
             'access_token_hash' => CompanionShare::hashToken('token'),
+            'status' => InvitationStatus::Accepted,
             'expires_at' => now()->addDay(),
         ]);
 
@@ -140,8 +142,8 @@ class QueueServiceTest extends TestCase
         $this->assertTrue($queue->journeys->every(fn ($stage) => $stage->stage_status === StageStatus::Done));
         $this->assertSame($staff->staff_id, $queue->journeys->last()->updated_by_staff_id);
         $this->assertNotNull($order->refresh()->ready_at);
-        $this->assertFalse($share->refresh()->is_active);
-        $this->assertNull(CompanionShare::findUsable('token'));
+        $this->assertSame(InvitationStatus::Expired, $share->refresh()->status);
+        $this->assertFalse(CompanionShare::live()->exists());
         $this->assertContains('medicine_ready', $queue->notifications()->pluck('trigger_type')->all());
 
         // A finished visit no longer blocks a new booking.

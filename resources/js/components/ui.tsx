@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import qrcode from 'qrcode-generator';
 import type { ReactNode } from 'react';
 
 const iconDimensions: Record<string, [number, number]> = {
@@ -87,5 +88,29 @@ export function Steps({ items }: { items: { title: string; detail: string }[] })
         </li>
       ))}
     </ol>
+  );
+}
+/** The check-in QR, drawn from the signed payload the server issues for this visit. */
+export function TicketQr({ value, label }: { value: string; label: string }) {
+  const qr = qrcode(0, 'M');
+  qr.addData(value);
+  qr.make();
+  const size = qr.getModuleCount();
+  let path = '';
+  for (let row = 0; row < size; row++)
+    for (let col = 0; col < size; col++) if (qr.isDark(row, col)) path += `M${col} ${row}h1v1h-1z`;
+  return (
+    <svg
+      className="ticket-qr"
+      viewBox={`-4 -4 ${size + 8} ${size + 8}`}
+      width={232}
+      height={232}
+      role="img"
+      aria-label={label}
+      shapeRendering="crispEdges"
+    >
+      <rect x={-4} y={-4} width={size + 8} height={size + 8} fill="#fff" />
+      <path d={path} fill="#173d3b" />
+    </svg>
   );
 }

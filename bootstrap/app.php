@@ -12,6 +12,7 @@ use Inertia\Inertia;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
@@ -29,7 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // A broken queue rule is an expected outcome: send the user back with the reason.
         $exceptions->dontReport(QueueRuleException::class);
         $exceptions->render(function (QueueRuleException $e, Request $request) {
-            if ($request->expectsJson()) {
+            if ($request->is('api/*') || $request->expectsJson()) {
                 return response()->json(['message' => $e->getMessage()], 422);
             }
 

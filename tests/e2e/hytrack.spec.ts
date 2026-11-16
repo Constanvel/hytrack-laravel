@@ -111,16 +111,28 @@ test('patient flow, companion revocation and pharmacy completion', async ({ page
   await expect(page.getByRole('heading', { name: 'Menunggu giliran' })).toBeVisible();
   await expect(page.locator('.connection-row')).toContainText('Terhubung');
 
+  // The invitation is accepted with the companion's own account and is single-use.
   await page.getByRole('link', { name: 'Bagikan ke pendamping' }).click();
-  await page.getByRole('button', { name: 'Aktifkan akses pendamping' }).click();
+  await page.getByRole('button', { name: 'Undang pendamping' }).click();
   const link = (await page.locator('.share-link').textContent())!;
   const companion = await (await page.context().browser()!.newContext()).newPage();
   await companion.goto(link);
+  await expect(companion.getByRole('link', { name: 'Masuk untuk menerima' })).toBeVisible();
+  await login(companion, 'ahmad');
+  await expect(companion).toHaveURL(/\/pantauan\//);
+  await companion.getByRole('button', { name: 'Terima undangan' }).click();
   await expect(companion.getByRole('heading', { name: 'Siti A.' })).toBeVisible();
+  await expect(companion.locator('main')).toContainText('Menunggu pemeriksaan');
   await expect(companion.locator('main')).not.toContainText('Aminah');
-  await page.getByRole('button', { name: 'Cabut akses pendamping' }).click();
-  await companion.reload();
-  await expect(companion.getByText('Akses pendamping tidak aktif')).toBeVisible();
+  const monitor = companion.url();
+  await companion.goto(link);
+  await expect(companion.getByText(/Undangan tidak berlaku/)).toBeVisible();
+
+  await page.reload();
+  await page.getByRole('button', { name: 'Cabut akses' }).click();
+  await expect(page.getByText(/Dicabut/)).toBeVisible();
+  await companion.goto(monitor);
+  await expect(companion.getByText('Akses pendamping dicabut.')).toBeVisible();
   await companion.context().close();
 
   await page.getByRole('link', { name: 'Kunjungan', exact: true }).click();
@@ -145,6 +157,36 @@ test('staff check-in reaches the patient screen', async ({ page, browser }) => {
 
   await page.reload();
   await expect(page.getByText('Sudah check-in', { exact: true })).toBeVisible();
+  await staff.context().close();
+});
+
+test('staff scanner identifies a ticket before confirming and rejects reuse', async ({
+  page,
+  browser,
+}) => {
+  await login(page);
+  await bookDoctor(page, /dr. Rina/);
+  await page.getByRole('link', { name: 'Tampilkan QR check-in' }).click();
+  const code = (await page.locator('.qr-card .small').textContent())!.split(' ')[0];
+
+  const staff = await asStaff(browser, 'dina');
+  await staff.getByRole('button', { name: 'Scan QR kedatangan' }).click();
+  const manual = staff.getByPlaceholder('Contoh: HT-000027');
+  await manual.fill('HT1.1.20200101.00000000000000000000');
+  await staff.getByRole('button', { name: 'Cari tiket' }).click();
+  await expect(staff.locator('.scan-status')).toContainText('QR tidak valid');
+
+  await manual.fill(code);
+  await staff.getByRole('button', { name: 'Cari tiket' }).click();
+  await expect(staff.locator('.scan-card.result')).toContainText('Siti Aminah');
+  await page.reload();
+  await expect(page.getByText(/Belum check-in/)).toBeVisible();
+
+  await staff.getByRole('button', { name: 'Konfirmasi check-in' }).click();
+  await expect(staff.locator('.scan-status')).toContainText('berhasil check-in');
+  await manual.fill(code);
+  await staff.getByRole('button', { name: 'Cari tiket' }).click();
+  await expect(staff.locator('.scan-status')).toContainText('sudah check-in');
   await staff.context().close();
 });
 
@@ -202,6 +244,9 @@ const pages: [string, string][] = [
   ['siti', '/dokter'],
   ['siti', '/hya'],
   ['siti', '/bantuan'],
+  ['siti', '/akun'],
+  ['siti', '/data-pasien'],
+  ['siti', '/data-pasien/tambah'],
   ['dina', '/petugas'],
   ['manajer', '/manajemen'],
 ];

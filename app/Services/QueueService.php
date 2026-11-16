@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\InvitationStatus;
 use App\Enums\JourneyStage;
 use App\Enums\PrescriptionStatus;
 use App\Enums\QueueStatus;
@@ -177,7 +178,7 @@ class QueueService
             }
 
             $this->stage($queue, JourneyStage::Consultation, StageStatus::Skipped, $by);
-            $this->revokeCompanions($queue);
+            $this->endCompanions($queue);
             $this->notify($queue, 'no_show', 'Anda tidak hadir saat dipanggil.', 'Hubungi petugas di meja check-in.');
         });
 
@@ -245,7 +246,7 @@ class QueueService
             if ($next === PrescriptionStatus::Completed) {
                 $this->transition($order->queue, QueueStatus::Completed, function (Queue $queue) use ($by) {
                     $this->stage($queue, JourneyStage::Pharmacy, StageStatus::Done, $by);
-                    $this->revokeCompanions($queue);
+                    $this->endCompanions($queue);
                     $this->notify($queue, 'completed', 'Kunjungan selesai. Semoga lekas sehat.');
                 });
             }
@@ -265,15 +266,17 @@ class QueueService
             }
 
             $queue->update(['queue_status' => QueueStatus::Cancelled]);
-            $this->revokeCompanions($queue);
+            $this->endCompanions($queue);
         });
 
         $this->estimator->refresh($queue->doctor_id, $queue->service_date);
     }
 
-    public function revokeCompanions(Queue $queue): void
+    /** The visit is over: every invitation for it ends, accepted or not. */
+    public function endCompanions(Queue $queue): void
     {
-        $queue->companionShares()->where('is_active', true)->update(['is_active' => false]);
+        $queue->companionShares()->whereIn('status', InvitationStatus::live())
+            ->update(['status' => InvitationStatus::Expired]);
     }
 
     /** @param Closure(Queue): void $apply */

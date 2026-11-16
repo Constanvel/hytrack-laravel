@@ -74,6 +74,23 @@ class DatabaseSeeder extends Seeder
             'user_id' => $account('siti', UserRole::Patient)->user_id,
             'full_name' => 'Siti Aminah',
             'phone_number' => '+62 812-5550-0842',
+            'medical_record_number' => '00-08-42',
+            'birth_date' => '1988-05-12',
+            'gender' => 'female',
+            'address' => 'Jl. Melati No. 12, RT 02/RW 03',
+            'city' => 'Bandung',
+            'postal_code' => '40132',
+        ]);
+        // A second patient account to accept Siti's companion invitation in the demo.
+        Patient::create([
+            'user_id' => $account('ahmad', UserRole::Patient)->user_id,
+            'full_name' => 'Ahmad Fauzi',
+            'phone_number' => '+62 812-5550-0843',
+            'birth_date' => '1985-02-20',
+            'gender' => 'male',
+            'address' => 'Jl. Melati No. 12, RT 02/RW 03',
+            'city' => 'Bandung',
+            'postal_code' => '40132',
         ]);
         $this->clerk = Staff::create([
             'user_id' => $account('dina', UserRole::Staff)->user_id,

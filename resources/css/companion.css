@@ -1,0 +1,204 @@
+/* Pantauan pendamping (Figma 27:303) and the patient's invitation list. */
+.companion-shell .page-content {
+  gap: 12px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+.companion-shell .eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 14px;
+}
+.monitor-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.monitor-row > div {
+  flex: 1;
+  min-width: 0;
+}
+.monitor-row h2 {
+  font-size: 22px;
+  line-height: 31px;
+}
+.monitor-row .live {
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 15px;
+  white-space: pre;
+}
+.monitor-row .live.offline {
+  color: var(--warning-text);
+}
+.monitor-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 18px;
+  border-radius: 20px;
+  background: var(--primary);
+  color: #fff;
+}
+.monitor-hero .eyebrow {
+  color: #b8ded1;
+  font-size: 11px;
+  line-height: 15px;
+}
+.monitor-ticket {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.monitor-ticket strong {
+  font-size: 48px;
+  line-height: 67px;
+  white-space: nowrap;
+}
+.monitor-ticket span {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.monitor-headline {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 22px;
+}
+.monitor-hero .small {
+  color: #e2efea;
+  font-size: 12px;
+  line-height: 17px;
+}
+.monitor-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px;
+  border-radius: 20px;
+  background: #fff;
+}
+.monitor-card h3 {
+  font-size: 18px;
+  line-height: 25px;
+}
+.monitor-card > p:not(.eyebrow) {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+.monitor-card.timeline {
+  gap: 10px;
+}
+.timeline h3 {
+  font-size: 16px;
+  line-height: 22px;
+}
+.timeline ol {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.timeline li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+}
+.timeline li > span:first-child {
+  width: 15px;
+  color: var(--primary);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 22px;
+  text-align: center;
+}
+.timeline li > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.timeline li.current > span:nth-child(2) {
+  font-weight: 600;
+}
+.timeline li small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 15px;
+  white-space: nowrap;
+}
+.timeline .next {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 17px;
+}
+.monitor-privacy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 17px;
+}
+.monitor-privacy strong {
+  font-weight: 500;
+}
+.companion-shell .tip-card {
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 14px;
+}
+.companion-shell .tip-card strong {
+  font-size: 13px;
+  line-height: 18px;
+}
+.companion-shell .tip-card p {
+  font-size: 12px;
+  line-height: 17px;
+}
+.companion-shell .text-button {
+  align-self: flex-start;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 17px;
+}
+.companion-shell .action-bar {
+  display: flex;
+  align-items: center;
+  padding-top: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.companion-shell .action-bar .button {
+  min-height: 52px;
+  border-radius: 14px;
+}
+
+/* Patient side: one row per invitation. */
+.stack-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.invitation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.card.invitation > * + * {
+  margin-top: 0;
+}
+.invitation.revoked,
+.invitation.expired {
+  opacity: 0.7;
+}
+.text-button.danger {
+  color: var(--warning-text);
+  white-space: nowrap;
+}

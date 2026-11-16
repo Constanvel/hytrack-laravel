@@ -1,0 +1,340 @@
+/* Data pasien, tambah/ubah data pasien and Akun (Figma 27:61, 27:110, 27:179, 27:248).
+   Like the schedule screen, these frames use Inter and slightly different colours. */
+.inter-shell {
+  --text: #173d3b;
+  --muted: #5c706c;
+  --primary: #086f65;
+  --primary-hover: #075c54;
+  --pale: #e1efe7;
+  --border: #dce3dd;
+}
+.inter-shell,
+.inter-shell button,
+.inter-shell input,
+.inter-shell select,
+.inter-shell textarea {
+  font-family: 'Inter', sans-serif;
+}
+.inter-shell {
+  color: var(--text);
+}
+.inter-shell .page-header h1 {
+  font-size: 20px;
+  line-height: 28px;
+  letter-spacing: 0;
+}
+.inter-shell .heading p {
+  margin-top: 0;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 14px;
+}
+.inter-shell h2,
+.inter-shell h3 {
+  letter-spacing: 0;
+  text-wrap: pretty;
+}
+.inter-shell .button {
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 22px;
+}
+.inter-shell .button.outline {
+  min-height: 50px;
+  padding: 13px;
+  background: #fff;
+  border: 1px solid var(--primary);
+  border-radius: 10px;
+  color: var(--primary);
+}
+.inter-shell .button.outline:hover {
+  background: #f1f8f4;
+}
+.inter-shell .button.ghost {
+  background: transparent;
+  color: var(--primary);
+}
+.inter-shell .button.ghost:hover {
+  background: var(--pale);
+}
+
+/* Heading block at the top of the page. */
+.lead {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.lead h2 {
+  font-size: 24px;
+  line-height: 30px;
+}
+.lead p {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 21px;
+}
+.lead .required-note {
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+}
+.tip-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--pale);
+}
+.tip-card strong {
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+/* Figma's #5c706c on this mint is 4.4:1; the app's own muted tone reaches WCAG AA (4.75:1). */
+.tip-card p {
+  color: #566c65;
+  font-size: 13px;
+  line-height: 19px;
+}
+
+/* Data pasien list. */
+.data-shell .page-content {
+  gap: 24px;
+  padding-bottom: 24px;
+}
+.patient-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: #fff;
+}
+.patient-card header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.patient-card .eyebrow {
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 17px;
+}
+.patient-card h3 {
+  font-size: 22px;
+  line-height: 28px;
+}
+.patient-card .record {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 19px;
+}
+.patient-card dl {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+}
+.patient-card dl div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.patient-card dt {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+.patient-card dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+.patient-card dd.empty {
+  color: var(--muted);
+  font-weight: 400;
+}
+.data-shell .action-bar {
+  height: calc(82px + env(safe-area-inset-bottom));
+  padding-top: 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+}
+.inter-shell .action-bar .button {
+  min-height: 50px;
+  padding: 14px;
+  border-radius: 10px;
+}
+
+/* Tambah / ubah data pasien. No navigation: the actions end the form. */
+.form-shell {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.form-shell .page-content {
+  padding-bottom: 16px;
+}
+.patient-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.patient-form .lead {
+  gap: 6px;
+}
+.patient-form fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+/* A floated legend is laid out like the other fields, so the gap applies to it too. */
+.patient-form legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 24px;
+}
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.form-field label {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.form-field input,
+.form-field select,
+.form-field textarea {
+  width: 100%;
+  min-height: 50px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 20px;
+}
+.form-field textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+.form-field select {
+  appearance: none;
+  padding-right: 40px;
+  background: #fff
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%235c706c' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    right 16px center / 12px 8px no-repeat;
+}
+.form-field select.placeholder,
+.form-field input::placeholder,
+.form-field textarea::placeholder {
+  color: var(--muted);
+}
+.form-field input[type='date']:invalid::-webkit-datetime-edit {
+  color: var(--muted);
+}
+.form-field [aria-invalid] {
+  border-color: #c0573a;
+}
+.form-field .field-hint {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+.form-field .field-error {
+  line-height: 18px;
+}
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.patient-form .tip-card {
+  padding: 14px;
+}
+.patient-form .tip-card p {
+  font-size: 12px;
+  line-height: 18px;
+}
+.form-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+.form-actions .button {
+  border-radius: 10px;
+}
+
+/* Akun. */
+.account-shell .page-header h1 {
+  font-size: 28px;
+  line-height: 41px;
+}
+.account-shell .heading p {
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+}
+.account-shell .page-content {
+  padding-top: 12px;
+}
+.account-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 22px;
+  border-radius: 22px;
+  background: #fff;
+}
+.account-card .eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 17px;
+}
+.account-card h2 {
+  font-size: 26px;
+  line-height: 38px;
+}
+.account-card .phone {
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 23px;
+}
+.account-card p:last-child {
+  font-size: 15px;
+  line-height: 22px;
+}
+.account-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.account-menu .button {
+  min-height: 56px;
+  padding: 12px;
+  border-radius: 12px;
+  line-height: 24px;
+}
+
+@media (max-width: 359px) {
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+}
