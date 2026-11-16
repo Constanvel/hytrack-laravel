@@ -143,21 +143,26 @@ summary:focus-visible {
   max-width: 540px;
   margin: auto;
   min-height: 100dvh;
-  /* Bottom nav (80) + gap (16) + Hya bubble (76): keeps the last control clear of the bubble. */
-  padding-bottom: calc(172px + env(safe-area-inset-bottom));
+  /*
+    With the page's own 28px bottom padding this clears the bottom nav (80) and the Hya bubble
+    (16 above the nav, 65 tall) with ~10px to spare, without an extra empty band at the end.
+  */
+  padding-bottom: calc(144px + env(safe-area-inset-bottom));
+  position: relative;
   /* Lets the decorative accents (z-index: -1) sit behind content but above the shell background. */
   isolation: isolate;
 }
-/* Background accents from the design, pinned like the bottom nav. */
+/*
+  Background accents from the design. They belong to the page, not the viewport: placed at the
+  end of the page, just above the bottom nav, behind the last section, and scroll with it.
+*/
 .decor-waves::before,
 .decor-corner::before {
   content: '';
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
+  position: absolute;
+  left: 0;
   width: 100%;
-  max-width: inherit;
-  bottom: env(safe-area-inset-bottom);
+  bottom: calc(80px + env(safe-area-inset-bottom));
   z-index: -1;
   pointer-events: none;
 }
@@ -675,9 +680,12 @@ hr {
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px 10px 21px;
-  margin-top: 22px;
   position: relative;
   gap: 8px;
+}
+/* The queue screen has no page gap, so the card brings its own spacing there. */
+.queue-shell .hya-help {
+  margin-top: 22px;
 }
 .guide-hint {
   background: #fff;
