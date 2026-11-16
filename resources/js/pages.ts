@@ -9,6 +9,7 @@ import { Staff } from '@/features/operations/staff';
 import { Clinics, DoctorSchedule } from '@/features/patient/booking';
 import { CompanionAccess, CompanionView } from '@/features/patient/companion';
 import { Account, Home } from '@/features/patient/home';
+import { PatientData, PatientForm } from '@/features/patient/patient-data';
 import { CheckIn, Visit } from '@/features/patient/visit';
 import './types';
 
@@ -29,6 +30,8 @@ export const pages: Record<string, ComponentType<any>> = {
   CheckIn,
   CompanionAccess,
   CompanionView,
+  PatientData,
+  PatientForm,
   Hya,
   Help,
   CheckInGuide,

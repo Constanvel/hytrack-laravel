@@ -1,6 +1,7 @@
 @import './dashboard.css';
 @import './auth.css';
 @import './schedule.css';
+@import './patient-data.css';
 :root {
   --bg: #f8f7f1;
   --text: #183d39;

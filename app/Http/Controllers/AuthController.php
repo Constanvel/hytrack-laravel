@@ -20,7 +20,7 @@ class AuthController extends Controller
         return Inertia::render('Login', [
             // Shown only in demo mode, where the seeded accounts are meant to be shared.
             'demoAccounts' => config('hytrack.demo_controls')
-                ? 'Akun demo — pasien: 0812-5550-0842 · petugas: dina · manajemen: manajer · kata sandi: '.config('hytrack.demo_password')
+                ? 'Akun demo — pasien: 0812-5550-0842 · pendamping: 0812-5550-0843 · petugas: dina · manajemen: manajer · kata sandi: '.config('hytrack.demo_password')
                 : null,
         ]);
     }
@@ -69,7 +69,7 @@ class AuthController extends Controller
             'terms.accepted' => 'Setujui Syarat & Ketentuan dan Kebijakan Privasi untuk melanjutkan.',
         ]);
 
-        if (Patient::wherePhone($data['phone'])->exists() || User::where('username', $data['phone'])->exists()) {
+        if (Patient::whereNotNull('user_id')->wherePhone($data['phone'])->exists() || User::where('username', $data['phone'])->exists()) {
             throw ValidationException::withMessages(['phone' => 'Nomor ponsel sudah terdaftar. Silakan masuk.']);
         }
 

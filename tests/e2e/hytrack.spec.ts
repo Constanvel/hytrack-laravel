@@ -202,6 +202,9 @@ const pages: [string, string][] = [
   ['siti', '/dokter'],
   ['siti', '/hya'],
   ['siti', '/bantuan'],
+  ['siti', '/akun'],
+  ['siti', '/data-pasien'],
+  ['siti', '/data-pasien/tambah'],
   ['dina', '/petugas'],
   ['manajer', '/manajemen'],
 ];

@@ -71,23 +71,30 @@ export function Home() {
     </Shell>
   );
 }
+/** Akun (Figma 27:248). */
 export function Account() {
   const { visit, auth, demo } = usePage().props;
   const { busy, destroy } = useAction();
   return (
-    <Shell title="Akun" subtitle="Profil dan bantuan">
-      <section className="card">
+    <Shell title="Akun" subtitle="Profil dan bantuan" className="inter-shell account-shell">
+      <section className="account-card">
         <p className="eyebrow">AKUN PASIEN</p>
         <h2>{auth?.name}</h2>
-        {auth?.phone && <p className="muted">Telp {auth.phone}</p>}
-        <p>Satu akun untuk satu profil pasien. Hubungi petugas untuk memperbarui data Anda.</p>
+        {auth?.phone && <p className="phone">Telp {auth.phone}</p>}
+        <p>Kelola data Anda dan pasien yang Anda dampingi untuk kebutuhan kunjungan.</p>
       </section>
-      <ActionLink href="/bantuan" secondary>
-        Bantuan & panduan kunjungan
-      </ActionLink>
-      <ActionLink href="/hya" secondary>
-        Tanya Hya
-      </ActionLink>
+      <nav className="account-menu" aria-label="Menu akun">
+        <ActionLink href="/data-pasien">Data pasien</ActionLink>
+        <ActionLink href="/bantuan" secondary>
+          Bantuan & panduan kunjungan
+        </ActionLink>
+        <ActionLink href="/hya" secondary>
+          Tanya Hya
+        </ActionLink>
+        <button className="button secondary" onClick={() => router.post('/keluar')}>
+          Keluar
+        </button>
+      </nav>
       {demo && isActive(visit) && (
         <fieldset className="demo-controls">
           <legend>Kontrol demo</legend>
@@ -96,9 +103,6 @@ export function Account() {
           </button>
         </fieldset>
       )}
-      <button className="button secondary" onClick={() => router.post('/keluar')}>
-        Keluar
-      </button>
     </Shell>
   );
 }
