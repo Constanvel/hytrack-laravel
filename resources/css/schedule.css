@@ -1,0 +1,252 @@
+/* Dokter & jadwal (Figma 22:2). Values follow the 412px frame; line heights are Figma's
+   pixel-snapped text boxes (font size × 1.4, rounded). The frame's colours are slightly
+   different from the app tokens, so the page redefines them. */
+.schedule-shell {
+  --text: #173d3b;
+  --muted: #5c706c;
+  --primary: #086f65;
+  --pale: #e1efe7;
+}
+.schedule-shell .page-content,
+.schedule-shell .action-bar {
+  font-family: 'Inter', sans-serif;
+  color: var(--text);
+}
+.schedule-shell .page-content {
+  gap: 10px;
+}
+.schedule-shell h2 {
+  line-height: 36px;
+  letter-spacing: 0;
+}
+.schedule-shell .notice {
+  border-radius: 9px;
+  padding: 10px;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+/* Month navigation, the dates of that month and the hint. */
+.date-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.date-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.date-nav button {
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--primary);
+  font-weight: 600;
+}
+.date-arrow {
+  flex: none;
+  width: 32px;
+  padding: 0;
+  font-size: 24px;
+  line-height: 30px;
+}
+/* Month and button share the row like in the frame (the month takes the free space); with
+   larger text or a narrow screen the button takes its own line instead of the month being cut. */
+.date-month {
+  flex: 999 1 auto;
+  text-align: center;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.date-calendar {
+  flex: 1 0 auto;
+  position: relative;
+  display: flex;
+}
+.date-calendar button {
+  flex: 1;
+  padding: 0 20px;
+  font-size: 12px;
+  line-height: 18px;
+}
+/* Only there for its picker, which opens over the button. */
+.date-calendar input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  border: 0;
+  padding: 0;
+}
+.date-strip {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .date-strip {
+    scrollbar-width: thin;
+    padding-bottom: 6px;
+  }
+}
+/* Three dates fill the column; the rest of the month scrolls sideways. A date never goes
+   narrower than its text, so larger text widens every date instead of wrapping one. */
+.date-strip button {
+  flex: 0 0 calc((100% - 24px) / 3);
+  min-width: max-content;
+  min-height: 68px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 12px;
+  border: 0;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+}
+.date-strip strong {
+  color: var(--text);
+  font-size: 17px;
+  line-height: 24px;
+}
+.date-strip button[aria-pressed='true'],
+.date-strip button[aria-pressed='true'] strong {
+  background: var(--primary);
+  color: #fff;
+}
+.date-hint {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+/* Doctors: the selected one in full, the others as a single line. */
+.doctor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.doctor-option {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  border: 2px solid transparent;
+  border-radius: 20px;
+  background: #fff;
+  text-align: left;
+}
+.doctor-option:hover {
+  background: #fcfffd;
+}
+.doctor-option > strong {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 22px;
+}
+.doctor-when {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 20px;
+}
+.doctor-option[aria-pressed='true'] {
+  gap: 10px;
+  padding: 20px;
+  border-color: var(--primary);
+}
+.doctor-option[aria-pressed='true'] > strong {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 27px;
+}
+.doctor-option[aria-pressed='true'] .doctor-when {
+  font-size: 15px;
+  line-height: 21px;
+}
+.doctor-option hr {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+.doctor-option .metrics {
+  gap: 12px;
+}
+.doctor-option .metrics small {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 17px;
+}
+.doctor-option .metrics strong {
+  font-size: 19px;
+  line-height: 27px;
+}
+
+.schedule-shell .warning-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+}
+.schedule-shell .warning-card > * + * {
+  margin: 0;
+}
+.schedule-shell .warning-card strong {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 21px;
+}
+.schedule-shell .warning-card p {
+  font-size: 13px;
+  line-height: 18px;
+}
+.schedule-shell .action-bar .button {
+  gap: 10px;
+  border-radius: 14px;
+  box-shadow: 0 4px 4px rgb(0 0 0 / 0.15);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 22px;
+}
+.schedule-shell .action-bar .icon,
+.schedule-shell .action-bar .icon img {
+  width: 20px;
+  height: 20px;
+}
+
+@media (max-width: 399px) {
+  .date-calendar button {
+    padding-inline: 12px;
+  }
+}
+@media (min-width: 768px) {
+  .schedule-shell .page-content {
+    gap: 16px;
+  }
+  .date-strip button {
+    flex-basis: calc((100% - 48px) / 5);
+  }
+}
+@media (min-width: 1024px) {
+  .date-strip button {
+    flex-basis: calc((100% - 72px) / 7);
+  }
+}

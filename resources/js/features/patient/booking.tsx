@@ -1,5 +1,5 @@
 import { usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { Shell } from '@/components/shell';
 import { ActionLink, Icon, Notice, RowLink } from '@/components/ui';
 import { isActive, useAction } from '@/lib/live';
@@ -65,6 +65,16 @@ export function Clinics({ clinics }: { clinics: Clinic[] }) {
   );
 }
 
+interface Day {
+  date: string;
+  day: string;
+  weekday: string;
+  label: string;
+  /** "Jumat, 4 Des 2026" */
+  medium: string;
+  /** "Desember 2026" */
+  month: string;
+}
 interface Doctor {
   id: number;
   name: string;
@@ -78,15 +88,31 @@ export function DoctorSchedule({
   doctors,
 }: {
   clinic: { id: number; name: string; room: string | null };
-  days: { date: string; day: string; weekday: string; label: string }[];
+  /** Every bookable service date, today first. */
+  days: Day[];
   doctors: Doctor[];
 }) {
   const { visit } = usePage().props;
   const [date, setDate] = useState(days[0].date);
   const [doctorId, setDoctorId] = useState(doctors[0]?.id);
   const { busy, post } = useAction();
+  const strip = useRef<HTMLDivElement>(null);
+  const picker = useRef<HTMLInputElement>(null);
   const day = days.find((item) => item.date === date)!;
   const doctor = doctors.find((item) => item.id === doctorId);
+  // The strip shows the selected day's month; the arrows jump to the first open day of the
+  // previous / next month inside the booking window.
+  const months = [...new Set(days.map((item) => item.month))];
+  const month = months.indexOf(day.month);
+  const jump = (to: number) => setDate(days.find((item) => item.month === months[to])!.date);
+
+  // Bring the selected date into view when it comes from the calendar or another month.
+  useLayoutEffect(() => {
+    const row = strip.current;
+    const chip = row?.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (row && chip) row.scrollLeft = chip.offsetLeft - (row.clientWidth - chip.offsetWidth) / 2;
+  }, [date]);
+
   if (isActive(visit))
     return (
       <Shell title="Dokter & jadwal" back="/poliklinik">
@@ -94,6 +120,7 @@ export function DoctorSchedule({
         <ActionLink href="/kunjungan">Buka kunjungan aktif</ActionLink>
       </Shell>
     );
+  const full = !!doctor && doctor.days[date].quota < 1;
   return (
     <Shell
       title="Dokter & jadwal"
@@ -101,6 +128,19 @@ export function DoctorSchedule({
       back="/poliklinik"
       guide={doctors.length ? 'dokter' : undefined}
       decor="waves"
+      className="schedule-shell"
+      action={
+        doctors.length > 0 && (
+          <button
+            className="button"
+            data-guide=""
+            disabled={busy || !doctor || full}
+            onClick={() => post('/kunjungan', { doctor_id: doctor!.id, date })}
+          >
+            {full ? 'Kuota penuh' : 'Ambil antrean'} <Icon name="arrow" className="on-dark" />
+          </button>
+        )
+      }
     >
       <Notice>
         {clinic.name}
@@ -117,21 +157,80 @@ export function DoctorSchedule({
         </section>
       ) : (
         <>
-          <div className="date-grid" role="group" aria-label="Tanggal kunjungan">
-            {days.map((item) => (
+          <section className="date-section" aria-label="Tanggal kunjungan">
+            <div className="date-nav">
               <button
-                key={item.date}
-                aria-pressed={date === item.date}
-                onClick={() => setDate(item.date)}
+                className="date-arrow"
+                aria-label="Bulan sebelumnya"
+                disabled={month === 0}
+                onClick={() => jump(month - 1)}
               >
-                {item.day}
-                <strong>{item.label}</strong>
+                ‹
               </button>
-            ))}
-          </div>
-          <div className="stack" role="group" aria-label="Pilih dokter">
+              <p className="date-month" aria-live="polite">
+                {day.month}
+              </p>
+              <button
+                className="date-arrow"
+                aria-label="Bulan berikutnya"
+                disabled={month === months.length - 1}
+                onClick={() => jump(month + 1)}
+              >
+                ›
+              </button>
+              <span className="date-calendar">
+                <button
+                  onClick={() => {
+                    const input = picker.current!;
+                    try {
+                      input.showPicker();
+                    } catch {
+                      input.focus();
+                      input.click();
+                    }
+                  }}
+                >
+                  Kalender lengkap
+                </button>
+                {/* The browser's own date picker, limited to the booking window. */}
+                <input
+                  ref={picker}
+                  type="date"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  aria-label="Tanggal kunjungan"
+                  min={days[0].date}
+                  max={days[days.length - 1].date}
+                  value={date}
+                  onChange={(e) => {
+                    const picked = e.target.value;
+                    if (days.some((item) => item.date === picked)) setDate(picked);
+                  }}
+                />
+              </span>
+            </div>
+            <div className="date-strip" ref={strip} role="group" aria-label={day.month}>
+              {days
+                .filter((item) => item.month === day.month)
+                .map((item) => (
+                  <button
+                    key={item.date}
+                    aria-pressed={date === item.date}
+                    onClick={() => setDate(item.date)}
+                  >
+                    {item.day}
+                    <strong>{item.label}</strong>
+                  </button>
+                ))}
+            </div>
+            <p className="date-hint">Pilih bulan atau tanggal lain untuk booking lebih awal.</p>
+          </section>
+          <div className="doctor-list" role="group" aria-label="Pilih dokter">
             {doctors.map((item) => {
               const selected = doctorId === item.id;
+              const { quota, wait } = item.days[date];
+              // A reported delay is about today's practice only.
+              const delay = date === days[0].date ? item.delay : null;
               return (
                 <button
                   className="doctor-option"
@@ -143,34 +242,34 @@ export function DoctorSchedule({
                     {item.name}
                     {selected && <Icon name="check" />}
                   </strong>
-                  <p className="muted">
-                    {selected && (
-                      <>
+                  {selected ? (
+                    <>
+                      <span className="doctor-when">
                         {clinic.name}
                         <br />
-                      </>
-                    )}
-                    {day.weekday}, {day.label} · {item.time}
-                  </p>
-                  {selected && (
-                    <>
+                        {day.medium} · {item.time}
+                      </span>
                       <hr />
-                      <div className="metrics">
+                      <span className="metrics">
                         <span>
                           <small>Perkiraan tunggu</small>
-                          <strong>{item.days[date].wait} menit</strong>
+                          <strong>{wait} menit</strong>
                         </span>
                         <span>
                           <small>Sisa kuota</small>
-                          <strong>{item.days[date].quota} pasien</strong>
+                          <strong>{quota} pasien</strong>
                         </span>
-                      </div>
-                      <Notice tone={item.delay ? 'warning' : 'green'}>
-                        {item.delay
-                          ? `Dokter terlambat ±${item.delay.minutes} menit${item.delay.reason ? ` · ${item.delay.reason}` : ''}`
+                      </span>
+                      <Notice tone={delay ? 'warning' : 'green'}>
+                        {delay
+                          ? `Dokter terlambat ±${delay.minutes} menit${delay.reason ? ` · ${delay.reason}` : ''}`
                           : `Jadwal dipilih · ${item.time}`}
                       </Notice>
                     </>
+                  ) : (
+                    <span className="doctor-when">
+                      {item.time} · {quota ? `${quota} kuota tersisa` : 'Kuota penuh'}
+                    </span>
                   )}
                 </button>
               );
@@ -178,19 +277,8 @@ export function DoctorSchedule({
           </div>
           <section className="warning-card">
             <strong>Antrean belum diambil</strong>
-            <p className="small">
-              Nomor diterbitkan setelah Anda menekan Ambil antrean. Maks. 1 kunjungan aktif.
-            </p>
+            <p>Nomor diterbitkan setelah Anda menekan Ambil antrean. Maks. 1 kunjungan aktif.</p>
           </section>
-          <button
-            className="button"
-            data-guide=""
-            disabled={busy || !doctor || doctor.days[date].quota < 1}
-            onClick={() => post('/kunjungan', { doctor_id: doctor!.id, date })}
-          >
-            {doctor && doctor.days[date].quota < 1 ? 'Kuota penuh' : 'Ambil antrean'}{' '}
-            <Icon name="arrow" className="on-dark" />
-          </button>
         </>
       )}
     </Shell>

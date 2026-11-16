@@ -1,5 +1,6 @@
 @import './dashboard.css';
 @import './auth.css';
+@import './schedule.css';
 :root {
   --bg: #f8f7f1;
   --text: #183d39;
@@ -284,6 +285,19 @@ summary:focus-visible {
   flex-direction: column;
   font-size: 12px;
 }
+/* A screen's main action pinned in place of the bottom nav, same frame and height. */
+.action-bar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 540px;
+  height: calc(80px + env(safe-area-inset-bottom));
+  padding: 14px 24px calc(14px + env(safe-area-inset-bottom));
+  background: var(--bg);
+  z-index: 10;
+}
 .nav-marker {
   width: 76px;
   height: 32px;
@@ -500,50 +514,6 @@ hr {
 }
 .clinic-list .row-link:hover {
   background: var(--pale);
-}
-.date-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-.date-grid button {
-  background: #fff;
-  border: 0;
-  border-radius: 12px;
-  padding: 12px 8px;
-  min-height: 68px;
-}
-.date-grid button strong {
-  display: block;
-  font-size: 17px;
-  margin-top: 2px;
-}
-.date-grid button[aria-pressed='true'] {
-  background: var(--primary);
-  color: white;
-}
-.doctor-option {
-  border: 2px solid transparent;
-  width: 100%;
-  text-align: left;
-  padding: 18px;
-  background: white;
-  border-radius: 20px;
-}
-.doctor-option[aria-pressed='true'] {
-  border-color: var(--primary);
-}
-.doctor-option > strong {
-  font-size: 18px;
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-.doctor-option > * + * {
-  margin-top: 14px;
-}
-.doctor-option:hover {
-  background: #fcfffd;
 }
 .metrics {
   display: grid;
@@ -1037,6 +1007,7 @@ details p {
     max-width: 720px;
   }
   .bottom-nav,
+  .action-bar,
   .chat-composer {
     max-width: 720px;
   }
@@ -1068,7 +1039,8 @@ details p {
     display: grid;
     grid-template-columns: 1fr 1fr;
   }
-  .chat-composer {
+  .chat-composer,
+  .action-bar {
     padding-inline: 40px;
   }
   .hya-illustration {
@@ -1087,6 +1059,7 @@ details p {
     min-height: 100dvh;
   }
   .bottom-nav,
+  .action-bar,
   .chat-composer {
     max-width: 800px;
   }
@@ -1103,13 +1076,15 @@ details p {
   .queue-hero {
     padding: 24px 28px;
   }
-  .chat-composer {
+  .chat-composer,
+  .action-bar {
     padding-inline: 56px;
   }
 }
 @media (max-width: 359px) {
   .page-content,
-  .page-header {
+  .page-header,
+  .action-bar {
     padding-inline: 16px;
   }
   .demo-banner {
