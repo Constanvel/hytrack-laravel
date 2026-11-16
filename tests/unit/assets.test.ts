@@ -13,7 +13,6 @@ const dimensions: Record<string, [number, number]> = {
   check: [24, 24],
   send: [19.8, 17.8],
   close: [13.8, 13.8],
-  'qr-example': [232, 232],
   'wave-mint': [412, 170],
   'wave-sidebar': [232, 250],
   'wave-dashboard': [1208, 180],

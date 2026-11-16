@@ -24,6 +24,8 @@ export interface Visit extends VisitProgress {
   time: string;
   isToday: boolean;
   checkInCode: string;
+  /** Signed payload drawn as the check-in QR (App\Support\CheckInTicket). */
+  checkInQr: string;
   checkInBy: string | null;
   leaveBy: string | null;
   leadMinutes: number;
@@ -71,6 +73,6 @@ declare module '@inertiajs/core' {
       /** Visits this account accompanies right now. */
       following: number;
     };
-    flashDataType: { status?: string; error?: string; shareLink?: string };
+    flashDataType: { status?: string; error?: string; shareLink?: string; scan?: ScannedTicket };
   }
 }

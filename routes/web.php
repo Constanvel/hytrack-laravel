@@ -69,6 +69,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role:staff')->prefix('petugas')->group(function () {
         Route::get('/', [StaffController::class, 'index']);
+        Route::post('/scan', [StaffController::class, 'scan'])->middleware('throttle:60,1');
         Route::post('/check-in', [StaffController::class, 'checkIn']);
         Route::post('/dokter/{doctor}/panggil', [StaffController::class, 'callNext']);
         Route::post('/antrean/{queue}/panggil-ulang', [StaffController::class, 'recall']);

@@ -1,0 +1,341 @@
+/* Petugas — scan QR kedatangan (Figma 27:360). The frame uses Inter. */
+.scan-page {
+  --scan-text: #173d3b;
+  --scan-muted: #5c706c;
+  --scan-primary: #086f65;
+  --scan-pale: #e1efe7;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  color: var(--scan-text);
+  font-family: 'Inter', sans-serif;
+  line-height: 1.4;
+}
+.scan-page button,
+.scan-page input {
+  font-family: inherit;
+}
+.scan-page h1,
+.scan-page h2 {
+  letter-spacing: 0;
+  line-height: 1.4;
+}
+.scan-page p {
+  line-height: 1.4;
+}
+.scan-title {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.scan-title > div {
+  flex: 1;
+  min-width: 0;
+}
+.scan-title h1 {
+  font-size: 30px;
+}
+.scan-title p {
+  margin-top: 4px;
+  color: var(--scan-muted);
+  font-size: 14px;
+}
+.scan-mode {
+  padding: 10px;
+  border-radius: 20px;
+  background: var(--scan-pale);
+  color: var(--scan-primary);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.scan-columns {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+.scan-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 20px;
+  background: #fff;
+}
+.scan-card.scanner {
+  flex: 1;
+  min-width: 0;
+}
+.scan-camera-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.scan-camera-row h2 {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.scan-link {
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--scan-primary);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.scan-link.center {
+  align-self: center;
+  min-height: 32px;
+}
+.scan-preview {
+  position: relative;
+  height: 340px;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #173d3b;
+}
+.scan-preview video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.scan-preview-label {
+  position: absolute;
+  top: 18px;
+  left: 20px;
+  color: #b8ded1;
+  font-size: 10px;
+  font-weight: 600;
+}
+/* Where the QR should be held; the rest of the picture is dimmed. */
+.scan-frame {
+  position: absolute;
+  top: 62px;
+  left: 50%;
+  width: 220px;
+  height: 220px;
+  transform: translateX(-50%);
+  border: 2px solid #fff;
+  border-radius: 12px;
+  box-shadow: 0 0 0 100vmax rgb(23 61 59 / 0.45);
+}
+.scan-preview-caption {
+  position: absolute;
+  right: 20px;
+  bottom: 16px;
+  left: 20px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+}
+.scan-status {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--scan-pale);
+}
+.scan-status strong {
+  color: var(--scan-primary);
+  font-size: 15px;
+  font-weight: 600;
+}
+.scan-status p {
+  color: var(--scan-muted);
+  font-size: 13px;
+}
+.scan-status.problem {
+  background: var(--warning);
+}
+.scan-status.problem strong,
+.scan-status.problem p {
+  color: var(--warning-text);
+}
+.scan-controls {
+  display: flex;
+  gap: 12px;
+}
+.scan-button {
+  flex: 1;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--scan-pale);
+  color: var(--scan-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+.scan-button:hover:not(:disabled) {
+  background: #cfe5db;
+}
+.scan-card.result {
+  flex: none;
+  width: 368px;
+  gap: 10px;
+  padding: 24px;
+}
+.scan-eyebrow {
+  color: var(--scan-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.result h2 {
+  font-size: 24px;
+}
+.scan-ticket {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--scan-pale);
+  color: var(--scan-primary);
+}
+.scan-ticket .scan-eyebrow {
+  color: inherit;
+  font-size: 10px;
+}
+.scan-ticket strong {
+  font-size: 42px;
+  line-height: 1.4;
+}
+.scan-ticket span {
+  font-size: 12px;
+  font-weight: 500;
+}
+.result dl {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+}
+.result dl div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.result dt {
+  color: var(--scan-muted);
+  font-size: 12px;
+}
+.result dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.scan-arrival {
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--warning);
+  color: var(--warning-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+.scan-arrival.done {
+  background: var(--scan-pale);
+  color: var(--scan-primary);
+}
+.scan-note,
+.scan-empty {
+  color: var(--scan-muted);
+  font-size: 13px;
+}
+.scan-confirm {
+  min-height: 48px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--scan-primary);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+.scan-confirm:hover:not(:disabled) {
+  background: #075c54;
+}
+.scan-manual {
+  flex-direction: row;
+  align-items: center;
+  gap: 24px;
+}
+.scan-manual > div {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.scan-manual h2 {
+  font-size: 17px;
+  font-weight: 700;
+}
+.scan-manual p {
+  color: var(--scan-muted);
+  font-size: 13px;
+}
+.scan-manual input {
+  width: 264px;
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid #d9e3de;
+  border-radius: 12px;
+  color: var(--scan-text);
+  font-size: 14px;
+}
+.scan-manual input::placeholder {
+  color: var(--scan-muted);
+}
+.scan-manual .scan-button {
+  flex: none;
+  width: 130px;
+}
+.scan-footnote {
+  color: var(--scan-muted);
+  font-size: 12px;
+}
+
+@media (max-width: 1199px) {
+  .scan-columns {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .scan-card.result {
+    width: auto;
+  }
+}
+@media (max-width: 767px) {
+  .scan-title {
+    flex-wrap: wrap;
+  }
+  .scan-preview {
+    height: 300px;
+  }
+  .scan-frame {
+    top: 50px;
+    width: 180px;
+    height: 180px;
+  }
+  .scan-manual {
+    flex-wrap: wrap;
+  }
+  .scan-manual > div {
+    flex-basis: 100%;
+  }
+  .scan-manual label {
+    flex: 1;
+  }
+  .scan-manual input {
+    width: 100%;
+  }
+}

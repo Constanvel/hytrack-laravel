@@ -31,6 +31,7 @@ final class VisitView
             'time' => $queue->doctor->scheduleLabel(),
             'isToday' => $queue->service_date === HospitalTime::today(),
             'checkInCode' => $queue->checkInCode(),
+            'checkInQr' => CheckInTicket::payload($queue),
             'checkInBy' => HospitalTime::clock($queue->checkin_deadline),
             'leaveBy' => HospitalTime::clock($queue->recommended_departure_time),
             'leadMinutes' => config('hytrack.check_in_lead_minutes'),

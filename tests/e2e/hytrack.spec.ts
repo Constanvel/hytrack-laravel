@@ -160,6 +160,36 @@ test('staff check-in reaches the patient screen', async ({ page, browser }) => {
   await staff.context().close();
 });
 
+test('staff scanner identifies a ticket before confirming and rejects reuse', async ({
+  page,
+  browser,
+}) => {
+  await login(page);
+  await bookDoctor(page, /dr. Rina/);
+  await page.getByRole('link', { name: 'Tampilkan QR check-in' }).click();
+  const code = (await page.locator('.qr-card .small').textContent())!.split(' ')[0];
+
+  const staff = await asStaff(browser, 'dina');
+  await staff.getByRole('button', { name: 'Scan QR kedatangan' }).click();
+  const manual = staff.getByPlaceholder('Contoh: HT-000027');
+  await manual.fill('HT1.1.20200101.00000000000000000000');
+  await staff.getByRole('button', { name: 'Cari tiket' }).click();
+  await expect(staff.locator('.scan-status')).toContainText('QR tidak valid');
+
+  await manual.fill(code);
+  await staff.getByRole('button', { name: 'Cari tiket' }).click();
+  await expect(staff.locator('.scan-card.result')).toContainText('Siti Aminah');
+  await page.reload();
+  await expect(page.getByText(/Belum check-in/)).toBeVisible();
+
+  await staff.getByRole('button', { name: 'Konfirmasi check-in' }).click();
+  await expect(staff.locator('.scan-status')).toContainText('berhasil check-in');
+  await manual.fill(code);
+  await staff.getByRole('button', { name: 'Cari tiket' }).click();
+  await expect(staff.locator('.scan-status')).toContainText('sudah check-in');
+  await staff.context().close();
+});
+
 test('clinic search, missing schedules and booking guard', async ({ page }) => {
   await login(page);
   await page.goto('/poliklinik');
