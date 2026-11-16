@@ -63,9 +63,18 @@ class PatientFlowTest extends TestCase
             ->where('days.0.date', self::TODAY)
             ->where('days.0.label', '4 Nov')
             ->where('days.0.weekday', 'Rabu')
-            ->has('days', 3)
+            ->where('days.0.medium', 'Rabu, 4 Nov 2026')
+            ->where('days.0.month', 'November 2026')
+            ->has('days', 60)
+            ->where('days.59.date', '2027-01-02')
             ->where('doctors.0.time', '09.00–12.00')
             ->where('doctors.0.days.'.self::TODAY.'.quota', 30));
+
+        // A reported delay only lengthens today's estimate.
+        $this->doctor->forceFill(['delay_minutes' => 20])->save();
+        $this->get('/dokter?poli='.$this->doctor->polyclinic_id)->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('doctors.0.days.'.self::TODAY.'.wait', '20–30')
+            ->where('doctors.0.days.2026-11-05.wait', '0–10'));
     }
 
     public function test_booking_shows_the_ticket_derived_from_the_chosen_doctor(): void

@@ -90,9 +90,12 @@ class QueueServiceTest extends TestCase
             $this->assertStringContainsString('penuh', $e->getMessage());
         }
 
-        $this->assertSame([self::TODAY, '2026-11-05', '2026-11-06'], $this->queues->bookingDates());
+        $dates = $this->queues->bookingDates();
+        $this->assertCount(60, $dates);
+        $this->assertSame([self::TODAY, '2026-11-05'], array_slice($dates, 0, 2));
+        $this->assertSame('2027-01-02', end($dates));
         $this->expectException(QueueRuleException::class);
-        $this->book(date: '2026-11-07');
+        $this->book(date: '2027-01-03');
     }
 
     public function test_stages_cannot_be_skipped(): void
