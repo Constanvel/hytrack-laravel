@@ -111,16 +111,28 @@ test('patient flow, companion revocation and pharmacy completion', async ({ page
   await expect(page.getByRole('heading', { name: 'Menunggu giliran' })).toBeVisible();
   await expect(page.locator('.connection-row')).toContainText('Terhubung');
 
+  // The invitation is accepted with the companion's own account and is single-use.
   await page.getByRole('link', { name: 'Bagikan ke pendamping' }).click();
-  await page.getByRole('button', { name: 'Aktifkan akses pendamping' }).click();
+  await page.getByRole('button', { name: 'Undang pendamping' }).click();
   const link = (await page.locator('.share-link').textContent())!;
   const companion = await (await page.context().browser()!.newContext()).newPage();
   await companion.goto(link);
+  await expect(companion.getByRole('link', { name: 'Masuk untuk menerima' })).toBeVisible();
+  await login(companion, 'ahmad');
+  await expect(companion).toHaveURL(/\/pantauan\//);
+  await companion.getByRole('button', { name: 'Terima undangan' }).click();
   await expect(companion.getByRole('heading', { name: 'Siti A.' })).toBeVisible();
+  await expect(companion.locator('main')).toContainText('Menunggu pemeriksaan');
   await expect(companion.locator('main')).not.toContainText('Aminah');
-  await page.getByRole('button', { name: 'Cabut akses pendamping' }).click();
-  await companion.reload();
-  await expect(companion.getByText('Akses pendamping tidak aktif')).toBeVisible();
+  const monitor = companion.url();
+  await companion.goto(link);
+  await expect(companion.getByText(/Undangan tidak berlaku/)).toBeVisible();
+
+  await page.reload();
+  await page.getByRole('button', { name: 'Cabut akses' }).click();
+  await expect(page.getByText(/Dicabut/)).toBeVisible();
+  await companion.goto(monitor);
+  await expect(companion.getByText('Akses pendamping dicabut.')).toBeVisible();
   await companion.context().close();
 
   await page.getByRole('link', { name: 'Kunjungan', exact: true }).click();

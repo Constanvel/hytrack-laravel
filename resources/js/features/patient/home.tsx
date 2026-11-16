@@ -1,11 +1,11 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { Shell, HyaHelp } from '@/components/shell';
-import { ActionLink, Icon } from '@/components/ui';
+import { ActionLink, Icon, RowLink } from '@/components/ui';
 import { GuideRestart } from '@/features/guide/guide';
 import { isActive, useAction } from '@/lib/live';
 
 export function Home() {
-  const { visit, auth } = usePage().props;
+  const { visit, auth, following } = usePage().props;
   const active = isActive(visit);
   return (
     <Shell title="HyTrack" brand guide={active ? undefined : 'pasien'} decor="corner">
@@ -43,6 +43,14 @@ export function Home() {
           {active ? 'Lihat kunjungan' : '+ Ambil antrean'}
         </Link>
       </section>
+      {following > 0 && (
+        <RowLink
+          href="/pendampingan"
+          detail={`${following} kunjungan keluarga sedang Anda dampingi`}
+        >
+          Pantauan keluarga
+        </RowLink>
+      )}
       <section className="profile-row" data-guide={active ? undefined : ''}>
         <div>
           <p className="eyebrow">PASIEN TERPILIH</p>

@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\CompanionShare;
 use App\Models\Doctor;
 use App\Models\Patient;
 use App\Models\Polyclinic;
@@ -162,65 +161,6 @@ class PatientFlowTest extends TestCase
         $this->assertSame('cancelled', $queue->refresh()->queue_status->value);
         $this->get('/kunjungan')->assertInertia(fn (AssertableInertia $page) => $page->where('visit', null));
         $this->assertSame('A-002', $this->book()->queue_number);
-    }
-
-    public function test_companion_link_is_hashed_limited_and_revocable(): void
-    {
-        $queue = $this->book();
-
-        $this->from('/pendamping')->post('/pendamping')->assertRedirect('/pendamping');
-        $link = null;
-        $this->get('/pendamping')->assertInertia(function (AssertableInertia $page) use (&$link) {
-            $link = $page->toArray()['flash']['shareLink'];
-            $page->where('visit.companionActive', true);
-        });
-        $token = basename($link);
-
-        // Only the hash is stored.
-        $share = CompanionShare::sole();
-        $this->assertSame(hash('sha256', $token), $share->access_token_hash);
-        $this->assertStringNotContainsString($token, json_encode($share->getAttributes()));
-        $this->assertSame('2026-11-04 16:59:59', $share->expires_at->toDateTimeString()); // 23.59 WIB in UTC
-
-        // The companion needs no account and sees progress only.
-        auth()->logout();
-        $response = $this->get('/pantauan/'.$token)->assertOk();
-        $response->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('CompanionView')
-            ->where('share.ticket', $queue->queue_number)
-            ->where('share.patientName', 'Siti A.')
-            ->missing('share.checkInCode')
-            ->missing('share.doctor')
-            ->where('visit', null));
-        $this->assertStringNotContainsString('Aminah', $response->getContent());
-        $this->assertStringNotContainsString('0842', $response->getContent());
-
-        $this->get('/pantauan/token-yang-salah')->assertNotFound()
-            ->assertInertia(fn (AssertableInertia $page) => $page->where('share', null));
-
-        // The patient revokes: the same link stops working.
-        $this->actingAs($this->user)->from('/pendamping')->delete('/pendamping');
-        auth()->logout();
-        $this->get('/pantauan/'.$token)->assertNotFound();
-    }
-
-    public function test_companion_links_expire_and_can_be_dropped_by_the_companion(): void
-    {
-        $this->book();
-        $this->post('/pendamping');
-        $token = '';
-        $this->get('/pendamping')->assertInertia(function (AssertableInertia $page) use (&$token) {
-            $token = basename($page->toArray()['flash']['shareLink']);
-        });
-        auth()->logout();
-
-        $this->delete('/pantauan/'.$token)->assertRedirect('/pantauan/'.$token);
-        $this->get('/pantauan/'.$token)->assertNotFound();
-
-        CompanionShare::query()->update(['is_active' => true]);
-        $this->get('/pantauan/'.$token)->assertOk();
-        $this->travelTo(Carbon::parse('2026-11-05 00:01', 'Asia/Jakarta'));
-        $this->get('/pantauan/'.$token)->assertNotFound();
     }
 
     public function test_notifications_follow_queue_changes_and_are_marked_read(): void

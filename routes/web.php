@@ -19,11 +19,8 @@ Route::middleware('guest')->group(function () {
     Route::post('/daftar', [AuthController::class, 'storeAccount'])->middleware('throttle:6,1');
 });
 
-// Family Companion: the link itself is the credential, so these stay public but throttled.
-Route::middleware('throttle:30,1')->group(function () {
-    Route::get('/pantauan/{token}', [CompanionController::class, 'show']);
-    Route::delete('/pantauan/{token}', [CompanionController::class, 'stop']);
-});
+// Family Companion invitation link: public so guests can be asked to sign in, but throttled.
+Route::get('/pantauan/{token}', [CompanionController::class, 'show'])->middleware('throttle:30,1');
 
 Route::middleware('auth')->group(function () {
     Route::post('/keluar', [AuthController::class, 'destroy']);
@@ -41,7 +38,6 @@ Route::middleware('auth')->group(function () {
         // These screens render from the shared "visit" prop.
         Route::inertia('/kunjungan', 'Visit');
         Route::inertia('/check-in', 'CheckIn');
-        Route::inertia('/pendamping', 'CompanionAccess');
         Route::inertia('/akun', 'Account');
         Route::inertia('/hya', 'Hya');
         Route::inertia('/bantuan', 'Help');
@@ -57,8 +53,17 @@ Route::middleware('auth')->group(function () {
         Route::post('/data-pasien', [PatientDataController::class, 'store']);
         Route::get('/data-pasien/{patient}/ubah', [PatientDataController::class, 'edit'])->whereNumber('patient');
         Route::put('/data-pasien/{patient}', [PatientDataController::class, 'update'])->whereNumber('patient');
+
+        // Family Companion, patient side: invite, list and revoke.
+        Route::get('/pendamping', [CompanionController::class, 'access']);
         Route::post('/pendamping', [CompanionController::class, 'store']);
-        Route::delete('/pendamping', [CompanionController::class, 'destroy']);
+        Route::delete('/pendamping/{share}', [CompanionController::class, 'destroy'])->whereNumber('share');
+
+        // Companion side: any patient account can accept an invitation and follow that visit.
+        Route::post('/pantauan/{token}', [CompanionController::class, 'accept'])->middleware('throttle:30,1');
+        Route::get('/pendampingan', [CompanionController::class, 'following']);
+        Route::get('/pendampingan/{share}', [CompanionController::class, 'monitor'])->whereNumber('share');
+        Route::delete('/pendampingan/{share}', [CompanionController::class, 'stop'])->whereNumber('share');
         Route::post('/hya', HyaController::class)->middleware('throttle:30,1');
     });
 

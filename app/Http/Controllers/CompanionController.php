@@ -2,74 +2,110 @@
 
 namespace App\Http\Controllers;
 
-use App\Exceptions\QueueRuleException;
+use App\Enums\InvitationStatus;
 use App\Models\CompanionShare;
-use App\Services\QueueService;
-use App\Support\HospitalTime;
+use App\Services\CompanionInvitations;
 use App\Support\VisitView;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
-use Symfony\Component\HttpFoundation\Response;
+use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
-/** Family Companion: a revocable, expiring, read-only link to one visit. */
+/**
+ * Family Companion. Patient side: invite, list, revoke. Companion side: accept with an
+ * account, then follow each patient's visit until it ends.
+ */
 class CompanionController extends Controller
 {
-    public function store(Request $request, QueueService $queues): RedirectResponse
+    public function __construct(private readonly CompanionInvitations $invitations) {}
+
+    public function access(Request $request): Response
     {
-        $queue = $request->user()->patient->queues()->active()->latest('queue_id')->first()
-            ?? throw new QueueRuleException('Tidak ada kunjungan aktif untuk dibagikan.');
+        $queue = $request->user()->patient->queues()->active()->latest('queue_id')->first();
 
-        // One live link per visit: issuing a new one invalidates the previous link.
-        $queues->revokeCompanions($queue);
-
-        $token = Str::random(48);
-        $queue->companionShares()->create([
-            'access_token_hash' => CompanionShare::hashToken($token),
-            // Ends with the visit, or at the end of the service day, whichever comes first.
-            'expires_at' => HospitalTime::at($queue->service_date, '23:59:59'),
+        return Inertia::render('CompanionAccess', [
+            'invitations' => $queue ? $this->invitations->forVisit($queue)->map(CompanionInvitations::row(...)) : [],
         ]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        [, $token] = $this->invitations->invite($this->invitations->visitOf($request->user()->patient));
 
         // Only the hash is stored, so this is the single time the link can be shown.
         Inertia::flash([
-            'status' => 'Akses pendamping diaktifkan.',
-            'shareLink' => url('/pantauan/'.$token),
+            'status' => 'Undangan pendamping dibuat.',
+            'shareLink' => $this->invitations->link($token),
         ]);
 
         return back();
     }
 
-    public function destroy(Request $request, QueueService $queues): RedirectResponse
+    public function destroy(Request $request, int $share): RedirectResponse
     {
-        $queue = $request->user()->patient->queues()->active()->latest('queue_id')->first();
-
-        if ($queue) {
-            $queues->revokeCompanions($queue);
-        }
+        $this->invitations->revoke($this->invitations->visitOf($request->user()->patient), $share);
         Inertia::flash('status', 'Akses pendamping dicabut.');
 
         return back();
     }
 
-    /** Public: whoever holds a valid link sees the limited view. Unknown and expired links look the same. */
-    public function show(Request $request, string $token): Response
+    /**
+     * The invitation link. Guests are asked to sign in first and come back here; unknown,
+     * used, revoked and expired links all look the same.
+     */
+    public function show(Request $request, string $token): HttpResponse
     {
-        $share = CompanionShare::findUsable($token);
-        $queue = $share?->queue()->with(['doctor', 'polyclinic', 'patient', 'pharmacyOrder'])->first();
+        $preview = $this->invitations->preview($token);
+        $user = $request->user();
 
-        $view = $queue?->queue_status->isActive() ? VisitView::forCompanion($queue) : null;
+        if ($preview && ! $user) {
+            $request->session()->put('url.intended', $request->url());
+        }
 
-        return Inertia::render('CompanionView', ['share' => $view, 'token' => $token])
-            ->toResponse($request)
-            ->setStatusCode($view ? 200 : 404);
+        return Inertia::render('CompanionInvite', [
+            'token' => $token,
+            'invite' => $preview['invite'] ?? null,
+            'canAccept' => $this->invitations->canAccept($user, $preview['share'] ?? null),
+        ])->toResponse($request)->setStatusCode($preview ? 200 : 404);
     }
 
-    /** Public: a companion may give up their own access. */
-    public function stop(string $token): RedirectResponse
+    public function accept(Request $request, string $token): RedirectResponse
     {
-        CompanionShare::findUsable($token)?->update(['is_active' => false]);
+        $share = $this->invitations->accept($token, $request->user());
 
-        return redirect('/pantauan/'.$token);
+        return redirect('/pendampingan/'.$share->share_id);
+    }
+
+    public function following(Request $request): Response
+    {
+        return Inertia::render('CompanionList', [
+            'patients' => $this->invitations->following($request->user())->map(fn (CompanionShare $share) => [
+                'id' => $share->share_id,
+                'name' => $share->queue->patient->shortName(),
+                'detail' => "{$share->queue->queue_number} · Poli {$share->queue->polyclinic->polyclinic_name}",
+            ]),
+        ]);
+    }
+
+    public function monitor(Request $request, int $share): Response
+    {
+        $share = $this->invitations->followed($request->user(), $share);
+        // Once the visit ends or the patient revokes access, the page says so instead of 404.
+        $live = $share->currentStatus() === InvitationStatus::Accepted;
+
+        return Inertia::render('CompanionDashboard', [
+            'shareId' => $share->share_id,
+            'progress' => $live ? VisitView::forCompanion($share->queue, $share) : null,
+            'ended' => $live ? null : $share->currentStatus()->label(),
+        ]);
+    }
+
+    public function stop(Request $request, int $share): RedirectResponse
+    {
+        $this->invitations->stop($request->user(), $share);
+        Inertia::flash('status', 'Anda berhenti memantau kunjungan ini.');
+
+        return redirect('/pendampingan');
     }
 }

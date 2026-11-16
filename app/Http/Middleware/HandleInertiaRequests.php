@@ -2,7 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\InvitationStatus;
 use App\Enums\UserRole;
+use App\Models\CompanionShare;
 use App\Models\User;
 use App\Support\HospitalTime;
 use App\Support\VisitView;
@@ -32,6 +34,8 @@ class HandleInertiaRequests extends Middleware
             // The patient shell, home, Hya and visit screens all read the current visit.
             'visit' => fn () => VisitView::forPatient($patient?->currentVisit()),
             'unread' => fn () => $patient?->notifications()->whereNull('read_at')->count() ?? 0,
+            'following' => fn () => $patient ? CompanionShare::live()->where('status', InvitationStatus::Accepted)
+                ->where('companion_user_id', $user->user_id)->count() : 0,
         ];
     }
 
