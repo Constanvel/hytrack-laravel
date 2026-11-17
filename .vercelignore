@@ -1,0 +1,9 @@
+/vendor
+/node_modules
+/tests
+/playwright-report
+/test-results
+/storage/logs/*
+/database/*.sqlite
+/public/hot
+.env
