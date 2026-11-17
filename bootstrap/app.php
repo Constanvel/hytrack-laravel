@@ -7,6 +7,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -15,6 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
+        // Prototype mode: the screens with in-browser sample data. No web middleware, so no session or database.
+        then: fn () => Route::view('/prototipe/{path?}', 'prototype')->where('path', '.*'),
     )
     ->withMiddleware(function (Middleware $middleware): void {
         // Behind Vercel's edge: read https and the client IP from X-Forwarded-*,
