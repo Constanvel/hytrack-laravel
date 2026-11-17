@@ -119,6 +119,8 @@ export function Visit() {
         <br />
         Estimasi berubah mengikuti pelayanan.
       </p>
+      {/* Family can follow from booking on, not only once the patient is in the queue. */}
+      <RowLink href="/pendamping">Bagikan ke pendamping</RowLink>
       <HyaHelp />
       <button className="text-button" disabled={busy} onClick={() => destroy('/kunjungan')}>
         Batalkan kunjungan
