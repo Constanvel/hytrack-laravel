@@ -17,6 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Behind Vercel's edge: read https and the client IP from X-Forwarded-*,
+        // otherwise asset URLs come out as http and throttles key on the proxy IP.
+        $middleware->trustProxies(at: '*');
         $middleware->web(append: [HandleInertiaRequests::class]);
         $middleware->alias(['role' => EnsureRole::class]);
         $middleware->redirectGuestsTo('/masuk');
