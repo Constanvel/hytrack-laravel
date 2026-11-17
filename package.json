@@ -10,7 +10,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "prototype:record": "node resources/js/prototype/record.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",

@@ -9,3 +9,4 @@ playwright-report
 test-results
 *.php
 composer.json
+resources/js/prototype/fixtures.json

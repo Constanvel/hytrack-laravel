@@ -35,7 +35,8 @@ export function Shell({
   className?: string;
 }) {
   const { url, props, flash } = usePage();
-  const path = url.split('?')[0];
+  // Prototype pages live under /prototipe; the nav highlights the same tab either way.
+  const path = url.split('?')[0].replace(/^\/prototipe(?=\/|$)/, '') || '/';
   const { visible: guiding } = useGuide(guide);
   const active =
     path === '/'

@@ -249,3 +249,80 @@
 .auth-consent input[aria-invalid='true'] {
   border-color: #9b3b1f;
 }
+/* Prototype toggle under the sign-in form. */
+.auth-prototype {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px dashed #b9cec7;
+  border-radius: 14px;
+}
+.auth-switch-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+.auth-switch-toggle input {
+  appearance: none;
+  flex: none;
+  width: 40px;
+  height: 24px;
+  margin: 0;
+  border-radius: 12px;
+  background: #c5d3ce;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.auth-switch-toggle input::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.15s;
+}
+.auth-switch-toggle input:checked {
+  background: #086f65;
+}
+.auth-switch-toggle input:checked::after {
+  transform: translateX(16px);
+}
+.auth-switch-toggle input:focus-visible {
+  outline: 2px solid #086f65;
+  outline-offset: 2px;
+}
+.auth-switch-toggle span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 14px;
+  line-height: 20px;
+}
+.auth-switch-toggle small {
+  color: #5b6f6b;
+  font-size: 12px;
+  line-height: 17px;
+}
+.auth-prototype-roles {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.auth-prototype-roles button {
+  height: 40px;
+  border: 1px solid #086f65;
+  border-radius: 10px;
+  background: white;
+  color: #086f65;
+  font-size: 14px;
+  font-weight: 600;
+}
+.auth-prototype-roles button:hover {
+  background: #e1efe7;
+}

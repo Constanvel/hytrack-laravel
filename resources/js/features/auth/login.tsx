@@ -1,9 +1,23 @@
-import { Link, useForm } from '@inertiajs/react';
+import { Link, router, useForm } from '@inertiajs/react';
 import { useState, type FormEvent } from 'react';
 import { Notice } from '@/components/ui';
 import { ACCOUNT_HELP, AuthInput, AuthPage, PasswordInput } from './auth-form';
 
-export function Login({ demoAccounts }: { demoAccounts: string | null }) {
+// Prototype mode (/prototipe) signs in as one of these sample accounts; no password is checked.
+const PROTOTYPE_ROLES = [
+  ['Pasien', '0812-5550-0842'],
+  ['Pendamping', '0812-5550-0843'],
+  ['Petugas', 'dina'],
+  ['Manajemen', 'manajer'],
+] as const;
+
+export function Login({
+  demoAccounts,
+  prototype = false,
+}: {
+  demoAccounts: string | null;
+  prototype?: boolean;
+}) {
   const form = useForm({ username: '', password: '' });
   const [help, setHelp] = useState<'recovery' | 'contact' | null>(null);
   function submit(event: FormEvent) {
@@ -63,6 +77,35 @@ export function Login({ demoAccounts }: { demoAccounts: string | null }) {
           </p>
         </div>
       </form>
+      <div className="auth-prototype">
+        <label className="auth-switch-toggle">
+          <input
+            type="checkbox"
+            role="switch"
+            checked={prototype}
+            onChange={() =>
+              window.location.assign(prototype ? '/masuk' : '/prototipe/masuk?reset=1')
+            }
+          />
+          <span>
+            <strong>Mode prototype</strong>
+            <small>Coba alur aplikasi dengan data contoh, tanpa database.</small>
+          </span>
+        </label>
+        {prototype && (
+          <div className="auth-prototype-roles" role="group" aria-label="Masuk sebagai">
+            {PROTOTYPE_ROLES.map(([label, username]) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => router.post('/masuk', { username, password: 'prototype' })}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       <section className="auth-help">
         <div className="auth-benefit">
           <h2>Satu akun, perjalanan lebih tenang.</h2>

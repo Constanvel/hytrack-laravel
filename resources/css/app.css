@@ -1174,3 +1174,20 @@ details p {
 .share-link {
   word-break: break-all;
 }
+/* Shown above every /prototipe screen. */
+.prototype-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 12px;
+  padding: 8px 16px;
+  background: var(--warning);
+  color: var(--warning-text);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.prototype-bar a {
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+}
