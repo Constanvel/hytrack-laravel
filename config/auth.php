@@ -42,14 +42,6 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
-
-        // Android app: "Authorization: Bearer <token>", stored as users.api_token_hash.
-        'api' => [
-            'driver' => 'token',
-            'provider' => 'users',
-            'storage_key' => 'api_token_hash',
-            'hash' => true,
-        ],
     ],
 
     /*
