@@ -9,7 +9,7 @@ use App\Http\Controllers\PatientDataController;
 use App\Http\Controllers\PolyclinicController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\VisitController;
-use App\Services\GeminiGuide;
+use App\Services\GeminiChat;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -42,8 +42,8 @@ Route::middleware('auth')->group(function () {
         Route::inertia('/kunjungan', 'Visit');
         Route::inertia('/check-in', 'CheckIn');
         Route::inertia('/akun', 'Account');
-        // aiGuide tells the page whether help texts are reworded by Gemini, for an honest label.
-        Route::get('/hya', fn (GeminiGuide $gemini) => Inertia::render('Hya', ['aiGuide' => $gemini->enabled()]));
+        // aiGuide tells the page whether Gemini answers, so the label stays honest.
+        Route::get('/hya', fn (GeminiChat $gemini) => Inertia::render('Hya', ['aiGuide' => $gemini->enabled()]));
         Route::inertia('/bantuan', 'Help');
         Route::inertia('/bantuan/check-in', 'CheckInGuide');
         Route::inertia('/bantuan/antrean', 'QueueGuide');

@@ -9,9 +9,19 @@ interface Message {
   id: number;
   role: 'user' | 'assistant';
   text: string;
+  /** Written by Gemini from the server's facts (false: fixed rule or error text). */
+  ai?: boolean;
+  /** Connection error shown locally; never sent back as history. */
+  failed?: boolean;
 }
+interface Reply {
+  reply: string;
+  ai?: boolean;
+}
+/** How many earlier messages go with a question, so follow-ups keep their context. */
+const HISTORY = 6;
 /** Hya's replies come from Laravel so they can use the patient's live queue data. */
-async function askHya(question: string): Promise<string> {
+async function askHya(question: string, history: Message[]): Promise<Reply> {
   const token = decodeURIComponent(document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '');
   const response = await fetch('/hya', {
     method: 'POST',
@@ -20,10 +30,16 @@ async function askHya(question: string): Promise<string> {
       Accept: 'application/json',
       'X-XSRF-TOKEN': token,
     },
-    body: JSON.stringify({ question }),
+    body: JSON.stringify({
+      question,
+      history: history
+        .filter((message) => !message.failed)
+        .slice(-HISTORY)
+        .map(({ role, text }) => ({ role, text })),
+    }),
   });
   if (!response.ok) throw new Error(`Hya ${response.status}`);
-  return (await response.json()).reply;
+  return response.json();
 }
 function summary(visit: Visit) {
   return {
@@ -49,15 +65,21 @@ export function Hya() {
   async function ask(question: string) {
     const value = question.trim().slice(0, 500);
     if (!value || pending) return;
-    const say = (role: Message['role'], text: string) =>
-      setMessages((current) => [...current, { id: current.length, role, text }]);
-    say('user', value);
+    const say = (message: Omit<Message, 'id'>) =>
+      setMessages((current) => [...current, { ...message, id: current.length }]);
+    const history = messages;
+    say({ role: 'user', text: value });
     setInput('');
     setPending(true);
     try {
-      say('assistant', await askHya(value));
+      const { reply, ai } = await askHya(value, history);
+      say({ role: 'assistant', text: reply, ai });
     } catch {
-      say('assistant', 'Hya belum dapat menjawab. Periksa koneksi Anda, lalu coba lagi.');
+      say({
+        role: 'assistant',
+        text: 'Hya belum dapat menjawab. Periksa koneksi Anda, lalu coba lagi.',
+        failed: true,
+      });
     } finally {
       setPending(false);
     }
@@ -123,7 +145,9 @@ export function Hya() {
           <div className="messages" role="log" aria-live="polite" aria-label="Percakapan Hya">
             {messages.map((message) => (
               <div className={`message ${message.role}`} key={message.id}>
-                {message.role === 'assistant' && <strong>Hya</strong>}
+                {message.role === 'assistant' && (
+                  <strong>Hya{message.ai && <span className="muted"> · dijawab AI</span>}</strong>
+                )}
                 <p>{message.text}</p>
               </div>
             ))}
@@ -167,7 +191,7 @@ export function Hya() {
         </form>
         <small>
           {aiGuide
-            ? 'Info antrean dari data rumah sakit; panduan umum dirapikan AI (Gemini). Jangan masukkan data pribadi atau medis.'
+            ? 'Hya dijawab AI (Gemini) dari data antrean Anda dan bisa keliru; pastikan ke petugas. Jangan masukkan data pribadi atau medis.'
             : 'Respons terstruktur, bukan AI. Jangan masukkan data pribadi atau medis.'}
         </small>
       </div>
