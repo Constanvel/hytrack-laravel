@@ -618,3 +618,177 @@ td .text-button {
     overflow-wrap: anywhere;
   }
 }
+
+/* Daftar booking (CRUD petugas) */
+.title-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.title-actions .scan-open {
+  width: auto;
+  min-height: 44px;
+  padding-inline: 22px;
+  white-space: nowrap;
+}
+.dashboard-topbar strong.offline {
+  color: var(--warning-text);
+  background: var(--warning);
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+.booking-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(300px, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.booking-filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.4fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+.booking-filters label,
+.walk-in label,
+.cancel-form label {
+  display: grid;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.booking-filters input,
+.booking-filters select,
+.walk-in input,
+.walk-in select,
+.cancel-form textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+.booking-filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.booking-filter-actions .button {
+  width: auto;
+  min-height: 42px;
+  padding-inline: 18px;
+}
+.booking-filter-actions .text-button[aria-pressed='true'] {
+  text-decoration: underline;
+}
+.status-pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--pale);
+  color: var(--primary);
+}
+.status-pill.booked {
+  background: var(--info);
+  color: var(--info-text);
+}
+.status-pill.no_show,
+.status-pill.cancelled {
+  background: var(--warning);
+  color: var(--warning-text);
+}
+.status-pill.completed {
+  background: #eceeea;
+  color: var(--muted);
+}
+.booking-detail h2 {
+  font-size: 34px;
+}
+.booking-detail dl {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+}
+.booking-detail dl > div {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 8px;
+}
+.booking-detail dt {
+  color: var(--muted);
+}
+.stage-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.detail-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.detail-actions .button {
+  font-size: 12px;
+  min-height: 44px;
+  padding-inline: 8px;
+}
+.danger-text {
+  color: var(--warning-text);
+}
+.recent-bookings {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.recent-bookings small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+}
+.recent-bookings .text-button {
+  min-height: 32px;
+  padding: 2px 0;
+}
+.walk-in-find {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+.walk-in-find .button,
+.walk-in .button {
+  min-height: 42px;
+  font-size: 13px;
+}
+.walk-in-find .button {
+  width: auto;
+}
+@media (max-width: 1199px) {
+  .booking-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .booking-filters {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 767px) {
+  .booking-filters,
+  .detail-actions {
+    grid-template-columns: 1fr;
+  }
+  .title-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

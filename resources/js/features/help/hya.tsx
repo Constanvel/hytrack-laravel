@@ -34,6 +34,7 @@ function summary(visit: Visit) {
     pharmacy: 'Penyiapan obat',
     completed: '',
     no_show: '',
+    cancelled: '',
   }[visit.stage];
 }
 export function Hya() {

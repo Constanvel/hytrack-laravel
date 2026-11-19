@@ -64,11 +64,31 @@ export function Visit() {
         </section>
       </Shell>
     );
+  if (visit.stage === 'cancelled')
+    return (
+      <Shell title="Kunjungan" subtitle="RAWAT JALAN">
+        <Notice tone="warning">
+          Booking {visit.ticket} untuk {visit.dateLabel} dibatalkan petugas.
+          {visit.cancelReason ? ` Alasan: ${visit.cancelReason}.` : ''}
+        </Notice>
+        <section className="card empty">
+          <h2>Booking dibatalkan</h2>
+          <p className="muted">
+            Kuota Anda dikembalikan. Ambil antrean baru atau hubungi petugas di meja check-in.
+          </p>
+          <ActionLink href="/poliklinik">Ambil antrean baru</ActionLink>
+        </section>
+        <RowLink href="/riwayat">Riwayat kunjungan</RowLink>
+        <HyaHelp />
+      </Shell>
+    );
   if (visit.stage === 'no_show')
     return (
       <Shell title="Kunjungan" subtitle="RAWAT JALAN">
         <Notice tone="warning">
-          Nomor {visit.ticket} ditandai tidak hadir setelah dipanggil ulang.
+          {visit.checkedInAt
+            ? `Nomor ${visit.ticket} ditandai tidak hadir setelah dipanggil ulang.`
+            : `Nomor ${visit.ticket} ditandai tidak hadir karena belum check-in hingga batas ${visit.checkInBy}.`}
         </Notice>
         <section className="card empty">
           <h2>Anda melewatkan panggilan</h2>
@@ -81,6 +101,12 @@ export function Visit() {
   return (
     <Shell title="Tiket kunjungan" subtitle={visit.dateLabel.toUpperCase()} back="/" guide="tiket">
       <Notice>✓ Antrean berhasil diambil</Notice>
+      <div className="connection-row" role="status">
+        <strong>{live.online ? '● Terhubung' : '○ Koneksi terputus'}</strong>
+        <span>
+          {live.online ? 'Diperbarui' : 'Data terakhir'} {live.syncedAt}
+        </span>
+      </div>
       <section className="card ticket-card">
         <p className="eyebrow">NOMOR ANTREAN ANDA</p>
         <div className="ticket-number">{visit.ticket}</div>
@@ -101,6 +127,10 @@ export function Visit() {
           perjalanan Anda.
         </p>
       </section>
+      <Notice tone="warning">
+        Status: Belum check-in
+        {visit.isToday ? ` · batas ${visit.checkInBy}` : ` · check-in dibuka ${visit.dateLabel}`}
+      </Notice>
       <div className="metrics ticket-metrics">
         <div>
           <strong>{visit.ahead} pasien</strong>
@@ -111,6 +141,9 @@ export function Visit() {
           <small>setelah check-in</small>
         </div>
       </div>
+      <p className="small muted">
+        Sedang dilayani: <strong>{visit.serving ?? '—'}</strong>
+      </p>
       <div data-guide="">
         <ActionLink href="/check-in">Tampilkan QR check-in</ActionLink>
       </div>
@@ -122,7 +155,15 @@ export function Visit() {
       {/* Family can follow from booking on, not only once the patient is in the queue. */}
       <RowLink href="/pendamping">Bagikan ke pendamping</RowLink>
       <HyaHelp />
-      <button className="text-button" disabled={busy} onClick={() => destroy('/kunjungan')}>
+      <RowLink href="/riwayat">Riwayat kunjungan</RowLink>
+      <button
+        className="text-button"
+        disabled={busy}
+        onClick={() => {
+          if (window.confirm(`Batalkan antrean ${visit.ticket}? Kuota akan dilepas.`))
+            destroy('/kunjungan');
+        }}
+      >
         Batalkan kunjungan
       </button>
     </Shell>
@@ -131,8 +172,8 @@ export function Visit() {
 export function CheckIn() {
   const { visit, hospital } = usePage().props;
   const [manual, setManual] = useState(false);
-  useLive();
-  if (!visit || visit.stage === 'completed' || visit.stage === 'no_show') return <Visit />;
+  const live = useLive();
+  if (!visit || ['completed', 'no_show', 'cancelled'].includes(visit.stage)) return <Visit />;
   const booked = visit.stage === 'booked';
   return (
     <Shell
@@ -157,9 +198,15 @@ export function CheckIn() {
         />
         <p className="small muted">{visit.checkInCode} · Nomor check-in</p>
       </section>
+      <div className="connection-row" role="status">
+        <strong>{live.online ? '● Terhubung' : '○ Koneksi terputus'}</strong>
+        <span>
+          {live.online ? 'Diperbarui' : 'Data terakhir'} {live.syncedAt}
+        </span>
+      </div>
       <Notice tone={booked ? 'warning' : 'green'}>
         {!booked
-          ? 'Sudah check-in'
+          ? `✓ Sudah check-in${visit.checkedInAt ? ` pukul ${visit.checkedInAt}` : ''}`
           : visit.isToday
             ? `Belum check-in · Batas ${visit.checkInBy}`
             : `Check-in dibuka pada ${visit.dateLabel}`}
@@ -203,7 +250,11 @@ function Queue({ visit, live }: { visit: VisitData; live: ReturnType<typeof useL
         </span>
       </div>
       <section className="hero queue-hero" data-guide="">
-        <p className="eyebrow">{serving ? 'GILIRAN ANDA' : 'SUDAH CHECK-IN'}</p>
+        <p className="eyebrow">
+          {serving
+            ? 'GILIRAN ANDA'
+            : `SUDAH CHECK-IN${visit.checkedInAt ? ` · ${visit.checkedInAt}` : ''}`}
+        </p>
         <h2>{serving ? 'Silakan masuk' : 'Menunggu giliran'}</h2>
         <div className="ticket-number">{visit.ticket}</div>
         <p className="ahead">

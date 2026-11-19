@@ -1,5 +1,6 @@
-import { router, usePage } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 import { useState, type FormEvent } from 'react';
+import { Bookings, BOOKINGS, visitDashboard, type BookingProps } from './bookings';
 import { DashboardShell, SCAN } from './dashboard-shell';
 import { QrScanner } from './scanner';
 import { Notice } from '@/components/ui';
@@ -41,7 +42,8 @@ export function Staff({
   pharmacy,
   history,
   checkInDesk,
-}: StaffProps) {
+  ...bookingProps
+}: StaffProps & Omit<BookingProps, 'clinics'>) {
   const { flash, props } = usePage();
   const [section, setSection] = useState('Antrean poli');
   const [query, setQuery] = useState('');
@@ -53,10 +55,7 @@ export function Staff({
     `${patient.name} ${patient.number}`.toLowerCase().includes(query.toLowerCase()),
   );
   const filter = (poli: number, dokter?: number) =>
-    router.get('/petugas', dokter ? { poli, dokter } : { poli }, {
-      preserveState: true,
-      preserveScroll: true,
-    });
+    visitDashboard({ poli, dokter: dokter ?? null });
   function checkIn(event: FormEvent) {
     event.preventDefault();
     post('/petugas/check-in', { code });
@@ -68,13 +67,24 @@ export function Staff({
         <div className="dashboard-title">
           <div>
             <h1>{section}</h1>
-            <p className="muted">Kelola panggilan dan bantu pasien melanjutkan pelayanan.</p>
+            <p className="muted">
+              {section === BOOKINGS
+                ? 'Buat, cari, perbarui, dan batalkan booking pasien. Semua perubahan tersimpan di server.'
+                : 'Kelola panggilan dan bantu pasien melanjutkan pelayanan.'}
+            </p>
           </div>
-          <Notice>Data hari ini · {props.now}</Notice>
+          <div className="title-actions">
+            <button className="button scan-open" onClick={() => setSection(SCAN)}>
+              Scan QR
+            </button>
+            <Notice>Data hari ini · {props.now}</Notice>
+          </div>
         </div>
       )}
       {section === SCAN ? (
         <QrScanner desk={checkInDesk} />
+      ) : section === BOOKINGS ? (
+        <Bookings clinics={clinics} {...bookingProps} />
       ) : section === 'Antrean poli' ? (
         <>
           <div className="dashboard-filters">
@@ -253,7 +263,7 @@ export function Staff({
                       />
                     </label>
                     <button className="button secondary" disabled={!code.trim() || busy}>
-                      Konfirmasi check-in
+                      Konfirmasi hadir
                     </button>
                   </form>
                   <Notice tone="warning">

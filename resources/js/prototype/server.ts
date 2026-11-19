@@ -1,6 +1,5 @@
 // Prototype mode: a pretend Laravel that answers Inertia visits from recorded fixtures.
-// No database, no session, nothing leaves the browser. fixtures.json was recorded from the
-// previous Laravel backend (removed; see git history before the backend removal).
+// No database, no session, nothing leaves the browser. Re-record with `npm run prototype:record`.
 import data from './fixtures.json';
 
 type Props = Record<string, unknown>;
@@ -38,7 +37,7 @@ export interface Page {
 }
 
 const LAST = fixtures.steps.length - 1;
-// Recorded steps: 0 no visit, 1 booked, 2 invite sent, 3 companion following, 4+ the visit moving on.
+// Steps recorded by record.mjs: 0 no visit, 1 booked, 2 invite sent, 3 companion following, 4+ the visit moving on.
 const BOOKED = 1;
 const INVITED = 2;
 const FOLLOWING = 3;

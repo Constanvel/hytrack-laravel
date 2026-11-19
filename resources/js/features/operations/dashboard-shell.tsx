@@ -1,7 +1,8 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { Avatar, Notice } from '@/components/ui';
-import { useLive } from '@/lib/live';
+import { BOOKINGS } from './bookings';
+import { syncLabel, useLive } from '@/lib/live';
 
 export const SCAN = 'Scan QR kedatangan';
 
@@ -21,7 +22,7 @@ export function DashboardShell({
   const live = useLive();
   const items = management
     ? ['Ringkasan layanan', 'Waktu tunggu', 'Kinerja poliklinik', 'Laporan']
-    : [SCAN, 'Antrean poli', 'Alur pelayanan', 'Farmasi', 'Riwayat aktivitas'];
+    : [SCAN, BOOKINGS, 'Antrean poli', 'Alur pelayanan', 'Farmasi', 'Riwayat aktivitas'];
   return (
     <div className="dashboard">
       <aside className="dashboard-sidebar">
@@ -57,8 +58,8 @@ export function DashboardShell({
                 ? 'Pelayanan / Check-in kedatangan'
                 : 'Pelayanan / Rawat jalan'}
           </span>
-          <strong role="status">
-            {live.online ? `● Terhubung · Diperbarui ${live.syncedAt}` : '○ Koneksi terputus'}
+          <strong role="status" className={live.online ? undefined : 'offline'}>
+            {syncLabel(live)}
           </strong>
           <span>{today}</span>
         </header>

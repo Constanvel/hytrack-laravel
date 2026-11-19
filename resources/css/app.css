@@ -1191,3 +1191,29 @@ details p {
   font-weight: 700;
   text-decoration: underline;
 }
+
+/* Riwayat kunjungan */
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.history-number {
+  font-size: 22px;
+}
+.history-status {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: var(--pale);
+  color: var(--primary);
+}
+.history-status.no_show,
+.history-status.cancelled,
+.history-status.booked {
+  background: var(--warning);
+  color: var(--warning-text);
+}

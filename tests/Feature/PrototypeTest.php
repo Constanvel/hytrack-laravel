@@ -6,9 +6,11 @@ use Tests\TestCase;
 
 class PrototypeTest extends TestCase
 {
-    public function test_home_opens_the_prototype(): void
+    /** The backend is kept: guests go to the real sign-in; the prototype stays at /prototipe. */
+    public function test_home_signs_in_and_the_prototype_stays_available(): void
     {
-        $this->get('/')->assertRedirect('/prototipe/masuk');
+        $this->get('/')->assertRedirect('/masuk');
+        $this->get('/prototipe/masuk')->assertOk();
     }
 
     public function test_prototype_is_served_without_session_or_database(): void
