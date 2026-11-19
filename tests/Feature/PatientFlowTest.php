@@ -9,7 +9,9 @@ use App\Models\Queue;
 use App\Models\User;
 use App\Services\QueueService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
@@ -180,6 +182,7 @@ class PatientFlowTest extends TestCase
 
     public function test_hya_answers_from_the_patients_real_queue(): void
     {
+        config(['services.gemini.key' => null]);
         $ask = fn (string $question) => $this->postJson('/hya', ['question' => $question])->assertOk()->json('reply');
 
         $this->assertStringContainsString('tenaga kesehatan', $ask('Berapa dosis obat?'));
@@ -207,5 +210,36 @@ class PatientFlowTest extends TestCase
 
         $this->postJson('/hya', ['question' => str_repeat('a', 501)])->assertUnprocessable();
         $this->assertSame('pharmacy', $queue->refresh()->queue_status->value);
+    }
+
+    public function test_hya_sends_only_the_fixed_guide_to_gemini_and_falls_back_on_failure(): void
+    {
+        config(['services.gemini.key' => 'test-key', 'hytrack.demo_controls' => true]);
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://generativelanguage.googleapis.com/*' => Http::sequence()
+                ->push(['candidates' => [[
+                    'finishReason' => 'STOP',
+                    'content' => ['parts' => [['text' => 'Buka tiket lalu tunjukkan QR check-in kepada petugas.']]],
+                ]]])
+                ->push([], 403),
+        ]);
+
+        $this->book();
+        $this->postJson('/hya', ['question' => 'Kapan giliran saya?'])->assertOk();
+        $this->postJson('/hya', ['question' => 'Berapa dosis obat?'])->assertOk();
+        Http::assertNothingSent();
+
+        $this->postJson('/hya', ['question' => 'Nomor saya 081234567890, bagaimana check-in?'])
+            ->assertOk()->assertJsonPath('reply', 'Buka tiket lalu tunjukkan QR check-in kepada petugas.');
+        Http::assertSent(function (Request $request) {
+            return $request->hasHeader('x-goog-api-key', 'test-key')
+                && str_starts_with($request['contents'][0]['parts'][0]['text'], 'Buka tiket kunjungan,')
+                && ! str_contains($request->body(), '081234567890');
+        });
+
+        $response = $this->postJson('/hya', ['question' => 'Bagaimana cara check-in?'])->assertOk();
+        $this->assertStringContainsString('nomor check-in', $response->json('reply'));
+        Http::assertSentCount(2);
     }
 }

@@ -7,12 +7,14 @@ use App\Enums\QueueStatus;
 use App\Models\Queue;
 
 /**
- * Hya answers from fixed topics using the patient's real queue data.
- * It is rule-based, not an AI model, and never gives medical advice.
+ * Hya reads visit details locally. Gemini can rephrase fixed help text.
  */
 class HyaResponder
 {
-    public function __construct(private readonly WaitEstimator $estimator) {}
+    public function __construct(
+        private readonly WaitEstimator $estimator,
+        private readonly GeminiGuide $guide,
+    ) {}
 
     public function reply(string $question, ?Queue $queue): string
     {
@@ -21,7 +23,11 @@ class HyaResponder
         }
 
         if (preg_match('/check|qr|terlambat/iu', $question)) {
-            return 'Buka tiket kunjungan, lalu tekan “Tampilkan QR check-in”. Tunjukkan QR atau nomor check-in kepada petugas di meja check-in. Jika terlambat, minta bantuan petugas.';
+            return $this->guide->rewrite('Buka tiket kunjungan, lalu tekan “Tampilkan QR check-in”. Tunjukkan QR atau nomor check-in kepada petugas di meja check-in. Jika terlambat, minta bantuan petugas.');
+        }
+
+        if (preg_match('/(?:cara|gimana|bagaimana).*?(?:ambil|pesan).*?(?:antre|jadwal)/iu', $question)) {
+            return $this->guide->rewrite('Buka Beranda dan pilih Ambil antrean. Pilih poliklinik dan jadwal dokter, lalu konfirmasi. Buka halaman Kunjungan untuk melihat tiket Anda.');
         }
 
         $status = $queue?->queue_status;
