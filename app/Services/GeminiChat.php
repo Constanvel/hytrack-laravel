@@ -53,6 +53,8 @@ class GeminiChat
         }
         $contents[] = ['role' => 'user', 'parts' => [['text' => self::mask($question)]]];
 
+        $started = hrtime(true);
+        $elapsed = fn () => (int) ((hrtime(true) - $started) / 1_000_000);
         try {
             $response = Http::acceptJson()
                 ->withHeader('x-goog-api-key', trim((string) config('services.gemini.key')))
@@ -66,10 +68,21 @@ class GeminiChat
                     'generationConfig' => ['maxOutputTokens' => 1024],
                 ]);
         } catch (ConnectionException) {
-            Log::warning('Hya could not connect to Gemini.');
+            Log::warning('Hya could not connect to Gemini.', ['ms' => $elapsed()]);
 
             return null;
         }
+
+        // Timing and token counts only (no text), to see where Hya's latency comes from.
+        Log::info('Hya Gemini call', [
+            'ms' => $elapsed(),
+            'status' => $response->status(),
+            'finish' => $response->json('candidates.0.finishReason'),
+            'input_tokens' => $response->json('usageMetadata.promptTokenCount'),
+            'thought_tokens' => $response->json('usageMetadata.thoughtsTokenCount'),
+            'output_tokens' => $response->json('usageMetadata.candidatesTokenCount'),
+            'model' => $response->json('modelVersion'),
+        ]);
 
         if (! $response->successful()) {
             Log::warning('Gemini request for Hya failed.', ['status' => $response->status()]);
