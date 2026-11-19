@@ -85,10 +85,19 @@ class SetupHytrack extends Command
         }
 
         $name = $this->option('name') ?? text('Nama lengkap petugas', required: true);
-        $secret = password('Kata sandi petugas (min. 10 karakter, tidak ditampilkan)', required: true,
-            validate: fn (string $value) => mb_strlen($value) < 10 ? 'Minimal 10 karakter.' : null);
-        if (password('Ulangi kata sandi', required: true) !== $secret) {
-            $this->error('Kata sandi tidak sama. Tidak ada akun yang dibuat.');
+        // Hidden prompts do not work in every Windows terminal, so the password can also come
+        // from HYTRACK_STAFF_PASSWORD, set for this shell only (e.g. Read-Host -AsSecureString).
+        $secret = getenv('HYTRACK_STAFF_PASSWORD') ?: null;
+        if ($secret === null) {
+            $secret = password('Kata sandi petugas (min. 10 karakter, tidak ditampilkan)', required: true);
+            if (password('Ulangi kata sandi', required: true) !== $secret) {
+                $this->error('Kata sandi tidak sama. Tidak ada akun yang dibuat.');
+
+                return self::FAILURE;
+            }
+        }
+        if (mb_strlen($secret) < 10) {
+            $this->error('Kata sandi minimal 10 karakter. Tidak ada akun yang dibuat.');
 
             return self::FAILURE;
         }

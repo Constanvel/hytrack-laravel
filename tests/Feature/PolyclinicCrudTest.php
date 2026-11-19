@@ -91,4 +91,20 @@ class PolyclinicCrudTest extends TestCase
 
         $this->post('/masuk', ['username' => 'petugas.rama', 'password' => 'sandi-rahasia-123'])->assertRedirect('/petugas');
     }
+
+    public function test_setup_takes_the_password_from_the_environment_without_prompting(): void
+    {
+        putenv('HYTRACK_STAFF_PASSWORD=pendek');
+        try {
+            $this->artisan('hytrack:setup', ['--staff' => 'petugas2', '--name' => 'Dua'])->assertFailed();
+            $this->assertSame(0, User::count());
+
+            putenv('HYTRACK_STAFF_PASSWORD=sandi-dari-env-123');
+            $this->artisan('hytrack:setup', ['--staff' => 'petugas2', '--name' => 'Dua'])->assertSuccessful();
+        } finally {
+            putenv('HYTRACK_STAFF_PASSWORD');
+        }
+
+        $this->post('/masuk', ['username' => 'petugas2', 'password' => 'sandi-dari-env-123'])->assertRedirect('/petugas');
+    }
 }
