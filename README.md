@@ -108,7 +108,7 @@ npm run test:e2e            # 24 tes browser: alur, responsif 320–1440px, axe,
 | Family Companion       | Berfungsi       | Tautan acak, hanya hash SHA-256 yang disimpan; berakhir 23.59 hari layanan, saat dicabut, atau selesai.  |
 | Live Control Dashboard | Berfungsi       | Check-in, panggil, panggil ulang, tidak hadir, lanjut laboratorium/farmasi, riwayat aktivitas.           |
 | Service Insights       | Berfungsi       | Agregat per tanggal/poliklinik, grafik per jam, ekspor CSV tanpa identitas pasien.                       |
-| Hya (chat bubble)      | Berbasis aturan | Menjawab dari antrean pasien yang sebenarnya; bukan AI, tidak menjawab pertanyaan medis.                 |
+| Hya (chat bubble)      | Berbasis aturan | Menjawab dari antrean pasien yang sebenarnya; panduan umum dapat dirapikan Gemini; tanpa saran medis.    |
 | Panduan interaktif     | Berfungsi       | Disimpan di localStorage tanpa data pasien.                                                              |
 | Indikator koneksi      | Berfungsi       | Status online/offline browser dan waktu sinkron terakhir dari server.                                    |
 | Petunjuk ruangan       | Teks statis     | Tanpa denah atau navigasi peta.                                                                          |

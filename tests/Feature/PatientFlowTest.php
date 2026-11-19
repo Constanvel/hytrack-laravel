@@ -180,6 +180,19 @@ class PatientFlowTest extends TestCase
         $this->get('/')->assertInertia(fn (AssertableInertia $page) => $page->where('unread', 0));
     }
 
+    public function test_hya_page_says_whether_gemini_rewords_the_guides(): void
+    {
+        config(['services.gemini.key' => null]);
+        $this->get('/hya')->assertInertia(fn (AssertableInertia $page) => $page->component('Hya')->where('aiGuide', false));
+
+        config(['services.gemini.key' => 'test-key', 'services.gemini.model' => 'gemini-3.5-flash-lite']);
+        $this->get('/hya')->assertInertia(fn (AssertableInertia $page) => $page->where('aiGuide', true));
+
+        // An invalid model name is never called, so the page must not claim AI either.
+        config(['services.gemini.model' => 'not-a-model']);
+        $this->get('/hya')->assertInertia(fn (AssertableInertia $page) => $page->where('aiGuide', false));
+    }
+
     public function test_hya_answers_from_the_patients_real_queue(): void
     {
         config(['services.gemini.key' => null]);

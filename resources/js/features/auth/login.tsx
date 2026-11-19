@@ -39,7 +39,7 @@ export function Login({
         <div className="auth-fields">
           {/* Patients type their phone number; staff and managers still use their username. */}
           <AuthInput
-            label="Nomor ponsel"
+            label="Nomor ponsel atau nama pengguna"
             name="username"
             icon="phone"
             placeholder="+62 123-4567-8910"

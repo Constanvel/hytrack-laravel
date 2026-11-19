@@ -8,15 +8,21 @@ use Illuminate\Support\Facades\Log;
 
 class GeminiGuide
 {
+    /** True when a key and a valid model name are configured, so help texts go to Gemini. */
+    public function enabled(): bool
+    {
+        return trim((string) config('services.gemini.key')) !== ''
+            && preg_match('/^gemini-[a-z0-9.-]+$/D', (string) config('services.gemini.model')) === 1;
+    }
+
     /** Accept only a fixed HyTrack help text, without any question or visit data. */
     public function rewrite(string $guide): string
     {
-        $key = trim((string) config('services.gemini.key'));
-        $model = (string) config('services.gemini.model');
-
-        if ($key === '' || ! preg_match('/^gemini-[a-z0-9.-]+$/D', $model)) {
+        if (! $this->enabled()) {
             return $guide;
         }
+        $key = trim((string) config('services.gemini.key'));
+        $model = (string) config('services.gemini.model');
 
         try {
             $response = Http::acceptJson()

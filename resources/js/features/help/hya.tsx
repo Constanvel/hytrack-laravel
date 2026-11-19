@@ -38,7 +38,7 @@ function summary(visit: Visit) {
   }[visit.stage];
 }
 export function Hya() {
-  const { visit } = usePage().props;
+  const { visit, aiGuide } = usePage<{ aiGuide?: boolean }>().props;
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [pending, setPending] = useState(false);
@@ -165,7 +165,11 @@ export function Hya() {
             <Icon name="send" />
           </button>
         </form>
-        <small>Respons terstruktur, bukan AI. Jangan masukkan data pribadi atau medis.</small>
+        <small>
+          {aiGuide
+            ? 'Info antrean dari data rumah sakit; panduan umum dirapikan AI (Gemini). Jangan masukkan data pribadi atau medis.'
+            : 'Respons terstruktur, bukan AI. Jangan masukkan data pribadi atau medis.'}
+        </small>
       </div>
     </Shell>
   );
