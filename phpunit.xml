@@ -3,10 +3,16 @@
          xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
          bootstrap="vendor/autoload.php"
          colors="true"
+         defaultTestSuite="Feature"
 >
     <testsuites>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
+        </testsuite>
+        <!-- Real row-lock races on MySQL, in the separate hytrack_laravel_test database:
+             run with: php artisan test (testsuite MySQL) -->
+        <testsuite name="MySQL">
+            <directory>tests/MySql</directory>
         </testsuite>
     </testsuites>
     <source>

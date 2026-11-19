@@ -28,6 +28,35 @@ final class CheckInTicket
      */
     public static function resolve(string $code): Queue
     {
+        $queue = self::identify($code);
+
+        $message = match (true) {
+            $queue->queue_status === QueueStatus::NoShow => 'Tiket ditandai tidak hadir dan tidak dapat dipakai lagi.',
+            $queue->queue_status !== QueueStatus::Booked => "Tiket {$queue->queue_number} sudah check-in pukul ".HospitalTime::clock($queue->checkin_at).'.',
+            default => null,
+        };
+        if ($message) {
+            throw new QueueRuleException($message);
+        }
+
+        return $queue;
+    }
+
+    /** How the ticket was identified, stored as queues.checkin_method. */
+    public static function method(string $code): string
+    {
+        return str_starts_with(trim($code), 'HT1.') ? 'qr' : 'code';
+    }
+
+    /**
+     * The ticket for today's visit behind a QR or typed number, whatever its progress, so a
+     * second scan can show "Sudah check-in" with the original time. Invalid, cancelled and
+     * wrong-date tickets are rejected.
+     *
+     * @throws QueueRuleException with the reason shown to staff
+     */
+    public static function identify(string $code): Queue
+    {
         $code = trim($code);
 
         if (preg_match('/^HT1\.(\d{1,9})\.(\d{8})\.([0-9a-f]{20})$/', $code, $qr)) {
@@ -51,11 +80,10 @@ final class CheckInTicket
 
         $today = HospitalTime::today();
         $message = match (true) {
-            $queue->queue_status === QueueStatus::Cancelled => 'Kunjungan ini sudah dibatalkan.',
+            $queue->queue_status === QueueStatus::Cancelled => 'Booking ini sudah dibatalkan'
+                .($queue->cancel_reason ? " ({$queue->cancel_reason})" : '').' dan tidak dapat dipakai check-in.',
             $queue->service_date < $today => 'Tiket sudah kedaluwarsa. Tanggal kunjungannya '.HospitalTime::dateLabel($queue->service_date).'.',
             $queue->service_date > $today => 'Tiket untuk '.HospitalTime::dateLabel($queue->service_date).'. Check-in dibuka pada tanggal tersebut.',
-            $queue->queue_status === QueueStatus::NoShow => 'Tiket ditandai tidak hadir dan tidak dapat dipakai lagi.',
-            $queue->queue_status !== QueueStatus::Booked => "Tiket {$queue->queue_number} sudah check-in pukul ".HospitalTime::clock($queue->checkin_at).'.',
             default => null,
         };
         if ($message) {
@@ -65,10 +93,21 @@ final class CheckInTicket
         return $queue;
     }
 
-    /** What staff check before confirming. Expects doctor and polyclinic to be loaded. */
+    /**
+     * What staff check before confirming: only what is needed to match the person at the
+     * desk. Expects patient, doctor, polyclinic and checkedInBy to be loaded.
+     */
     public static function summary(Queue $queue): array
     {
         return [
+            // booked: may be confirmed · checked_in: already recorded · no_show: unusable
+            'state' => match ($queue->queue_status) {
+                QueueStatus::Booked => 'booked',
+                QueueStatus::NoShow => 'no_show',
+                default => 'checked_in',
+            },
+            'checkedInAt' => HospitalTime::clock($queue->checkin_at),
+            'checkedInBy' => $queue->checkedInBy?->full_name,
             'code' => $queue->checkInCode(),
             'name' => $queue->patient->full_name,
             'ticket' => $queue->queue_number,

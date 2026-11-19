@@ -43,6 +43,9 @@ export function Home() {
           {active ? 'Lihat kunjungan' : '+ Ambil antrean'}
         </Link>
       </section>
+      <RowLink href="/riwayat" detail="Tiket, check-in, dan pembatalan Anda">
+        Riwayat kunjungan
+      </RowLink>
       {following > 0 && (
         <RowLink
           href="/pendampingan"
@@ -93,6 +96,9 @@ export function Account() {
       </section>
       <nav className="account-menu" aria-label="Menu akun">
         <ActionLink href="/data-pasien">Data pasien</ActionLink>
+        <ActionLink href="/riwayat" secondary>
+          Riwayat kunjungan
+        </ActionLink>
         <ActionLink href="/bantuan" secondary>
           Bantuan & panduan kunjungan
         </ActionLink>

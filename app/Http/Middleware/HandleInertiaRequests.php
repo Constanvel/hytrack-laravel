@@ -30,6 +30,8 @@ class HandleInertiaRequests extends Middleware
             'pollSeconds' => config('hytrack.poll_seconds'),
             'today' => HospitalTime::dateLabel(HospitalTime::today()),
             'now' => HospitalTime::clock(now()),
+            // Server time of this response: the "last successful sync" shown on live screens.
+            'syncedAt' => HospitalTime::now()->format('H.i.s'),
             'auth' => $user ? $this->account($user) : null,
             // The patient shell, home, Hya and visit screens all read the current visit.
             'visit' => fn () => VisitView::forPatient($patient?->currentVisit()),

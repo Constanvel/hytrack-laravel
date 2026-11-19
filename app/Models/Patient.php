@@ -56,16 +56,25 @@ class Patient extends Model
 
     /**
      * The visit shown in the patient app: the active one, otherwise the visit
-     * that ended today so the patient still sees how it concluded.
+     * that ended today so the patient still sees how it concluded. A booking that
+     * staff cancelled stays visible until its service date so the patient sees why.
      */
     public function currentVisit(): ?Queue
     {
+        $today = HospitalTime::today();
+
         return $this->queues()
             ->where(fn ($query) => $query
-                ->whereIn('queue_status', QueueStatus::active())
+                ->where(fn ($active) => $active
+                    ->whereIn('queue_status', QueueStatus::active())
+                    ->where('service_date', '>=', $today))
                 ->orWhere(fn ($ended) => $ended
                     ->whereIn('queue_status', [QueueStatus::Completed, QueueStatus::NoShow])
-                    ->where('service_date', HospitalTime::today())))
+                    ->where('service_date', $today))
+                ->orWhere(fn ($cancelled) => $cancelled
+                    ->where('queue_status', QueueStatus::Cancelled)
+                    ->whereNotNull('cancelled_by_staff_id')
+                    ->where('service_date', '>=', $today)))
             ->with(['doctor', 'polyclinic', 'patient', 'pharmacyOrder'])
             ->latest('queue_id')
             ->first();

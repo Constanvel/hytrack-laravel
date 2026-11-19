@@ -13,14 +13,15 @@ class StaffController extends Controller
 {
     public function scan(Request $request): JsonResponse
     {
-        $queue = CheckInTicket::resolve($this->code($request))->load(['patient', 'doctor', 'polyclinic']);
+        $queue = CheckInTicket::identify($this->code($request))->load(['patient', 'doctor', 'polyclinic', 'checkedInBy']);
 
         return response()->json(['ticket' => CheckInTicket::summary($queue)]);
     }
 
     public function checkIn(Request $request, QueueService $queues): JsonResponse
     {
-        $queue = $queues->checkIn(CheckInTicket::resolve($this->code($request)), $request->user()->staff);
+        $code = $this->code($request);
+        $queue = $queues->checkIn(CheckInTicket::resolve($code), $request->user()->staff, CheckInTicket::method($code));
 
         return response()->json(['message' => "{$queue->queue_number} berhasil check-in."]);
     }

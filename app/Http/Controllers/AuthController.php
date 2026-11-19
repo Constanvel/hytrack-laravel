@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\UserRole;
 use App\Models\Patient;
 use App\Models\User;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -73,20 +74,26 @@ class AuthController extends Controller
             throw ValidationException::withMessages(['phone' => 'Nomor ponsel sudah terdaftar. Silakan masuk.']);
         }
 
-        $user = DB::transaction(function () use ($data) {
-            $user = User::create([
-                'username' => $data['phone'],
-                'password_hash' => $data['password'],
-                'role' => UserRole::Patient,
-            ]);
-            Patient::create([
-                'user_id' => $user->user_id,
-                'full_name' => trim($data['name']),
-                'phone_number' => Patient::formatPhone($data['phone']),
-            ]);
+        try {
+            // users + patients in one transaction: never an account without a profile.
+            $user = DB::transaction(function () use ($data) {
+                $user = User::create([
+                    'username' => $data['phone'],
+                    'password_hash' => $data['password'], // hashed by the model's "hashed" cast
+                    'role' => UserRole::Patient,
+                ]);
+                Patient::create([
+                    'user_id' => $user->user_id,
+                    'full_name' => trim($data['name']),
+                    'phone_number' => Patient::formatPhone($data['phone']),
+                ]);
 
-            return $user;
-        });
+                return $user;
+            });
+        } catch (UniqueConstraintViolationException) {
+            // Two sign-ups with the same number at the same moment: users.username is unique.
+            throw ValidationException::withMessages(['phone' => 'Nomor ponsel sudah terdaftar. Silakan masuk.']);
+        }
 
         Auth::login($user);
 

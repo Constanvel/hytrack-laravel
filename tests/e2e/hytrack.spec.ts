@@ -152,11 +152,11 @@ test('staff check-in reaches the patient screen', async ({ page, browser }) => {
 
   const staff = await asStaff(browser, 'dina');
   await staff.getByPlaceholder(/Nomor check-in/).fill(code);
-  await staff.getByRole('button', { name: 'Konfirmasi check-in' }).click();
-  await expect(staff.locator('.dashboard-footnote')).toContainText('A-027 berhasil check-in.');
+  await staff.getByRole('button', { name: 'Konfirmasi hadir' }).click();
+  await expect(staff.locator('.dashboard-footnote')).toContainText('A-027 berhasil check-in pukul');
 
   await page.reload();
-  await expect(page.getByText('Sudah check-in', { exact: true })).toBeVisible();
+  await expect(page.getByText(/✓ Sudah check-in pukul/)).toBeVisible();
   await staff.context().close();
 });
 
@@ -182,11 +182,12 @@ test('staff scanner identifies a ticket before confirming and rejects reuse', as
   await page.reload();
   await expect(page.getByText(/Belum check-in/)).toBeVisible();
 
-  await staff.getByRole('button', { name: 'Konfirmasi check-in' }).click();
+  await staff.getByRole('button', { name: 'Konfirmasi hadir' }).click();
   await expect(staff.locator('.scan-status')).toContainText('berhasil check-in');
   await manual.fill(code);
   await staff.getByRole('button', { name: 'Cari tiket' }).click();
-  await expect(staff.locator('.scan-status')).toContainText('sudah check-in');
+  // A repeat scan shows the original check-in instead of recording it again.
+  await expect(staff.locator('.scan-card.result')).toContainText('Sudah check-in pukul');
   await staff.context().close();
 });
 
@@ -348,7 +349,7 @@ test('visit progress survives a refresh and the browser stores no patient identi
   await page.getByRole('link', { name: 'Tampilkan QR check-in' }).click();
   await page.getByRole('button', { name: 'Simulasikan konfirmasi petugas' }).click();
   await page.reload();
-  await expect(page.getByText('Sudah check-in', { exact: true })).toBeVisible();
+  await expect(page.getByText(/✓ Sudah check-in pukul/)).toBeVisible();
   await page.getByRole('link', { name: 'Lihat antrean saya' }).click();
   await page.getByRole('button', { name: 'Simulasikan pemeriksaan selesai' }).click();
   await page.getByRole('button', { name: 'Simulasikan lanjut ke farmasi' }).click();

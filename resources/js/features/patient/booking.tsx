@@ -2,7 +2,7 @@ import { usePage } from '@inertiajs/react';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { Shell } from '@/components/shell';
 import { ActionLink, Icon, Notice, RowLink } from '@/components/ui';
-import { isActive, useAction } from '@/lib/live';
+import { isActive, syncLabel, useAction, useLive } from '@/lib/live';
 
 interface Clinic {
   id: number;
@@ -95,7 +95,9 @@ export function DoctorSchedule({
   const { visit } = usePage().props;
   const [date, setDate] = useState(days[0].date);
   const [doctorId, setDoctorId] = useState(doctors[0]?.id);
-  const { busy, post } = useAction();
+  const { busy, post, error } = useAction();
+  // Sisa kuota comes from the server and is refreshed by polling.
+  const live = useLive();
   const strip = useRef<HTMLDivElement>(null);
   const picker = useRef<HTMLInputElement>(null);
   const day = days.find((item) => item.date === date)!;
@@ -135,7 +137,9 @@ export function DoctorSchedule({
             className="button"
             data-guide=""
             disabled={busy || !doctor || full}
-            onClick={() => post('/kunjungan', { doctor_id: doctor!.id, date })}
+            onClick={() =>
+              post('/kunjungan', { doctor_id: doctor!.id, polyclinic_id: clinic.id, date })
+            }
           >
             {full ? 'Kuota penuh' : 'Ambil antrean'} <Icon name="arrow" className="on-dark" />
           </button>
@@ -275,10 +279,18 @@ export function DoctorSchedule({
               );
             })}
           </div>
+          {error && (
+            <Notice tone="warning" role="alert">
+              {error}
+            </Notice>
+          )}
           <section className="warning-card">
             <strong>Antrean belum diambil</strong>
             <p>Nomor diterbitkan setelah Anda menekan Ambil antrean. Maks. 1 kunjungan aktif.</p>
           </section>
+          <p className="small muted" role="status">
+            {syncLabel(live)}
+          </p>
         </>
       )}
     </Shell>

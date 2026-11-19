@@ -113,6 +113,34 @@ class PatientController extends Controller
         ]);
     }
 
+    /** Riwayat kunjungan: every ticket of the signed-in patient, newest service date first. */
+    public function history(Request $request): Response
+    {
+        $queues = $request->user()->patient->queues()
+            ->with(['polyclinic', 'doctor'])
+            ->orderByDesc('service_date')->orderByDesc('queue_id')
+            ->limit(100)->get();
+
+        return Inertia::render('History', [
+            'items' => $queues->map(fn (Queue $queue) => [
+                'id' => $queue->queue_id,
+                'number' => $queue->queue_number,
+                'clinic' => $queue->polyclinic->polyclinic_name,
+                'doctor' => $queue->doctor->doctor_name,
+                'date' => HospitalTime::dateLabel($queue->service_date),
+                'time' => $queue->doctor->scheduleLabel(),
+                'status' => $queue->queue_status->value,
+                // A booking left unconfirmed on an earlier date was never checked in.
+                'statusLabel' => $queue->queue_status === QueueStatus::Booked && $queue->service_date < HospitalTime::today()
+                    ? 'Tidak check-in'
+                    : $queue->queue_status->label(),
+                'checkInAt' => $queue->checkin_at
+                    ? HospitalTime::local($queue->checkin_at)->locale('id')->translatedFormat('j M Y · H.i') : null,
+                'cancelReason' => $queue->queue_status === QueueStatus::Cancelled ? $queue->cancel_reason : null,
+            ]),
+        ]);
+    }
+
     /** Listing estimate: people in line times the default consultation length. */
     private function estimate(int $inLine, int $delay = 0): int
     {

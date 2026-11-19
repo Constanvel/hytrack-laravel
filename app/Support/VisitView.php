@@ -31,7 +31,10 @@ final class VisitView
             'time' => $queue->doctor->scheduleLabel(),
             'isToday' => $queue->service_date === HospitalTime::today(),
             'checkInCode' => $queue->checkInCode(),
-            'checkInQr' => CheckInTicket::payload($queue),
+            // No QR for a cancelled booking: it can no longer be used at the desk.
+            'checkInQr' => $queue->queue_status === QueueStatus::Cancelled ? '' : CheckInTicket::payload($queue),
+            'checkedInAt' => HospitalTime::clock($queue->checkin_at),
+            'cancelReason' => $queue->queue_status === QueueStatus::Cancelled ? $queue->cancel_reason : null,
             'checkInBy' => HospitalTime::clock($queue->checkin_deadline),
             'leaveBy' => HospitalTime::clock($queue->recommended_departure_time),
             'leadMinutes' => config('hytrack.check_in_lead_minutes'),

@@ -105,8 +105,13 @@ class ApiTest extends TestCase
         $this->as($token)->postJson('/api/petugas/scan', ['code' => $payload])->assertOk()
             ->assertJsonPath('ticket.ticket', $queue->queue_number);
         $this->as($token)->postJson('/api/petugas/check-in', ['code' => $payload])->assertOk();
-        $this->as($token)->postJson('/api/petugas/scan', ['code' => $payload])->assertUnprocessable()
+        // A second scan shows the ticket as already checked in; a second check-in is refused.
+        $this->as($token)->postJson('/api/petugas/scan', ['code' => $payload])->assertOk()
+            ->assertJsonPath('ticket.state', 'checked_in')
+            ->assertJsonPath('ticket.checkedInBy', $staff->full_name);
+        $this->as($token)->postJson('/api/petugas/check-in', ['code' => $payload])->assertUnprocessable()
             ->assertJsonPath('message', fn (string $message) => str_contains($message, 'sudah check-in'));
+        $this->assertSame('qr', $queue->refresh()->checkin_method);
 
         $patientToken = $this->token($queue->patient->user->username);
         $this->as($patientToken)->postJson('/api/petugas/scan', ['code' => $payload])->assertForbidden();

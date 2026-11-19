@@ -22,10 +22,18 @@ class VisitController extends Controller
     {
         $data = $request->validate([
             'doctor_id' => ['required', 'integer', Rule::exists('doctors', 'doctor_id')],
+            'polyclinic_id' => ['nullable', 'integer'],
             'date' => ['required', 'date_format:Y-m-d'],
         ]);
 
-        $this->queues->book($request->user()->patient, Doctor::findOrFail($data['doctor_id']), $data['date']);
+        // The patient always comes from the session, never from the request.
+        $queue = $this->queues->book(
+            $request->user()->patient,
+            Doctor::findOrFail($data['doctor_id']),
+            $data['date'],
+            polyclinicId: isset($data['polyclinic_id']) ? (int) $data['polyclinic_id'] : null,
+        );
+        Inertia::flash('status', "Antrean {$queue->queue_number} berhasil diambil.");
 
         return redirect('/kunjungan');
     }
@@ -65,7 +73,7 @@ class VisitController extends Controller
 
     private function activeVisit(Request $request): Queue
     {
-        return $request->user()->patient->queues()->active()->latest('queue_id')->first()
+        return $request->user()->patient->queues()->ongoing()->latest('queue_id')->first()
             ?? throw new QueueRuleException('Tidak ada kunjungan aktif.');
     }
 

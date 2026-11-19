@@ -34,6 +34,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/poliklinik', [PatientController::class, 'clinics']);
         Route::get('/dokter', [PatientController::class, 'doctors']);
         Route::get('/notifikasi', [PatientController::class, 'notifications']);
+        Route::get('/riwayat', [PatientController::class, 'history']);
 
         // These screens render from the shared "visit" prop.
         Route::inertia('/kunjungan', 'Visit');
@@ -71,7 +72,13 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [StaffController::class, 'index']);
         Route::post('/scan', [StaffController::class, 'scan'])->middleware('throttle:60,1');
         Route::post('/check-in', [StaffController::class, 'checkIn']);
+        // Bookings: create for a walk-in patient (with JSON lookups), cancel with a reason.
+        Route::get('/pasien', [StaffController::class, 'findPatient'])->middleware('throttle:60,1');
+        Route::get('/jadwal', [StaffController::class, 'schedule']);
+        Route::post('/booking', [StaffController::class, 'book']);
+        Route::post('/antrean/{queue}/batal', [StaffController::class, 'cancel']);
         Route::post('/dokter/{doctor}/panggil', [StaffController::class, 'callNext']);
+        Route::post('/antrean/{queue}/panggil', [StaffController::class, 'call']);
         Route::post('/antrean/{queue}/panggil-ulang', [StaffController::class, 'recall']);
         Route::post('/antrean/{queue}/tidak-hadir', [StaffController::class, 'noShow']);
         Route::post('/antrean/{queue}/selesai-periksa', [StaffController::class, 'examined']);

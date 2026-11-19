@@ -1,5 +1,6 @@
 import { router } from '@inertiajs/react';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { postJson } from '@/lib/live';
 import type { ScannedTicket } from '@/types';
 
 type Phase =
@@ -25,7 +26,6 @@ function cameraProblem(error: unknown) {
         ? 'Kamera sedang dipakai aplikasi lain. Tutup aplikasi itu lalu coba lagi.'
         : 'Kamera tidak dapat dibuka. Coba lagi atau ketik nomor check-in di bawah.';
 }
-const visit = { preserveScroll: true, preserveState: true } as const;
 
 /**
  * Scan QR kedatangan (Figma 27:360). The camera only reads the code; Laravel decides whether
@@ -58,29 +58,15 @@ export function QrScanner({ desk }: { desk: string }) {
 
   /** Step 1: Laravel identifies the ticket without changing anything. */
   const verify = useCallback(
-    (value: string) => {
+    async (value: string) => {
       video.current?.pause();
       setCode(value);
       setTicket(null);
       setPhase('verifying');
-      router.post(
-        '/petugas/scan',
-        { code: value },
-        {
-          ...visit,
-          onSuccess: (page) => {
-            if (page.flash.scan) {
-              setTicket(page.flash.scan);
-              setPhase('found');
-            } else fail(page.flash.error ?? 'Tiket tidak dapat diperiksa.');
-          },
-          onError: (errors) => fail(errors.code ?? 'Tiket tidak dapat diperiksa.'),
-          onNetworkError: () => {
-            fail('Koneksi ke server terputus. Coba pindai lagi.');
-            return false;
-          },
-        },
-      );
+      const result = await postJson<{ ticket: ScannedTicket }>('/petugas/scan', { code: value });
+      if (!result.ok) return fail(result.message);
+      setTicket(result.data.ticket);
+      setPhase('found');
     },
     [fail],
   );
@@ -162,25 +148,14 @@ export function QrScanner({ desk }: { desk: string }) {
     } else setPhase('scanning');
   }
   /** Step 2: record the arrival. */
-  function confirm() {
+  async function confirm() {
     setPhase('confirming');
-    router.post(
-      '/petugas/check-in',
-      { code },
-      {
-        ...visit,
-        onSuccess: (page) => {
-          if (page.flash.error) return fail(page.flash.error);
-          setDone(page.flash.status ?? 'Check-in tercatat.');
-          setPhase('done');
-        },
-        onError: (errors) => fail(errors.code ?? 'Check-in gagal dicatat.'),
-        onNetworkError: () => {
-          fail('Koneksi ke server terputus. Check-in belum tercatat.');
-          return false;
-        },
-      },
-    );
+    const result = await postJson<{ message: string }>('/petugas/check-in', { code });
+    if (!result.ok) return fail(result.message);
+    setDone(result.data.message);
+    setPhase('done');
+    // Refresh the dashboard lists and counters with the new arrival.
+    router.reload();
   }
   function search(event: FormEvent) {
     event.preventDefault();
@@ -193,7 +168,7 @@ export function QrScanner({ desk }: { desk: string }) {
       <div className="scan-title">
         <div>
           <h1>Scan QR kedatangan</h1>
-          <p>Pindai tiket pasien, cocokkan data, lalu konfirmasi check-in.</p>
+          <p>Pindai tiket pasien, cocokkan identitasnya, lalu konfirmasi hadir.</p>
         </div>
         <span className="scan-mode">{desk.toUpperCase().replace('LANTAI', 'LT.')}</span>
       </div>
@@ -327,6 +302,27 @@ export function QrScanner({ desk }: { desk: string }) {
                     Pindai pasien berikutnya
                   </button>
                 </>
+              ) : ticket.state === 'checked_in' ? (
+                <>
+                  <p className="scan-arrival done" role="alert">
+                    Sudah check-in pukul {ticket.checkedInAt}
+                    {ticket.checkedInBy ? ` · dikonfirmasi ${ticket.checkedInBy}` : ''}
+                  </p>
+                  <p className="scan-note">Kehadiran sudah tercatat. Tidak ada yang diubah.</p>
+                  <button className="scan-confirm" onClick={rescan}>
+                    Pindai pasien berikutnya
+                  </button>
+                </>
+              ) : ticket.state === 'no_show' ? (
+                <>
+                  <p className="scan-arrival" role="alert">
+                    Tidak hadir · tiket tidak dapat dipakai lagi
+                  </p>
+                  <p className="scan-note">Arahkan pasien ke petugas pendaftaran.</p>
+                  <button className="scan-confirm" onClick={rescan}>
+                    Pindai pasien berikutnya
+                  </button>
+                </>
               ) : (
                 <>
                   <p className="scan-arrival">
@@ -340,7 +336,7 @@ export function QrScanner({ desk }: { desk: string }) {
                     disabled={phase === 'confirming'}
                     onClick={confirm}
                   >
-                    {phase === 'confirming' ? 'Mencatat…' : 'Konfirmasi check-in'}
+                    {phase === 'confirming' ? 'Mencatat…' : 'Konfirmasi hadir'}
                   </button>
                   <button className="scan-link center" onClick={rescan}>
                     Batalkan pemindaian
@@ -351,7 +347,7 @@ export function QrScanner({ desk }: { desk: string }) {
           ) : (
             <p className="scan-empty">
               Data pasien tampil di sini setelah QR terbaca. Tidak ada yang dicatat sebelum Anda
-              menekan Konfirmasi check-in.
+              menekan Konfirmasi hadir.
             </p>
           )}
         </section>

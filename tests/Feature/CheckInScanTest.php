@@ -40,7 +40,13 @@ class CheckInScanTest extends TestCase
     /** POSTs a code from the scanner page and returns what the page receives. */
     private function scan(string $code): array
     {
-        $this->actingAs($this->staff->user)->from('/petugas')->post('/petugas/scan', ['code' => $code])->assertRedirect('/petugas');
+        return $this->postAndFlash('/petugas/scan', ['code' => $code]);
+    }
+
+    /** POSTs as the staff member from the dashboard and returns the flash the page receives. */
+    private function postAndFlash(string $url, array $data): array
+    {
+        $this->actingAs($this->staff->user)->from('/petugas')->post($url, $data)->assertRedirect('/petugas');
         $flash = [];
         $this->get('/petugas')->assertInertia(function (AssertableInertia $page) use (&$flash) {
             $flash = $page->toArray()['flash'];
@@ -61,14 +67,30 @@ class CheckInScanTest extends TestCase
         $this->assertSame('08.45', $flash['scan']['deadline']);
         $this->assertSame('booked', $queue->refresh()->queue_status->value); // scanning changes nothing
 
-        $this->post('/petugas/check-in', ['code' => $payload])->assertRedirect();
-        $this->assertSame('waiting', $queue->refresh()->queue_status->value);
-        $this->assertSame($this->staff->staff_id, $queue->journeys()->first()->updated_by_staff_id);
+        $this->assertSame('booked', $flash['scan']['state']);
 
-        // The same QR again is reported as used, and is not recorded twice.
-        $this->assertStringStartsWith("Tiket {$queue->queue_number} sudah check-in pukul 08.30", $this->scan($payload)['error']);
-        $this->post('/petugas/check-in', ['code' => $payload]);
+        $this->post('/petugas/check-in', ['code' => $payload])->assertRedirect();
+        $queue->refresh();
+        $this->assertSame('waiting', $queue->queue_status->value);
+        $this->assertSame($this->staff->staff_id, $queue->journeys()->first()->updated_by_staff_id);
+        // The official record sits on the ticket itself: server time, staff member, method.
+        $this->assertSame($this->staff->staff_id, $queue->checkin_by_staff_id);
+        $this->assertSame('qr', $queue->checkin_method);
+        $this->assertSame('2026-11-04 01:30:00', $queue->checkin_at->utc()->format('Y-m-d H:i:s'));
+
+        // The same QR an hour later shows "Sudah check-in" with the original time, and a
+        // second confirmation records nothing.
+        $this->travel(1)->hours();
+        $again = $this->scan($payload)['scan'];
+        $this->assertSame('checked_in', $again['state']);
+        $this->assertSame('08.30', $again['checkedInAt']);
+        $this->assertSame($this->staff->full_name, $again['checkedInBy']);
+        $this->assertStringStartsWith(
+            "Tiket {$queue->queue_number} sudah check-in pukul 08.30",
+            $this->postAndFlash('/petugas/check-in', ['code' => $payload])['error'],
+        );
         $this->assertSame(1, $queue->notifications()->where('trigger_type', 'checked_in')->count());
+        $this->assertSame('2026-11-04 01:30:00', $queue->refresh()->checkin_at->utc()->format('Y-m-d H:i:s'));
     }
 
     public function test_forged_expired_early_and_unknown_codes_are_rejected(): void

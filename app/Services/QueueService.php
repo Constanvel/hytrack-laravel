@@ -45,20 +45,33 @@ class QueueService
         return max(0, config('hytrack.daily_quota') - $taken);
     }
 
-    public function book(Patient $patient, Doctor $doctor, string $date): Queue
+    /**
+     * Issues a ticket. The same rules apply to the patient app and to staff booking a
+     * walk-in patient ($by). $polyclinicId, when given, must be the doctor's polyclinic.
+     */
+    public function book(Patient $patient, Doctor $doctor, string $date, ?Staff $by = null, ?int $polyclinicId = null): Queue
     {
-        $queue = DB::transaction(function () use ($patient, $doctor, $date) {
-            // Serialises bookings per doctor so two patients cannot get the same number.
+        $queue = DB::transaction(function () use ($patient, $doctor, $date, $by, $polyclinicId) {
+            // Lock order: patient, then doctor. The patient lock turns a double click (or two
+            // tabs) into two requests in a row, so the second one sees the first ticket.
+            Patient::whereKey($patient->patient_id)->lockForUpdate()->firstOrFail();
+            // Serialises bookings per doctor so two patients cannot get the same number or
+            // both take the last slot.
             $doctor = Doctor::whereKey($doctor->doctor_id)->lockForUpdate()->with('polyclinic')->firstOrFail();
 
+            if ($polyclinicId !== null && $doctor->polyclinic_id !== $polyclinicId) {
+                throw new QueueRuleException('Dokter tidak praktik di poliklinik yang dipilih.');
+            }
             if (! in_array($date, $this->bookingDates(), true)) {
                 throw new QueueRuleException('Tanggal kunjungan tidak tersedia.');
             }
             if ($doctor->availability_status === Doctor::OFF) {
                 throw new QueueRuleException('Dokter tidak praktik pada jadwal ini.');
             }
-            if ($patient->queues()->active()->exists()) {
-                throw new QueueRuleException('Anda sudah memiliki satu kunjungan aktif.');
+            if ($patient->queues()->ongoing()->exists()) {
+                throw new QueueRuleException($by
+                    ? 'Pasien ini sudah memiliki satu kunjungan aktif.'
+                    : 'Anda sudah memiliki satu kunjungan aktif.');
             }
             if ($this->remainingQuota($doctor, $date) < 1) {
                 throw new QueueRuleException('Kuota dokter pada tanggal ini sudah penuh.');
@@ -76,6 +89,8 @@ class QueueService
                 'service_date' => $date,
                 'queue_number' => sprintf('%s-%03d', $doctor->ticketPrefix(), $sequence),
                 'queue_status' => QueueStatus::Booked,
+                'booked_at' => now(),
+                'booked_by_staff_id' => $by?->staff_id,
                 'checkin_deadline' => $checkInBy,
                 'recommended_departure_time' => $checkInBy->subMinutes(config('hytrack.travel_minutes')),
             ]);
@@ -98,15 +113,22 @@ class QueueService
         return $queue->refresh();
     }
 
-    /** Arrival confirmed, by staff or (demo only) by the patient's own simulation. */
-    public function checkIn(Queue $queue, ?Staff $by = null): Queue
+    /**
+     * Arrival confirmed. The official record names the staff member ($by) and how the ticket
+     * was identified ($method: qr | code). The demo simulation passes no staff, so its
+     * check-in is recognisable as unofficial (checkin_by_staff_id stays null).
+     */
+    public function checkIn(Queue $queue, ?Staff $by = null, ?string $method = null): Queue
     {
-        $queue = $this->transition($queue, QueueStatus::Waiting, function (Queue $queue) use ($by) {
+        $queue = $this->transition($queue, QueueStatus::Waiting, function (Queue $queue) use ($by, $method) {
             if ($queue->service_date !== HospitalTime::today()) {
                 throw new QueueRuleException('Check-in hanya dapat dilakukan pada tanggal layanan.');
             }
 
+            // Server time, never a time sent by the browser.
             $queue->checkin_at = now();
+            $queue->checkin_by_staff_id = $by?->staff_id;
+            $queue->checkin_method = $by ? ($method ?? 'code') : 'demo';
             $this->stage($queue, JourneyStage::CheckIn, StageStatus::Done, $by);
             $this->notify($queue, 'checked_in', 'Check-in berhasil. Anda masuk antrean dokter.', 'Tunggu di dekat ruang poliklinik.');
         });
@@ -120,6 +142,8 @@ class QueueService
     public function callNext(Doctor $doctor, string $date, ?Staff $by = null): Queue
     {
         $called = DB::transaction(function () use ($doctor, $date, $by) {
+            // Two desks pressing "Panggil" at once must not call two patients.
+            Doctor::whereKey($doctor->doctor_id)->lockForUpdate()->firstOrFail();
             $line = Queue::forDoctorOn($doctor->doctor_id, $date);
 
             if ((clone $line)->where('queue_status', QueueStatus::Serving)->exists()) {
@@ -139,6 +163,35 @@ class QueueService
 
         $this->estimator->refresh($doctor->doctor_id, $date);
         $this->notifyUpNext($doctor->doctor_id, $date);
+
+        return $called;
+    }
+
+    /**
+     * Staff call one specific checked-in patient from the booking detail, e.g. a patient
+     * given priority. The doctor still serves one patient at a time.
+     */
+    public function callWaiting(Queue $queue, Staff $by): Queue
+    {
+        $called = DB::transaction(function () use ($queue, $by) {
+            Doctor::whereKey($queue->doctor_id)->lockForUpdate()->firstOrFail();
+            $queue = $queue->fresh();
+
+            if ($queue->queue_status !== QueueStatus::Waiting) {
+                throw new QueueRuleException('Hanya pasien yang sudah check-in dapat dipanggil.');
+            }
+            if ($queue->service_date !== HospitalTime::today()) {
+                throw new QueueRuleException('Pasien hanya dapat dipanggil pada tanggal layanan.');
+            }
+            if (Queue::forDoctorOn($queue->doctor_id, $queue->service_date)->where('queue_status', QueueStatus::Serving)->exists()) {
+                throw new QueueRuleException('Selesaikan pasien aktif sebelum memanggil berikutnya.');
+            }
+
+            return $this->call($queue, $by);
+        });
+
+        $this->estimator->refresh($called->doctor_id, $called->service_date);
+        $this->notifyUpNext($called->doctor_id, $called->service_date);
 
         return $called;
     }
@@ -169,17 +222,34 @@ class QueueService
         });
     }
 
-    /** A patient is only marked absent after at least one repeat call. */
+    /**
+     * "Tidak hadir" is recorded in two situations only:
+     * - not checked in (Booked) and the check-in deadline has passed;
+     * - checked in and called (Serving), but absent after at least one repeat call.
+     * Before the deadline a booked patient is simply "Belum check-in".
+     */
     public function markNoShow(Queue $queue, ?Staff $by = null): Queue
     {
         $queue = $this->transition($queue, QueueStatus::NoShow, function (Queue $queue) use ($by) {
-            if ($queue->called_count < 2) {
-                throw new QueueRuleException('Tandai tidak hadir hanya setelah panggilan ulang.');
+            if ($queue->queue_status === QueueStatus::Booked) {
+                if (! $queue->checkInClosed()) {
+                    throw new QueueRuleException('Pasien belum melewati batas check-in pukul '
+                        .HospitalTime::clock($queue->checkin_deadline).'. Statusnya masih Belum check-in.');
+                }
+                $this->stage($queue, JourneyStage::CheckIn, StageStatus::Skipped, $by);
+                $message = 'Anda tidak check-in sebelum batas waktu, sehingga ditandai tidak hadir.';
+            } else {
+                if ($queue->called_count < 2) {
+                    throw new QueueRuleException('Tandai tidak hadir hanya setelah panggilan ulang.');
+                }
+                $this->stage($queue, JourneyStage::Consultation, StageStatus::Skipped, $by);
+                $message = 'Anda tidak hadir saat dipanggil.';
             }
 
-            $this->stage($queue, JourneyStage::Consultation, StageStatus::Skipped, $by);
+            $queue->no_show_at = now();
+            $queue->no_show_by_staff_id = $by?->staff_id;
             $this->endCompanions($queue);
-            $this->notify($queue, 'no_show', 'Anda tidak hadir saat dipanggil.', 'Hubungi petugas di meja check-in.');
+            $this->notify($queue, 'no_show', $message, 'Hubungi petugas di meja check-in.');
         });
 
         $this->estimator->refresh($queue->doctor_id, $queue->service_date);
@@ -255,18 +325,49 @@ class QueueService
         });
     }
 
-    /** Patients may cancel before check-in. $force is for the demo reset only. */
-    public function cancel(Queue $queue, bool $force = false): void
+    /**
+     * Cancellation. The row is kept (never deleted) with when, by whom and why.
+     * Patients may cancel before check-in; staff ($by) may also cancel a checked-in patient
+     * who has not been called yet. $force is for the demo reset only.
+     *
+     * Quota rule: cancelled tickets no longer count against the doctor's daily quota, so the
+     * slot opens again. They keep their number, so numbering never repeats.
+     */
+    public function cancel(Queue $queue, bool $force = false, ?Staff $by = null, ?string $reason = null): void
     {
-        DB::transaction(function () use ($queue, $force) {
-            $queue = Queue::whereKey($queue->queue_id)->lockForUpdate()->firstOrFail();
+        DB::transaction(function () use ($queue, $force, $by, $reason) {
+            $queue = Queue::whereKey($queue->queue_id)->lockForUpdate()->with('journeys')->firstOrFail();
+            $status = $queue->queue_status;
 
-            if (! $queue->queue_status->canBecome(QueueStatus::Cancelled) && ! ($force && $queue->queue_status->isActive())) {
+            if ($by) {
+                if (! in_array($status, [QueueStatus::Booked, QueueStatus::Waiting], true)) {
+                    throw new QueueRuleException(match ($status) {
+                        QueueStatus::Cancelled => 'Booking ini sudah dibatalkan.',
+                        QueueStatus::Serving, QueueStatus::Laboratory, QueueStatus::Pharmacy => 'Pasien sudah dilayani; booking tidak dapat dibatalkan.',
+                        default => 'Booking yang sudah selesai tidak dapat dibatalkan.',
+                    });
+                }
+                if ($queue->service_date < HospitalTime::today()) {
+                    throw new QueueRuleException('Booking tanggal yang sudah lewat tidak dapat dibatalkan.');
+                }
+            } elseif (! $status->canBecome(QueueStatus::Cancelled) && ! ($force && $status->isActive())) {
                 throw new QueueRuleException('Kunjungan hanya dapat dibatalkan sebelum check-in.');
             }
 
-            $queue->update(['queue_status' => QueueStatus::Cancelled]);
+            $queue->update([
+                'queue_status' => QueueStatus::Cancelled,
+                'cancelled_at' => now(),
+                'cancelled_by_staff_id' => $by?->staff_id,
+                'cancel_reason' => $reason !== null ? trim($reason) : ($by ? null : 'Dibatalkan oleh pasien'),
+            ]);
+            // Stages that never happened are closed as skipped; finished ones keep their record.
+            $queue->journeys()->whereIn('stage_status', [StageStatus::Pending, StageStatus::Active])
+                ->update(['stage_status' => StageStatus::Skipped, 'updated_by_staff_id' => $by?->staff_id]);
             $this->endCompanions($queue);
+
+            if ($by) {
+                $this->notify($queue, 'cancelled', "Booking {$queue->queue_number} dibatalkan petugas.", $queue->cancel_reason ? "Alasan: {$queue->cancel_reason}" : null);
+            }
         });
 
         $this->estimator->refresh($queue->doctor_id, $queue->service_date);

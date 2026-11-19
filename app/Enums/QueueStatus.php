@@ -28,11 +28,27 @@ enum QueueStatus: string
         return in_array($this, self::active(), true);
     }
 
+    /** Status shown to staff and patients. "Belum check-in" and "Tidak hadir" are different things. */
+    public function label(): string
+    {
+        return match ($this) {
+            self::Booked => 'Belum check-in',
+            self::Waiting => 'Sudah check-in',
+            self::Serving => 'Dipanggil',
+            self::Laboratory => 'Laboratorium',
+            self::Pharmacy => 'Farmasi',
+            self::Completed => 'Selesai',
+            self::NoShow => 'Tidak hadir',
+            self::Cancelled => 'Dibatalkan',
+        };
+    }
+
     /** A visit only moves forward one stage at a time; stages cannot be skipped. */
     public function canBecome(self $next): bool
     {
         return in_array($next, match ($this) {
-            self::Booked => [self::Waiting, self::Cancelled],
+            // Booked → NoShow only once the check-in deadline has passed (QueueService::markNoShow).
+            self::Booked => [self::Waiting, self::Cancelled, self::NoShow],
             self::Waiting => [self::Serving],
             self::Serving => [self::Laboratory, self::NoShow],
             self::Laboratory => [self::Pharmacy],

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\JourneyStage;
 use App\Enums\QueueStatus;
+use App\Support\HospitalTime;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -29,6 +30,9 @@ class Queue extends Model
             'recommended_departure_time' => 'datetime',
             'checkin_deadline' => 'datetime',
             'checkin_at' => 'datetime',
+            'booked_at' => 'datetime',
+            'no_show_at' => 'datetime',
+            'cancelled_at' => 'datetime',
             'last_synced_at' => 'datetime',
             'called_count' => 'integer',
             'estimated_wait_minutes' => 'integer',
@@ -70,9 +74,47 @@ class Queue extends Model
         return $this->hasMany(Notification::class, 'queue_id', 'queue_id');
     }
 
+    public function bookedBy(): BelongsTo
+    {
+        return $this->belongsTo(Staff::class, 'booked_by_staff_id', 'staff_id');
+    }
+
+    public function checkedInBy(): BelongsTo
+    {
+        return $this->belongsTo(Staff::class, 'checkin_by_staff_id', 'staff_id');
+    }
+
+    public function noShowBy(): BelongsTo
+    {
+        return $this->belongsTo(Staff::class, 'no_show_by_staff_id', 'staff_id');
+    }
+
+    public function cancelledBy(): BelongsTo
+    {
+        return $this->belongsTo(Staff::class, 'cancelled_by_staff_id', 'staff_id');
+    }
+
     public function scopeActive(Builder $query): void
     {
         $query->whereIn('queue_status', QueueStatus::active());
+    }
+
+    /**
+     * Active and not in the past. A ticket left "booked" on an earlier date is history,
+     * not a visit that still blocks the patient from booking again.
+     */
+    public function scopeOngoing(Builder $query): void
+    {
+        $query->whereIn('queue_status', QueueStatus::active())
+            ->where('service_date', '>=', HospitalTime::today());
+    }
+
+    /** The check-in deadline passed without an arrival, so staff may record "Tidak hadir". */
+    public function checkInClosed(): bool
+    {
+        return $this->queue_status === QueueStatus::Booked
+            && ($this->service_date < HospitalTime::today()
+                || ($this->checkin_deadline !== null && now()->greaterThan($this->checkin_deadline)));
     }
 
     public function scopeForDoctorOn(Builder $query, int $doctorId, string $date): void

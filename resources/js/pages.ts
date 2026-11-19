@@ -13,6 +13,7 @@ import {
   CompanionInvite,
   CompanionList,
 } from '@/features/patient/companion';
+import { History } from '@/features/patient/history';
 import { Account, Home } from '@/features/patient/home';
 import { PatientData, PatientForm } from '@/features/patient/patient-data';
 import { CheckIn, Visit } from '@/features/patient/visit';
@@ -33,6 +34,7 @@ export const pages: Record<string, ComponentType<any>> = {
   DoctorSchedule,
   Visit,
   CheckIn,
+  History,
   CompanionAccess,
   CompanionInvite,
   CompanionList,

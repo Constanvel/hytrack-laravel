@@ -6,6 +6,8 @@ const port = 8010;
 // One shared database, reset before every test, so tests run one at a time.
 export default defineConfig({
   testDir: './tests/e2e',
+  // Runs against MySQL with its own config: playwright.operational.config.ts.
+  testIgnore: 'operational.spec.ts',
   fullyParallel: false,
   workers: 1,
   retries: 0,
@@ -16,7 +18,10 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  // PW_CHANNEL=chrome or msedge uses an installed browser instead of a downloaded one.
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'], channel: process.env.PW_CHANNEL } },
+  ],
   webServer: {
     command: 'node tests/e2e/server.mjs',
     url: `http://127.0.0.1:${port}/masuk`,
