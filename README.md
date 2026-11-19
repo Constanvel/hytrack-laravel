@@ -4,7 +4,9 @@ Aplikasi antrean rawat jalan rumah sakit: pasien mengambil antrean, check-in, me
 
 Versi ini adalah migrasi dari demo frontend Next.js (`Projek-KIK`) ke **Laravel 13 + Inertia.js + React 19**. Komponen, CSS, dan asset lama dipakai ulang; data, aturan antrean, autentikasi, dan otorisasi kini berada di server.
 
-> **Status: demo dengan backend nyata.** Data disimpan di database dan aturan antrean dijalankan server, tetapi aplikasi **tidak terhubung ke sistem rumah sakit (SIMRS)**, tidak ada push realtime, QR masih gambar contoh, dan Hya bukan AI. Lihat [Status fitur](#status-fitur).
+> **Status: demo dengan backend nyata.** Data disimpan di database dan aturan antrean dijalankan server, tetapi aplikasi **tidak terhubung ke sistem rumah sakit (SIMRS)** dan tidak ada push realtime (layar diperbarui dengan polling). QR check-in ditandatangani server dan dipindai petugas dengan kamera. Lihat [Status fitur](#status-fitur).
+>
+> **Mode operasional (pasien + petugas di dua browser, MySQL Laragon):** lihat [docs/panduan-demo-operasional.md](docs/panduan-demo-operasional.md).
 
 ## Stack
 
