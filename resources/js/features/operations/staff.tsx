@@ -1,6 +1,7 @@
 import { usePage } from '@inertiajs/react';
 import { useState, type FormEvent } from 'react';
 import { Bookings, BOOKINGS, visitDashboard, type BookingProps } from './bookings';
+import { ClinicAdmin, CLINICS, type ClinicRow } from './clinic-admin';
 import { DashboardShell, SCAN } from './dashboard-shell';
 import { QrScanner } from './scanner';
 import { Notice } from '@/components/ui';
@@ -30,6 +31,7 @@ interface StaffProps {
   }[];
   history: string[];
   checkInDesk: string;
+  clinicAdmin: ClinicRow[];
 }
 export function Staff({
   clinics,
@@ -42,6 +44,7 @@ export function Staff({
   pharmacy,
   history,
   checkInDesk,
+  clinicAdmin,
   ...bookingProps
 }: StaffProps & Omit<BookingProps, 'clinics'>) {
   const { flash, props } = usePage();
@@ -70,7 +73,9 @@ export function Staff({
             <p className="muted">
               {section === BOOKINGS
                 ? 'Buat, cari, perbarui, dan batalkan booking pasien. Semua perubahan tersimpan di server.'
-                : 'Kelola panggilan dan bantu pasien melanjutkan pelayanan.'}
+                : section === CLINICS
+                  ? 'Tambah, ubah, dan hapus data poliklinik yang dipilih pasien saat booking.'
+                  : 'Kelola panggilan dan bantu pasien melanjutkan pelayanan.'}
             </p>
           </div>
           <div className="title-actions">
@@ -85,6 +90,8 @@ export function Staff({
         <QrScanner desk={checkInDesk} />
       ) : section === BOOKINGS ? (
         <Bookings clinics={clinics} {...bookingProps} />
+      ) : section === CLINICS ? (
+        <ClinicAdmin clinics={clinicAdmin} />
       ) : section === 'Antrean poli' ? (
         <>
           <div className="dashboard-filters">

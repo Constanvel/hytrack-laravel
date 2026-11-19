@@ -126,7 +126,7 @@ export function useAction() {
   // Validation errors and lost connections. Rule violations arrive as flash.error instead.
   const [error, setError] = useState('');
   const run = (
-    method: 'post' | 'delete',
+    method: 'post' | 'put' | 'delete',
     url: string,
     data: Record<string, string | number>,
     onSuccess?: () => void,

@@ -792,3 +792,14 @@ td .text-button {
     align-items: stretch;
   }
 }
+
+/* Data poliklinik: edit and delete side by side in the table. */
+.row-actions {
+  display: flex;
+  gap: 12px;
+  white-space: nowrap;
+}
+.row-actions .text-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

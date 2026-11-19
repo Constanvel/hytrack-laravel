@@ -95,6 +95,15 @@ class StaffController extends Controller
                 ]),
             'history' => $this->history($today),
             'checkInDesk' => config('hytrack.rooms.check_in'),
+            // Master data (CRUD "Data poliklinik"), with how much still depends on each one.
+            'clinicAdmin' => Polyclinic::withCount(['doctors', 'queues'])->orderBy('polyclinic_name')->get()
+                ->map(fn (Polyclinic $item) => [
+                    'id' => $item->polyclinic_id,
+                    'name' => $item->polyclinic_name,
+                    'room' => $item->room_location,
+                    'doctors' => $item->doctors_count,
+                    'queues' => $item->queues_count,
+                ]),
             ...$this->bookings($request, $today),
         ]);
     }

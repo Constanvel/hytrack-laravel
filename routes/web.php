@@ -6,6 +6,7 @@ use App\Http\Controllers\HyaController;
 use App\Http\Controllers\ManagementController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PatientDataController;
+use App\Http\Controllers\PolyclinicController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\VisitController;
 use Illuminate\Http\Request;
@@ -84,6 +85,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/antrean/{queue}/selesai-periksa', [StaffController::class, 'examined']);
         Route::post('/antrean/{queue}/selesai-laboratorium', [StaffController::class, 'laboratoryDone']);
         Route::post('/farmasi/{order}/lanjut', [StaffController::class, 'advancePharmacy']);
+        // Master data: polyclinics (create, update, delete; the list is part of the dashboard).
+        Route::post('/poliklinik', [PolyclinicController::class, 'store']);
+        Route::put('/poliklinik/{polyclinic}', [PolyclinicController::class, 'update'])->whereNumber('polyclinic');
+        Route::delete('/poliklinik/{polyclinic}', [PolyclinicController::class, 'destroy'])->whereNumber('polyclinic');
     });
 
     Route::middleware('role:manager')->prefix('manajemen')->group(function () {

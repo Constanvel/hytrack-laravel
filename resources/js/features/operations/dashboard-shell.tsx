@@ -2,6 +2,7 @@ import { Link, router, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { Avatar, Notice } from '@/components/ui';
 import { BOOKINGS } from './bookings';
+import { CLINICS } from './clinic-admin';
 import { syncLabel, useLive } from '@/lib/live';
 
 export const SCAN = 'Scan QR kedatangan';
@@ -22,7 +23,7 @@ export function DashboardShell({
   const live = useLive();
   const items = management
     ? ['Ringkasan layanan', 'Waktu tunggu', 'Kinerja poliklinik', 'Laporan']
-    : [SCAN, BOOKINGS, 'Antrean poli', 'Alur pelayanan', 'Farmasi', 'Riwayat aktivitas'];
+    : [SCAN, BOOKINGS, 'Antrean poli', 'Alur pelayanan', 'Farmasi', 'Riwayat aktivitas', CLINICS];
   return (
     <div className="dashboard">
       <aside className="dashboard-sidebar">
