@@ -31,7 +31,13 @@ class GeminiChat
     public function enabled(): bool
     {
         return trim((string) config('services.gemini.key')) !== ''
-            && preg_match('/^gemini-[a-z0-9.-]+$/D', (string) config('services.gemini.model')) === 1;
+            && preg_match('/^gemini-[a-z0-9.-]+$/D', $this->model()) === 1;
+    }
+
+    /** Trimmed: a value pasted or piped into the host's settings often ends with a newline. */
+    private function model(): string
+    {
+        return trim((string) config('services.gemini.model'));
     }
 
     /**
@@ -60,7 +66,7 @@ class GeminiChat
                 ->withHeader('x-goog-api-key', trim((string) config('services.gemini.key')))
                 ->connectTimeout(3)
                 ->timeout(12)
-                ->post('https://generativelanguage.googleapis.com/v1beta/models/'.config('services.gemini.model').':generateContent', [
+                ->post('https://generativelanguage.googleapis.com/v1beta/models/'.$this->model().':generateContent', [
                     'systemInstruction' => ['parts' => [[
                         'text' => sprintf(self::RULES, config('hytrack.hospital'), '- '.implode("\n- ", $facts)),
                     ]]],
