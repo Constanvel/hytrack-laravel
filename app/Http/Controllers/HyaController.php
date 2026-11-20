@@ -15,7 +15,7 @@ class HyaController extends Controller
             'question' => ['required', 'string', 'max:500'],
             'history' => ['sometimes', 'array', 'max:6'],
             'history.*.role' => ['required', 'string', 'in:user,assistant'],
-            'history.*.text' => ['required', 'string', 'max:1200'],
+            'history.*.text' => ['required', 'string', 'max:2000'],
         ]);
         $history = array_map(fn (array $message) => ['role' => $message['role'], 'text' => $message['text']],
             array_values($data['history'] ?? []));

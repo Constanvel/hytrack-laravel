@@ -913,6 +913,10 @@ hr {
 .message.assistant {
   align-self: flex-start;
 }
+/* Hya's numbered steps arrive one per line. */
+.message p {
+  white-space: pre-line;
+}
 .message strong {
   display: block;
   margin-bottom: 6px;

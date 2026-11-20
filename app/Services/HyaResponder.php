@@ -50,10 +50,16 @@ class HyaResponder
         $facts = [
             'Sekarang: '.HospitalTime::dateLabel(HospitalTime::today()).', pukul '.HospitalTime::now()->format('H.i').' WIB.',
             "Lokasi layanan: meja check-in di {$rooms['check_in']}; laboratorium di {$rooms['laboratory']}; farmasi di {$rooms['pharmacy']}.",
-            'Cara ambil antrean: buka Beranda, tekan Ambil antrean, pilih poliklinik dan jadwal dokter, lalu konfirmasi. Satu akun hanya boleh punya 1 kunjungan aktif.',
-            'Cara check-in: buka halaman Kunjungan, tekan "Tampilkan QR check-in", lalu tunjukkan QR atau nomor check-in kepada petugas di meja check-in. Batas check-in '.config('hytrack.check_in_lead_minutes').' menit sebelum jadwal dokter dimulai.',
-            'Jika terlambat atau ada kendala, pasien meminta bantuan petugas di meja check-in.',
-            'Alur kunjungan: check-in, menunggu dipanggil, pemeriksaan dokter di poliklinik, laboratorium, lalu pengambilan obat di farmasi.',
+            'Langkah ambil antrean: (1) buka Beranda; (2) pilih poliklinik tujuan; (3) pilih tanggal, dokter, dan jadwal praktik; '
+                .'(4) tekan Ambil antrean, nomor antrean baru terbit setelah tombol ini ditekan; (5) tiket muncul di halaman Kunjungan. '
+                .'Satu akun hanya boleh punya 1 kunjungan aktif. Jika kuota jadwal penuh, pilih jadwal atau tanggal lain.',
+            'Langkah check-in: (1) datang ke rumah sakit sebelum batas check-in, yaitu '.config('hytrack.check_in_lead_minutes').' menit sebelum jadwal dokter dimulai; '
+                ."(2) buka halaman Kunjungan dan tekan \"Tampilkan QR check-in\"; (3) tunjukkan QR atau nomor check-in kepada petugas di meja check-in ({$rooms['check_in']}); "
+                .'(4) petugas memindai QR dan mencocokkan identitas; (5) status berubah menjadi "Sudah check-in", lalu pasien menunggu dipanggil.',
+            'Jika terlambat atau ada kendala: datangi meja check-in dan minta bantuan petugas. Perubahan jadwal dan kebijakan keterlambatan diputuskan oleh rumah sakit, bukan oleh Hya.',
+            'Alur kunjungan berurutan: (1) check-in di meja check-in; (2) menunggu nomor dipanggil, estimasi waktu tunggu bisa berubah; '
+                ."(3) pemeriksaan dokter di ruang poliklinik; (4) laboratorium di {$rooms['laboratory']}, lapor dengan menunjukkan tiket; "
+                ."(5) farmasi di {$rooms['pharmacy']}, ambil obat setelah nomor pengambilan dipanggil. Aplikasi memperbarui status di setiap tahap.",
             'Menu lain di aplikasi: Petunjuk ruangan, Bagikan ke pendamping (keluarga dapat memantau kunjungan dengan akun HyTrack sendiri), Riwayat kunjungan, Notifikasi.',
         ];
 
