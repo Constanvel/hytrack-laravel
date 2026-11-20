@@ -196,4 +196,34 @@ class CompanionInvitationTest extends TestCase
         $this->actingAs($this->patient)->get('/pendamping')->assertInertia(fn (AssertableInertia $page) => $page
             ->where('invitations.1.status', 'expired'));
     }
+
+    public function test_signing_in_as_companion_opens_the_followed_visit(): void
+    {
+        $companion = $this->companion();
+        // Nothing followed yet: the companion list explains how to start.
+        $this->post('/masuk', ['username' => $companion->username, 'password' => 'password', 'as' => 'companion'])
+            ->assertRedirect('/pendampingan');
+        $this->post('/keluar');
+
+        $this->book();
+        $token = $this->invite();
+        $this->actingAs($companion)->post('/pantauan/'.$token);
+        $this->post('/keluar');
+
+        // One followed visit opens directly; "Pasien" still lands on the patient home.
+        $share = CompanionShare::sole();
+        $this->post('/masuk', ['username' => $companion->username, 'password' => 'password', 'as' => 'companion'])
+            ->assertRedirect('/pendampingan/'.$share->share_id);
+        $this->post('/keluar');
+        $this->post('/masuk', ['username' => $companion->username, 'password' => 'password', 'as' => 'patient'])
+            ->assertRedirect('/');
+        $this->post('/keluar');
+        $this->post('/masuk', ['username' => $companion->username, 'password' => 'password', 'as' => 'staff'])
+            ->assertSessionHasErrors('as');
+
+        // Staff ignore the choice and keep their own dashboard.
+        $staff = Staff::factory()->create()->user;
+        $this->post('/masuk', ['username' => $staff->username, 'password' => 'password', 'as' => 'companion'])
+            ->assertRedirect('/petugas');
+    }
 }

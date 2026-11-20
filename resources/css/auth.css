@@ -326,3 +326,141 @@
 .auth-prototype-roles button:hover {
   background: #e1efe7;
 }
+
+/* Sign-in (Figma 00a · Login, node 31:53): mint atmosphere on top, role choice above the form.
+   Identity → form 24px, form → help 12px; the last line sits 18px above the frame's end, over
+   the waves, as in the design. */
+.auth-login {
+  background:
+    url('/assets/atmos-mint.svg') left top / 100% 220px no-repeat,
+    url('/assets/wave-mint.svg') left 0 bottom -24px / 100% 170px no-repeat,
+    #f6f8f4;
+}
+.auth-login .auth-main {
+  gap: 24px;
+  padding-bottom: 18px;
+}
+.auth-login .auth-help {
+  margin-top: -12px;
+}
+.auth-login .auth-input {
+  border-color: #dce8e1;
+  border-radius: 13px;
+}
+.auth-login .auth-submit {
+  border-radius: 14px;
+  background: linear-gradient(169.2deg, #086b62 0%, #168875 71.43%);
+  box-shadow: 0 5px 12px rgba(23, 106, 89, 0.16);
+}
+.auth-login .auth-submit:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+.auth-login .auth-benefit {
+  padding: 15px;
+  border: 1px solid #cfe4d8;
+  border-radius: 18px;
+}
+.auth-roles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.auth-roles legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.auth-roles > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+/* 176×112 cards; content sits 12px from the outer edge whatever the border width. */
+.auth-role {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 112px;
+  padding: 9px 11px 7px;
+  background: white;
+  border: 1px solid #dce8e1;
+  border-radius: 12px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background-color 0.15s;
+}
+.auth-role:hover {
+  border-color: #b7c7c0;
+}
+.auth-role:has(input:checked) {
+  padding: 8.5px 10.5px 6.5px;
+  background: #e1efe7;
+  border: 1.5px solid #086f65;
+}
+.auth-role:has(input:focus-visible) {
+  outline: 3px solid #bc6748;
+  outline-offset: 3px;
+}
+.auth-role img {
+  width: 28px;
+  height: 28px;
+}
+.auth-role strong {
+  margin-top: 6px;
+  color: #173d3b;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 21px;
+}
+.auth-role:has(input:checked) strong {
+  color: #086f65;
+}
+/* Figma #5c706c is 4.43:1 on the selected mint; one step darker reaches WCAG AA 4.5:1. */
+.auth-role:has(input:checked) small {
+  color: #5b6f6b;
+}
+.auth-role small {
+  margin-top: 3px;
+  color: #5c706c;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: pre-line;
+}
+/* Radio mark at 16px from the top and 14px from the right edge of the card. */
+.auth-radio {
+  position: absolute;
+  top: 15px;
+  right: 13px;
+  width: 16px;
+  height: 16px;
+  border: 1px solid #5c706c;
+  border-radius: 50%;
+  background: white;
+}
+.auth-role:has(input:checked) .auth-radio {
+  top: 14.5px;
+  right: 12.5px;
+  border-color: #086f65;
+  background: #086f65;
+  box-shadow: inset 0 0 0 4px #086f65;
+}
+.auth-role:has(input:checked) .auth-radio::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: white;
+}
+@media (max-width: 359px) {
+  .auth-roles > div {
+    gap: 8px;
+  }
+}
