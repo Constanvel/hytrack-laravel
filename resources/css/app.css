@@ -148,24 +148,13 @@ summary:focus-visible {
   margin: auto;
   min-height: 100dvh;
   /*
-    With the page's own 28px bottom padding this clears the bottom nav (80) and the Hya bubble
-    (16 above the nav, 65 tall) with ~10px to spare, without an extra empty band at the end.
+    Clears only the bottom nav or the pinned action bar (both 80px): the last section ends at the
+    page's own 28px padding above it, with no empty band. The Hya bubble floats over the page.
   */
-  padding-bottom: calc(144px + env(safe-area-inset-bottom));
+  padding-bottom: calc(80px + env(safe-area-inset-bottom));
   position: relative;
   /* Lets the decorative accents (z-index: -1) sit behind content but above the shell background. */
   isolation: isolate;
-}
-/*
-  The Hya bubble is fixed to the viewport's right edge. Once the viewport is wider than the
-  column plus the bubble and its margin (65 + 16 on each side = 162px), the bubble floats beside
-  the column, so the page only has to clear the bottom nav: the last section then ends 28px
-  (the page's own padding) above it instead of leaving an empty ~100px band.
-*/
-@media (min-width: 702px) and (max-width: 767px), (min-width: 882px) {
-  .app-shell.with-nav {
-    padding-bottom: calc(80px + env(safe-area-inset-bottom));
-  }
 }
 /*
   Background accents from the design. They belong to the page, not the viewport: placed at the
@@ -728,6 +717,14 @@ hr {
   bottom: calc(80px + 16px + env(safe-area-inset-bottom));
   z-index: 11;
   border-radius: 50%;
+  transition:
+    opacity 0.18s ease-out,
+    visibility 0.18s;
+}
+/* At the page end the bubble gives way to the link or button under it (see useTuckedFab). */
+.hya-fab.is-tucked {
+  opacity: 0;
+  visibility: hidden;
 }
 .hya-fab .avatar-large {
   margin: 0;

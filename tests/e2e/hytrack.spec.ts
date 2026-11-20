@@ -407,23 +407,49 @@ for (const width of [375, 768, 1440]) {
     await page.getByRole('link', { name: 'Tampilkan QR check-in' }).click();
     await expect(page.locator('.qr-card')).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    const covered = await page.evaluate(() => {
-      const fab = document.querySelector('.hya-fab')!.getBoundingClientRect();
-      return [...document.querySelectorAll('main button, main a, main input')]
-        .filter((element) => {
-          const box = element.getBoundingClientRect();
-          return (
-            box.right > fab.left &&
-            box.left < fab.right &&
-            box.bottom > fab.top &&
-            box.top < fab.bottom
-          );
-        })
-        .map((element) => element.textContent);
-    });
-    expect(covered).toEqual([]);
+    // No room is reserved for the bubble: at the page end it tucks away over a control instead.
+    const covered = () =>
+      page.evaluate(() => {
+        const bubble = document.querySelector('.hya-fab')!;
+        if (bubble.classList.contains('is-tucked')) return [];
+        const fab = bubble.getBoundingClientRect();
+        return [...document.querySelectorAll('main button, main a, main input')]
+          .filter((element) => {
+            const box = element.getBoundingClientRect();
+            return (
+              box.right > fab.left &&
+              box.left < fab.right &&
+              box.bottom > fab.top &&
+              box.top < fab.bottom
+            );
+          })
+          .map((element) => element.textContent);
+      });
+    await expect.poll(covered).toEqual([]);
   });
 }
+
+test('the last section ends right above the bottom nav, with no band for the Hya bubble', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  await login(page);
+  const gap = () =>
+    page.evaluate(() => {
+      const ends = [...document.querySelectorAll('#main > *')].map(
+        (child) => child.getBoundingClientRect().bottom,
+      );
+      return document.querySelector('.bottom-nav')!.getBoundingClientRect().top - Math.max(...ends);
+    });
+  const fab = page.locator('.hya-fab');
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  // Only the page's own 28px bottom padding is left above the nav.
+  expect(await gap()).toBeLessThanOrEqual(29);
+  await expect(fab).toHaveClass(/is-tucked/);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expect(fab).not.toHaveClass(/is-tucked/);
+  await expect(fab).toBeVisible();
+});
 
 test('first paint and refresh stay stable (CLS ≤ 0.1) with the guide shown', async ({ page }) => {
   await page.addInitScript(() => {
