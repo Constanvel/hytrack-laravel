@@ -20,6 +20,7 @@ Route::middleware(['auth:api', 'throttle:120,1'])->group(function () {
         Route::post('/data-pasien', [AccountController::class, 'storePatient']);
         Route::put('/data-pasien/{patient}', [AccountController::class, 'updatePatient'])->whereNumber('patient');
         Route::delete('/data-pasien/{patient}', [AccountController::class, 'destroyPatient'])->whereNumber('patient');
+        Route::get('/riwayat', [AccountController::class, 'history']);
 
         Route::get('/pendamping', [CompanionController::class, 'index']);
         Route::post('/pendamping', [CompanionController::class, 'store']);

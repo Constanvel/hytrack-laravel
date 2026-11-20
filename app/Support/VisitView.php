@@ -9,6 +9,7 @@ use App\Models\CompanionShare;
 use App\Models\Patient;
 use App\Models\Queue;
 use App\Services\WaitEstimator;
+use Carbon\CarbonImmutable;
 
 /**
  * What the frontend receives about a visit. Expects doctor, polyclinic, patient
@@ -99,6 +100,38 @@ final class VisitView
             'endsAt' => ($queue->service_date === HospitalTime::today() ? 'hari ini' : HospitalTime::dateLabel($queue->service_date))
                 .' pukul '.HospitalTime::clock($share->expires_at),
         ];
+    }
+
+    /**
+     * Riwayat kunjungan: every ticket of the patient, newest service date first (web and API).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function history(Patient $patient): array
+    {
+        return $patient->queues()
+            ->with(['polyclinic', 'doctor'])
+            ->orderByDesc('service_date')->orderByDesc('queue_id')
+            ->limit(100)->get()
+            ->map(fn (Queue $queue) => [
+                'id' => $queue->queue_id,
+                'number' => $queue->queue_number,
+                'clinic' => $queue->polyclinic->polyclinic_name,
+                'doctor' => $queue->doctor->doctor_name,
+                'date' => HospitalTime::dateLabel($queue->service_date),
+                'time' => $queue->doctor->scheduleLabel(),
+                // Card heading "28 Oktober 2026 · 09.00": check-in time, else the session start.
+                'day' => CarbonImmutable::parse($queue->service_date)->locale('id')->translatedFormat('j F Y'),
+                'clock' => HospitalTime::clock($queue->checkin_at) ?? substr($queue->doctor->scheduleLabel(), 0, 5),
+                'status' => $queue->queue_status->value,
+                // A booking left unconfirmed on an earlier date was never checked in.
+                'statusLabel' => $queue->queue_status === QueueStatus::Booked && $queue->service_date < HospitalTime::today()
+                    ? 'Tidak check-in'
+                    : $queue->queue_status->label(),
+                'checkInAt' => $queue->checkin_at
+                    ? HospitalTime::local($queue->checkin_at)->locale('id')->translatedFormat('j M Y · H.i') : null,
+                'cancelReason' => $queue->queue_status === QueueStatus::Cancelled ? $queue->cancel_reason : null,
+            ])->values()->all();
     }
 
     /** @return array<string, mixed> */

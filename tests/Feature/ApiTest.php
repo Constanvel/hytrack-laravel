@@ -73,6 +73,8 @@ class ApiTest extends TestCase
             ->assertJsonValidationErrors(['name', 'birth_date', 'gender', 'phone', 'address', 'city']);
         $this->as($sitiToken)->getJson('/api/data-pasien')->assertJsonCount(2, 'patients');
         $this->as($sitiToken)->getJson('/api/akun')->assertJsonPath('visit.checkInQr', CheckInTicket::payload($queue));
+        $this->as($sitiToken)->getJson('/api/riwayat')->assertOk()->assertJsonCount(1, 'items')
+            ->assertJsonPath('items.0.number', $queue->queue_number)->assertJsonPath('items.0.day', '4 November 2026');
 
         $invite = $this->as($sitiToken)->postJson('/api/pendamping')->assertCreated();
         $this->assertStringEndsWith('/pantauan/'.$invite->json('token'), $invite->json('link'));
