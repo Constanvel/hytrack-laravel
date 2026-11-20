@@ -157,6 +157,17 @@ summary:focus-visible {
   isolation: isolate;
 }
 /*
+  The Hya bubble is fixed to the viewport's right edge. Once the viewport is wider than the
+  column plus the bubble and its margin (65 + 16 on each side = 162px), the bubble floats beside
+  the column, so the page only has to clear the bottom nav: the last section then ends 28px
+  (the page's own padding) above it instead of leaving an empty ~100px band.
+*/
+@media (min-width: 702px) and (max-width: 767px), (min-width: 882px) {
+  .app-shell.with-nav {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+}
+/*
   Background accents from the design. They belong to the page, not the viewport: placed at the
   end of the page, just above the bottom nav, behind the last section, and scroll with it.
 */
