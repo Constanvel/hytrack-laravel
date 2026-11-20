@@ -1,6 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import { Icon, Avatar, Notice } from './ui';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { GuideHint, useGuide, type GuideStep } from '@/features/guide/guide';
 
 export function Shell({
@@ -38,6 +38,7 @@ export function Shell({
   // Prototype pages live under /prototipe; the nav highlights the same tab either way.
   const path = url.split('?')[0].replace(/^\/prototipe(?=\/|$)/, '') || '/';
   const { visible: guiding } = useGuide(guide);
+  useTuckedFab(url);
   const active =
     path === '/'
       ? 'home'
@@ -46,7 +47,7 @@ export function Shell({
         : 'ticket';
   return (
     <div
-      className={`app-shell ${hya ? 'chat-shell' : ''} ${queue ? 'queue-shell' : ''} ${guiding ? 'guide-active' : ''} ${decor ? `decor-${decor}` : ''} ${!hya && !bare && !action ? 'with-nav' : ''} ${className}`}
+      className={`app-shell ${hya ? 'chat-shell' : ''} ${queue ? 'queue-shell' : ''} ${guiding ? 'guide-active' : ''} ${decor ? `decor-${decor}` : ''} ${className}`}
     >
       <div className="demo-banner">Data contoh · Tidak terhubung ke sistem rumah sakit</div>
       <header className="page-header">
@@ -129,6 +130,46 @@ export function Shell({
       )}
     </div>
   );
+}
+/**
+ * The page reserves no room for the Hya bubble, so its last section sits right above the nav.
+ * Once scrolled to the end, the bubble steps aside wherever it would cover a link or button.
+ */
+function useTuckedFab(url: string) {
+  useEffect(() => {
+    const fab = document.querySelector<HTMLElement>('.hya-fab');
+    if (!fab) return;
+    let frame = 0;
+    const check = () => {
+      frame = 0;
+      const atEnd = innerHeight + scrollY >= document.documentElement.scrollHeight - 2;
+      const box = fab.getBoundingClientRect();
+      const covers =
+        atEnd &&
+        [...document.querySelectorAll('main a, main button, main input, main select')].some(
+          (control) => {
+            const b = control.getBoundingClientRect();
+            return (
+              b.right > box.left && b.left < box.right && b.bottom > box.top && b.top < box.bottom
+            );
+          },
+        );
+      fab.classList.toggle('is-tucked', covers);
+    };
+    const queue = () => {
+      frame ||= requestAnimationFrame(check);
+    };
+    const resize = new ResizeObserver(queue);
+    resize.observe(document.body);
+    addEventListener('scroll', queue, { passive: true });
+    addEventListener('resize', queue);
+    return () => {
+      cancelAnimationFrame(frame);
+      resize.disconnect();
+      removeEventListener('scroll', queue);
+      removeEventListener('resize', queue);
+    };
+  }, [url]);
 }
 export function HyaHelp() {
   return (
