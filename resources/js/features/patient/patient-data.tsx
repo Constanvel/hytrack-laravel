@@ -1,6 +1,9 @@
-import { Link, useForm } from '@inertiajs/react';
+import { Link, router, useForm } from '@inertiajs/react';
 import {
   cloneElement,
+  useEffect,
+  useRef,
+  useState,
   type FormEvent,
   type InputHTMLAttributes,
   type ReactElement,
@@ -26,6 +29,7 @@ const genders = { female: 'Perempuan', male: 'Laki-laki' };
 
 /** Data pasien (Figma 27:61): the account's own record, then the family it manages. */
 export function PatientData({ patients }: { patients: PatientRecord[] }) {
+  const [removing, setRemoving] = useState<PatientRecord | null>(null);
   return (
     <Shell
       title="Data pasien"
@@ -73,8 +77,19 @@ export function PatientData({ patients }: { patients: PatientRecord[] }) {
           <Link className="button outline" href={`/data-pasien/${patient.id}/ubah`}>
             Ubah data pasien
           </Link>
+          {/* The account's own record is the account itself; only family records can go. */}
+          {!patient.self && (
+            <button
+              type="button"
+              className="text-button danger"
+              onClick={() => setRemoving(patient)}
+            >
+              Hapus data pasien
+            </button>
+          )}
         </article>
       ))}
+      {removing && <DeleteDialog patient={removing} onClose={() => setRemoving(null)} />}
       <section className="tip-card">
         <strong>Mengurus kunjungan keluarga?</strong>
         <p>
@@ -84,6 +99,77 @@ export function PatientData({ patients }: { patients: PatientRecord[] }) {
     </Shell>
   );
 }
+/** Konfirmasi hapus (Figma 31:273): a modal dialog, so focus stays inside and Esc cancels. */
+function DeleteDialog({ patient, onClose }: { patient: PatientRecord; onClose: () => void }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    dialog.current?.showModal();
+  }, []);
+  function remove() {
+    router.delete(`/data-pasien/${patient.id}`, {
+      preserveScroll: true,
+      onStart: () => {
+        setBusy(true);
+        setError('');
+      },
+      onFinish: () => setBusy(false),
+      onSuccess: onClose,
+      onError: (errors) => setError(Object.values(errors)[0] ?? 'Data pasien gagal dihapus.'),
+      onNetworkError: () => {
+        setError('Koneksi ke server terputus. Data belum dihapus; coba lagi.');
+        return false;
+      },
+    });
+  }
+  return (
+    <dialog
+      ref={dialog}
+      className="delete-dialog"
+      aria-labelledby="delete-title"
+      aria-describedby="delete-detail"
+      // Esc closes the native dialog; keep React's state in step, but never mid-request.
+      onCancel={(event) => {
+        event.preventDefault();
+        if (!busy) onClose();
+      }}
+    >
+      <span className="delete-mark" aria-hidden="true">
+        <img src="/assets/trash.svg" alt="" width={28} height={28} />
+      </span>
+      <h2 id="delete-title">Hapus data pasien?</h2>
+      <p id="delete-detail">
+        Data pasien berikut akan dihapus dari daftar Anda. Tindakan ini tidak dapat dibatalkan.
+      </p>
+      <div className="delete-target">
+        <strong>{patient.name}</strong>
+        <span>{patient.recordNumber ? `No. RM ${patient.recordNumber}` : 'Belum ada No. RM'}</span>
+      </div>
+      <p className="delete-note">Pastikan data pasien yang dipilih sudah benar.</p>
+      {error && (
+        <p className="field-error" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="delete-actions">
+        <button
+          type="button"
+          className="button outline"
+          disabled={busy}
+          onClick={onClose}
+          autoFocus
+        >
+          Batal
+        </button>
+        <button type="button" className="button danger" disabled={busy} onClick={remove}>
+          {busy ? 'Menghapus…' : 'Hapus data'}
+        </button>
+      </div>
+    </dialog>
+  );
+}
+
 function Detail({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>

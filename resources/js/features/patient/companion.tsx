@@ -1,5 +1,5 @@
-import { router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { Link, router, usePage } from '@inertiajs/react';
+import { useState, type ReactNode } from 'react';
 import { Shell } from '@/components/shell';
 import { ActionLink, Notice, RowLink } from '@/components/ui';
 import { isActive, useAction, useLive } from '@/lib/live';
@@ -224,29 +224,44 @@ export function CompanionList({
   );
 }
 
-const stageStatus: Record<string, string[]> = {
-  booked: ['Menunggu', 'kedatangan'],
-  waiting: ['Menunggu', 'giliran'],
-  serving: ['Sedang', 'diperiksa'],
-  laboratory: ['Di', 'laboratorium'],
-  pharmacy: ['Di', 'farmasi'],
+/** Status pill on the queue card. */
+const stageLabel: Record<string, string> = {
+  booked: 'Belum check-in',
+  waiting: 'Menunggu',
+  serving: 'Diperiksa',
+  laboratory: 'Laboratorium',
+  pharmacy: 'Farmasi',
 };
-function headline(visit: CompanionProgress) {
-  switch (visit.stage) {
-    case 'waiting':
-      return `${visit.ahead} pasien lagi${visit.waitRange ? ` · sekitar ${visit.waitRange} menit` : ''}`;
-    case 'serving':
-      return 'Sedang di ruang pemeriksaan dokter';
-    case 'laboratory':
-      return 'Menjalani pemeriksaan laboratorium';
-    case 'pharmacy':
-      return `Obat: ${visit.pharmacy?.label ?? 'menunggu resep'}`;
-    default:
-      return 'Belum tiba di meja check-in';
-  }
+
+/** Shared frame of the companion screens: mint atmosphere, logo and the "Pendamping" badge. */
+function CompanionPage({ children }: { children: ReactNode }) {
+  const { flash } = usePage();
+  return (
+    <div className="companion-page">
+      <main id="main" className="companion-main">
+        <header className="companion-header">
+          <Link href="/" className="lockup" aria-label="HyTrack, ke beranda">
+            <img src="/assets/logo-hytrack.png" alt="" width={72} height={54} />
+            <span>
+              <span className="lockup-name">HyTrack</span>
+              <span className="lockup-tagline">TEMAN PERJALANAN BEROBAT</span>
+            </span>
+          </Link>
+          <span className="companion-badge">Pendamping</span>
+        </header>
+        {flash.error && (
+          <Notice tone="warning" role="alert">
+            {flash.error}
+          </Notice>
+        )}
+        {flash.status && <Notice role="status">{flash.status}</Notice>}
+        {children}
+      </main>
+    </div>
+  );
 }
 
-/** Pantauan pendamping (Figma 27:303): live progress of one accompanied visit. */
+/** Antrean pasien (Figma 31:136): the queue of one accompanied patient, view only. */
 export function CompanionDashboard({
   shareId,
   progress: visit,
@@ -257,90 +272,94 @@ export function CompanionDashboard({
   ended: string | null;
 }) {
   const live = useLive();
+  const [refreshing, setRefreshing] = useState(false);
   if (!visit)
     return (
-      <Shell title="Pantauan pendamping" subtitle="AKSES PENDAMPING" back="/pendampingan" bare>
-        <Notice tone="warning">Akses pendamping {ended?.toLowerCase()}.</Notice>
-        <p className="muted">
-          Kunjungan sudah selesai atau pasien mencabut akses. Minta undangan baru bila masih perlu
-          mendampingi.
-        </p>
+      <CompanionPage>
+        <section className="companion-intro">
+          <h1>Antrean pasien</h1>
+          <p>Akses pendamping {ended?.toLowerCase()}.</p>
+        </section>
+        <section className="companion-limit">
+          <h2>Pantauan berakhir</h2>
+          <p>
+            Kunjungan sudah selesai atau pasien mencabut akses. Minta undangan baru bila masih perlu
+            mendampingi.
+          </p>
+        </section>
         <ActionLink href="/pendampingan">Kembali ke pantauan keluarga</ActionLink>
-      </Shell>
+      </CompanionPage>
     );
-  const [status, statusLine] = stageStatus[visit.stage] ?? ['', ''];
+  const inLine = visit.stage === 'booked' || visit.stage === 'waiting';
+  const estimate = inLine && visit.waitRange ? `±${visit.waitRange.split('–')[0]} mnt` : '—';
+  const clock = live.syncedAt.slice(0, 5);
   return (
-    <Shell
-      title="Pantauan pendamping"
-      subtitle="AKSES PENDAMPING"
-      back="/pendampingan"
-      bare
-      className="inter-shell companion-shell"
-      action={
-        visit.phone && (
-          <a className="button" href={`tel:+${visit.phone}`}>
-            Hubungi pasien
-          </a>
-        )
-      }
-    >
-      <div className="monitor-row">
-        <div>
-          <p className="eyebrow">KUNJUNGAN KELUARGA</p>
-          <h2>{visit.patientName}</h2>
+    <CompanionPage>
+      <section className="companion-intro">
+        <h1>Antrean pasien</h1>
+        <p>Pantau giliran pasien yang Anda dampingi.</p>
+      </section>
+      <section className="companion-patient" aria-label="Pasien yang didampingi">
+        <p className="eyebrow">PASIEN YANG DIDAMPINGI</p>
+        <h2>{visit.patientName}</h2>
+        <p>Keluarga · Pasien terhubung</p>
+      </section>
+      <section className="companion-queue" aria-labelledby="companion-queue-title">
+        <div className="companion-queue-head">
+          <p id="companion-queue-title">Nomor antrean pasien</p>
+          <span className="companion-status">{stageLabel[visit.stage] ?? 'Menunggu'}</span>
         </div>
-        <p className={`live ${live.online ? '' : 'offline'}`} role="status">
-          {live.online ? `●  Live · ${live.syncedAt}` : '○  Terputus'}
-        </p>
-      </div>
-      <section className="monitor-hero">
-        <p className="eyebrow">
-          {visit.checkedInAt ? `SUDAH CHECK-IN · ${visit.checkedInAt}` : 'BELUM CHECK-IN'}
-        </p>
-        <div className="monitor-ticket">
-          <strong>{visit.ticket}</strong>
-          <span>
-            {status}
-            <br />
-            {statusLine}
-          </span>
-        </div>
-        <p className="monitor-headline">{headline(visit)}</p>
-        {visit.serving && <p className="small">Sedang dilayani: {visit.serving}</p>}
-        {visit.stage === 'pharmacy' && visit.pharmacy && (
-          <p className="small">Nomor ambil obat: {visit.pharmacy.pickupNumber}</p>
-        )}
+        <strong className="companion-ticket">{visit.ticket}</strong>
+        <p className="companion-clinic">Poli {visit.clinic}</p>
+        <dl className="companion-metrics">
+          <div>
+            <dt>Dipanggil</dt>
+            <dd>{visit.serving ?? '—'}</dd>
+          </div>
+          <div>
+            <dt>Di depan Anda</dt>
+            <dd>{inLine ? `${visit.ahead} pasien` : '—'}</dd>
+          </div>
+          <div>
+            <dt>Estimasi</dt>
+            <dd>{estimate}</dd>
+          </div>
+        </dl>
+        <button
+          type="button"
+          className="companion-refresh"
+          disabled={refreshing}
+          onClick={() =>
+            router.reload({
+              onStart: () => setRefreshing(true),
+              onFinish: () => setRefreshing(false),
+            })
+          }
+        >
+          {refreshing ? 'Memperbarui…' : 'Perbarui antrean'}
+        </button>
       </section>
-      <section className="monitor-card">
-        <p className="eyebrow">LOKASI SAAT INI</p>
-        <h3>{visit.place}</h3>
-        {visit.placeDetail && <p>{visit.placeDetail}</p>}
-      </section>
-      <section className="monitor-card timeline">
-        <h3>Alur kunjungan</h3>
-        <ol>
-          {visit.timeline.map((step) => (
-            <li key={step.label} className={step.current ? 'current' : undefined}>
-              <span aria-hidden="true">{step.current ? '●' : '✓'}</span>
-              <span>{step.label}</span>
-              <small>{step.current ? 'Saat ini' : step.time}</small>
-            </li>
-          ))}
-        </ol>
-        <p className="next">Berikutnya: {visit.next}</p>
-      </section>
-      <section className="monitor-privacy">
+      <section className="companion-info">
+        <h2>Informasi kunjungan</h2>
         <p>
-          <strong>Hanya pantauan · informasi medis tetap privat.</strong>
+          {visit.day} · {visit.schedule}
         </p>
-        <p>Akses berakhir saat kunjungan selesai atau {visit.endsAt}.</p>
+        <p className="place">{visit.placeDetail ?? visit.place}</p>
       </section>
-      <section className="tip-card">
-        <strong>Tetap dekat dengan pasien</strong>
-        <p>Ikuti juga panggilan petugas di rumah sakit.</p>
+      <section className="companion-limit">
+        <h2>Akses pendamping · Hanya lihat</h2>
+        <p>
+          Anda hanya dapat memantau antrean pasien.
+          <br />
+          Pendaftaran antrean dilakukan oleh pasien.
+        </p>
       </section>
+      <p className="companion-updated" role="status">
+        {live.online ? `Diperbarui pukul ${clock}` : `Koneksi terputus · data pukul ${clock}`}
+      </p>
       <button
-        className="text-button"
+        type="button"
+        className="companion-stop"
         onClick={() => {
           if (
             window.confirm(
@@ -352,6 +371,6 @@ export function CompanionDashboard({
       >
         Berhenti memantau
       </button>
-    </Shell>
+    </CompanionPage>
   );
 }

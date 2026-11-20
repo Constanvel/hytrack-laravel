@@ -48,4 +48,14 @@ class PatientDataController extends Controller
 
         return redirect('/data-pasien');
     }
+
+    public function destroy(Request $request, int $patient): RedirectResponse
+    {
+        $owner = $request->user()->patient;
+        $record = $this->records->find($owner, $patient);
+        $this->records->delete($owner, $record);
+        Inertia::flash('status', "Data {$record->full_name} dihapus dari daftar Anda.");
+
+        return redirect('/data-pasien');
+    }
 }

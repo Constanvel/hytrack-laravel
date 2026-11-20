@@ -122,7 +122,8 @@ test('patient flow, companion revocation and pharmacy completion', async ({ page
   await expect(companion).toHaveURL(/\/pantauan\//);
   await companion.getByRole('button', { name: 'Terima undangan' }).click();
   await expect(companion.getByRole('heading', { name: 'Siti A.' })).toBeVisible();
-  await expect(companion.locator('main')).toContainText('Menunggu pemeriksaan');
+  await expect(companion.locator('.companion-status')).toHaveText('Menunggu');
+  await expect(companion.locator('main')).toContainText('Di depan Anda');
   await expect(companion.locator('main')).not.toContainText('Aminah');
   const monitor = companion.url();
   await companion.goto(link);

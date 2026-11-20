@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\UserRole;
 use App\Models\Patient;
 use App\Models\User;
+use App\Services\CompanionInvitations;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -35,6 +36,8 @@ class AuthController extends Controller
             'username.required' => 'Nomor ponsel wajib diisi.',
             'password.required' => 'Kata sandi wajib diisi.',
         ]);
+        // "Masuk sebagai" on the sign-in screen: where a patient account lands, not a separate role.
+        $as = $request->validate(['as' => ['nullable', 'in:patient,companion']])['as'] ?? 'patient';
         $credentials['username'] = $this->accountName($credentials['username']);
 
         // Deactivated accounts keep their history but can no longer sign in.
@@ -42,7 +45,7 @@ class AuthController extends Controller
             throw ValidationException::withMessages(['username' => 'Nomor ponsel atau kata sandi salah.']);
         }
 
-        return $this->signedIn($request);
+        return $this->signedIn($request, $as === 'companion');
     }
 
     public function createAccount(): Response
@@ -120,14 +123,26 @@ class AuthController extends Controller
             ->value('username') ?? $login;
     }
 
-    private function signedIn(Request $request): RedirectResponse
+    private function signedIn(Request $request, bool $asCompanion = false): RedirectResponse
     {
         $request->session()->regenerate();
 
         // The intended URL was stored while signed out and may belong to another role.
-        $role = $request->user()->role;
+        $user = $request->user();
+        $role = $user->role;
         $intended = $request->session()->pull('url.intended');
+        if ($intended && $role->owns(parse_url($intended, PHP_URL_PATH) ?? '/')) {
+            return redirect($intended);
+        }
 
-        return redirect($intended && $role->owns(parse_url($intended, PHP_URL_PATH) ?? '/') ? $intended : $role->home());
+        // A companion is a patient account following someone else's visit: open that visit,
+        // or the list when there are several (or none yet). Staff and managers ignore the choice.
+        if ($asCompanion && $role === UserRole::Patient) {
+            $following = app(CompanionInvitations::class)->following($user);
+
+            return redirect($following->count() === 1 ? '/pendampingan/'.$following->first()->share_id : '/pendampingan');
+        }
+
+        return redirect($role->home());
     }
 }

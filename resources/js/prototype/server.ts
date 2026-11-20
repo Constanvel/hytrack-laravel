@@ -149,6 +149,9 @@ export function respond(
 
   if (route === '/masuk') {
     s.user = accountFor(String(body.username ?? ''));
+    // "Masuk sebagai: Pendamping" opens the companion view, as AuthController does.
+    if (body.as === 'companion' && fixtures.users[s.user].auth.role === 'patient')
+      return go('/pendampingan');
     return go(fixtures.users[s.user].home);
   }
   if (route === '/daftar') {

@@ -12,16 +12,18 @@ export function AuthPage({
   title,
   intro,
   compact = false,
+  className = '',
   children,
 }: {
   title: string;
   intro: ReactNode;
   /** Sign-up has more fields, so the design tightens the top padding and section gap. */
   compact?: boolean;
+  className?: string;
   children: ReactNode;
 }) {
   return (
-    <div className={`auth-page ${compact ? 'auth-compact' : ''}`}>
+    <div className={`auth-page ${compact ? 'auth-compact' : ''} ${className}`}>
       <main id="main" className="auth-main">
         <header className="auth-identity">
           <div className="lockup">

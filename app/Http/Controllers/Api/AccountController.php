@@ -78,6 +78,19 @@ class AccountController extends Controller
         return response()->json(['patient' => $this->records->update($this->records->find($owner, $patient), $request)->record()]);
     }
 
+    public function destroyPatient(Request $request, int $patient): JsonResponse
+    {
+        $owner = $request->user()->patient;
+        $this->records->delete($owner, $this->records->find($owner, $patient));
+
+        return response()->json(['message' => 'Data pasien dihapus.']);
+    }
+
+    public function history(Request $request): JsonResponse
+    {
+        return response()->json(['items' => VisitView::history($request->user()->patient)]);
+    }
+
     private function account(User $user): array
     {
         $profile = $user->role === UserRole::Patient ? $user->patient : $user->staff;

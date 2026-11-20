@@ -46,7 +46,7 @@ export function Shell({
         : 'ticket';
   return (
     <div
-      className={`app-shell ${hya ? 'chat-shell' : ''} ${queue ? 'queue-shell' : ''} ${guiding ? 'guide-active' : ''} ${decor ? `decor-${decor}` : ''} ${className}`}
+      className={`app-shell ${hya ? 'chat-shell' : ''} ${queue ? 'queue-shell' : ''} ${guiding ? 'guide-active' : ''} ${decor ? `decor-${decor}` : ''} ${!hya && !bare && !action ? 'with-nav' : ''} ${className}`}
     >
       <div className="demo-banner">Data contoh · Tidak terhubung ke sistem rumah sakit</div>
       <header className="page-header">
