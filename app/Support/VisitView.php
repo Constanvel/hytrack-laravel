@@ -93,6 +93,9 @@ final class VisitView
                 ['label' => $current, 'time' => null, 'current' => true],
             ],
             'next' => $next,
+            // Informasi kunjungan: the service day and the doctor's session, no doctor name.
+            'day' => $queue->service_date === HospitalTime::today() ? 'Hari ini' : HospitalTime::dateLabel($queue->service_date),
+            'schedule' => $queue->doctor->scheduleLabel(),
             'endsAt' => ($queue->service_date === HospitalTime::today() ? 'hari ini' : HospitalTime::dateLabel($queue->service_date))
                 .' pukul '.HospitalTime::clock($share->expires_at),
         ];

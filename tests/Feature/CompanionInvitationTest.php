@@ -89,6 +89,8 @@ class CompanionInvitationTest extends TestCase
             ->where('progress.place', 'Belum check-in')
             ->where('progress.timeline.0.label', 'Menunggu kedatangan')
             ->where('progress.endsAt', 'hari ini pukul 23.59')
+            ->where('progress.day', 'Hari ini')
+            ->where('progress.schedule', $this->doctor->scheduleLabel())
             ->missing('progress.checkInCode')
             ->missing('progress.checkInQr')
             ->missing('progress.doctor'));

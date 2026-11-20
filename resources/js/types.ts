@@ -51,6 +51,9 @@ export interface CompanionProgress extends VisitProgress {
   placeDetail: string | null;
   timeline: { label: string; time: string | null; current: boolean }[];
   next: string;
+  /** "Hari ini" or the service date, and the doctor's session "08.00–12.00". */
+  day: string;
+  schedule: string;
   endsAt: string;
 }
 /** A ticket identified by the staff scanner, before check-in is confirmed. */
