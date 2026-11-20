@@ -7,11 +7,13 @@
         <meta name="robots" content="noindex, nofollow">
         <meta name="description" content="HyTrack: panduan kunjungan dan antrean rawat jalan.">
         <title>HyTrack — Berobat lebih tenang</title>
+        @include('partials.splash', ['part' => 'head'])
         @viteReactRefresh
         @vite('resources/js/app.tsx')
         @inertiaHead
     </head>
     <body>
+        @include('partials.splash', ['part' => 'body'])
         <a class="skip-link" href="#main">Lewati ke konten</a>
         @inertia
     </body>

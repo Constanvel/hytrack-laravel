@@ -100,6 +100,21 @@ test('sign-in and sign-up pages fit every width and pass accessibility checks', 
   }
 });
 
+test('the splash covers only the first load and leaves without a fixed delay', async ({ page }) => {
+  const response = await page.goto('/masuk');
+  // In the first HTML, so it paints before the app bundle arrives.
+  expect(await response!.text()).toContain('TEMAN PERJALANAN BEROBAT');
+  await expect(page.locator('#splash')).toHaveCount(0, { timeout: 2000 });
+  // Page changes are Inertia visits: the document never reloads, so it never returns.
+  await page.getByRole('link', { name: 'Daftar sekarang' }).click();
+  await expect(page).toHaveURL(/\/daftar$/);
+  await expect(page.locator('#splash')).toHaveCount(0);
+  // Reduced motion: removed at once, without the fade.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/masuk');
+  await expect(page.locator('#splash')).toHaveCount(0);
+});
+
 test('patient flow, companion revocation and pharmacy completion', async ({ page }) => {
   await login(page);
   await bookDoctor(page, /dr. Rina/);
