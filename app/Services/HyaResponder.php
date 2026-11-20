@@ -90,6 +90,11 @@ class HyaResponder
     /** Fixed answers for the common questions, used when Gemini is off or fails. */
     private function rules(string $question, ?Queue $queue): string
     {
+        // "Where is the pharmacy?" names a place: answer with that place, whatever the visit status.
+        if ($place = $this->askedPlace($question)) {
+            return $place;
+        }
+
         if (preg_match('/check|qr|terlambat/iu', $question)) {
             return 'Buka tiket kunjungan, lalu tekan “Tampilkan QR check-in”. Tunjukkan QR atau nomor check-in kepada petugas di meja check-in. Jika terlambat, minta bantuan petugas.';
         }
@@ -127,6 +132,28 @@ class HyaResponder
         }
 
         return 'Hya dapat membantu informasi antrean, lokasi layanan, dan cara check-in. Pilih topik tersebut atau hubungi petugas rumah sakit untuk bantuan lain.';
+    }
+
+    /** The location of the service a "where is …" question names, if it names one. */
+    private function askedPlace(string $question): ?string
+    {
+        if (! preg_match('/di ?mana|ruang|lokasi|arah|letak|lantai/iu', $question)) {
+            return null;
+        }
+
+        $rooms = config('hytrack.rooms');
+        $places = [
+            'pharmacy' => ['/farmasi|apotek/iu', 'Farmasi'],
+            'laboratory' => ['/lab/iu', 'Laboratorium'],
+            'check_in' => ['/check|meja/iu', 'Meja check-in'],
+        ];
+        foreach ($places as $room => [$pattern, $name]) {
+            if (preg_match($pattern, $question)) {
+                return "{$name} ada di {$rooms[$room]}. Jika masih bingung, tanyakan arah kepada petugas terdekat.";
+            }
+        }
+
+        return null;
     }
 
     private function waitingReply(Queue $queue): string

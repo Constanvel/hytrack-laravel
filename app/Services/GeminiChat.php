@@ -68,7 +68,7 @@ class GeminiChat
             $response = Http::acceptJson()
                 ->withHeader('x-goog-api-key', trim((string) config('services.gemini.key')))
                 ->connectTimeout(3)
-                ->timeout(12)
+                ->timeout(8)
                 ->post('https://generativelanguage.googleapis.com/v1beta/models/'.$this->model().':generateContent', [
                     'systemInstruction' => ['parts' => [[
                         'text' => sprintf(self::RULES, config('hytrack.hospital'), '- '.implode("\n- ", $facts)),

@@ -313,6 +313,21 @@ class PatientFlowTest extends TestCase
         $this->assertStringContainsString('tenaga kesehatan', $ask('Saya sakit kepala, minum obat apa?'));
     }
 
+    public function test_hya_fallback_answers_the_place_that_was_asked_about(): void
+    {
+        config(['services.gemini.key' => null]);
+        $this->book();
+        $ask = fn (string $question) => $this->postJson('/hya', ['question' => $question])
+            ->assertOk()->assertJson(['ai' => false])->json('reply');
+
+        $this->assertStringContainsString('Farmasi Loket F2', $ask('Ruang farmasi ada di mana?'));
+        $this->assertStringContainsString('Laboratorium A-108', $ask('Lab di lantai berapa?'));
+        $this->assertStringContainsString('Gedung A, lantai 2', $ask('Meja check-in di mana?'));
+        // Without a named place, the answer still follows the visit status.
+        $this->assertStringContainsString('Check-in lebih dulu', $ask('Ke ruangan mana saya harus pergi?'));
+        $this->assertStringNotContainsString('Farmasi', $ask('Kapan obat saya siap?'));
+    }
+
     public function test_numbers_and_emails_are_masked_but_clock_times_stay(): void
     {
         $this->assertSame('Telepon [nomor] atau [email]', GeminiChat::mask('Telepon +62 812-5550-0842 atau siti@contoh.id'));
