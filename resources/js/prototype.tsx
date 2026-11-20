@@ -2,6 +2,7 @@
 import './styles';
 import type { Page } from '@inertiajs/core';
 import { createInertiaApp, http } from '@inertiajs/react';
+import { hideSplash } from './lib/splash';
 import { pages } from './pages';
 import { csv, hya, initialState, PREFIX, respond, type State } from './prototype/server';
 
@@ -96,4 +97,4 @@ createInertiaApp({
   page: first.page as unknown as Page,
   resolve: (name) => pages[name],
   progress: { color: '#0b7268' },
-});
+}).finally(hideSplash);

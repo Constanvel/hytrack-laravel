@@ -120,6 +120,18 @@ class CompanionInvitations
             ->with(['queue.patient', 'queue.polyclinic'])->latest('share_id')->get();
     }
 
+    /** Where a companion lands: the one visit followed, the list when several, null when none. */
+    public function home(User $user): ?string
+    {
+        $following = $this->following($user);
+
+        return match ($following->count()) {
+            0 => null,
+            1 => '/pendampingan/'.$following->first()->share_id,
+            default => '/pendampingan',
+        };
+    }
+
     /** One of this account's invitations, in any status; check currentStatus() before showing it. */
     public function followed(User $user, int $shareId): CompanionShare
     {
