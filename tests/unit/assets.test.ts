@@ -16,6 +16,10 @@ const dimensions: Record<string, [number, number]> = {
   'wave-mint': [412, 170],
   'wave-sidebar': [232, 250],
   'wave-dashboard': [1208, 180],
+  'atmos-mint': [412, 220],
+  'role-patient': [28, 28],
+  'role-companion': [28, 28],
+  trash: [28, 28],
 };
 describe('vendored assets', () => {
   for (const [name, [width, height]] of Object.entries(dimensions))

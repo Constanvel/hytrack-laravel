@@ -68,6 +68,26 @@ class PatientRecords
         return $patient->refresh();
     }
 
+    /**
+     * Removes a family member from the account's list. The account's own record is the
+     * account itself and cannot go. Service history is never deleted: a record with visits
+     * or notifications is only detached from this account, otherwise it is deleted.
+     */
+    public function delete(Patient $owner, Patient $patient): void
+    {
+        if ($patient->patient_id === $owner->patient_id || $patient->user_id) {
+            throw ValidationException::withMessages(['patient' => 'Data pasien pemilik akun tidak dapat dihapus.']);
+        }
+
+        DB::transaction(function () use ($patient) {
+            if ($patient->queues()->exists() || $patient->notifications()->exists()) {
+                $patient->update(['managed_by_patient_id' => null]);
+            } else {
+                $patient->delete();
+            }
+        });
+    }
+
     /** @return array<string, mixed> column => value */
     private function validate(Request $request, ?Patient $patient = null): array
     {

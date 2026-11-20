@@ -57,6 +57,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/data-pasien', [PatientDataController::class, 'store']);
         Route::get('/data-pasien/{patient}/ubah', [PatientDataController::class, 'edit'])->whereNumber('patient');
         Route::put('/data-pasien/{patient}', [PatientDataController::class, 'update'])->whereNumber('patient');
+        Route::delete('/data-pasien/{patient}', [PatientDataController::class, 'destroy'])->whereNumber('patient');
 
         // Family Companion, patient side: invite, list and revoke.
         Route::get('/pendamping', [CompanionController::class, 'access']);
