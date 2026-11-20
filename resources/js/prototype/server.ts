@@ -22,6 +22,8 @@ export const PREFIX = '/prototipe';
 export interface State {
   user: User | null;
   step: number;
+  /** Signed in as Pendamping: "/" opens the companion view, as in routes/web.php. */
+  companion?: boolean;
 }
 export const initialState: State = { user: null, step: 0 };
 export interface Page {
@@ -87,6 +89,7 @@ function render(state: State, url: string, flash: Flash = {}): Page {
   const area = owner(path);
   const user = state.user;
   if (!user && area !== 'guest' && area !== 'any') return render(state, '/masuk', flash);
+  if (user && path === '/' && state.companion) return render(state, '/pendampingan', flash);
   if (user) {
     const role = fixtures.users[user].auth.role as string;
     const allowed = area === 'any' || area === (role === 'patient' ? 'patient' : role);
@@ -150,16 +153,18 @@ export function respond(
   if (route === '/masuk') {
     s.user = accountFor(String(body.username ?? ''));
     // "Masuk sebagai: Pendamping" opens the companion view, as AuthController does.
-    if (body.as === 'companion' && fixtures.users[s.user].auth.role === 'patient')
-      return go('/pendampingan');
+    s.companion = body.as === 'companion' && fixtures.users[s.user].auth.role === 'patient';
+    if (s.companion) return go('/pendampingan');
     return go(fixtures.users[s.user].home);
   }
   if (route === '/daftar') {
     s.user = 'siti';
+    s.companion = false;
     return go('/', { status: 'Mode prototype: Anda masuk sebagai pasien contoh, Siti Aminah.' });
   }
   if (route === '/keluar') {
     s.user = null;
+    s.companion = false;
     return go('/masuk');
   }
   if (!s.user) return go('/masuk');

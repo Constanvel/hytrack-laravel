@@ -216,9 +216,15 @@ class CompanionInvitationTest extends TestCase
         $share = CompanionShare::sole();
         $this->post('/masuk', ['username' => $companion->username, 'password' => 'password', 'as' => 'companion'])
             ->assertRedirect('/pendampingan/'.$share->share_id);
+        // The choice lasts for the session: reopening the app returns to the followed visit.
+        $this->get('/')->assertRedirect('/pendampingan/'.$share->share_id);
+        $share->update(['status' => InvitationStatus::Revoked]);
+        $this->get('/')->assertOk()->assertInertia(fn ($page) => $page->component('Home'));
         $this->post('/keluar');
+        $share->update(['status' => InvitationStatus::Accepted]);
         $this->post('/masuk', ['username' => $companion->username, 'password' => 'password', 'as' => 'patient'])
             ->assertRedirect('/');
+        $this->get('/')->assertOk()->assertInertia(fn ($page) => $page->component('Home'));
         $this->post('/keluar');
         $this->post('/masuk', ['username' => $companion->username, 'password' => 'password', 'as' => 'staff'])
             ->assertSessionHasErrors('as');

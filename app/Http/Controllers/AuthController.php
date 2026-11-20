@@ -126,10 +126,12 @@ class AuthController extends Controller
     private function signedIn(Request $request, bool $asCompanion = false): RedirectResponse
     {
         $request->session()->regenerate();
-
-        // The intended URL was stored while signed out and may belong to another role.
         $user = $request->user();
         $role = $user->role;
+        // Remembered for the session, so reopening the app ("/") returns to the companion view.
+        $request->session()->put('companion', $asCompanion && $role === UserRole::Patient);
+
+        // The intended URL was stored while signed out and may belong to another role.
         $intended = $request->session()->pull('url.intended');
         if ($intended && $role->owns(parse_url($intended, PHP_URL_PATH) ?? '/')) {
             return redirect($intended);
@@ -137,10 +139,8 @@ class AuthController extends Controller
 
         // A companion is a patient account following someone else's visit: open that visit,
         // or the list when there are several (or none yet). Staff and managers ignore the choice.
-        if ($asCompanion && $role === UserRole::Patient) {
-            $following = app(CompanionInvitations::class)->following($user);
-
-            return redirect($following->count() === 1 ? '/pendampingan/'.$following->first()->share_id : '/pendampingan');
+        if ($request->session()->get('companion')) {
+            return redirect(app(CompanionInvitations::class)->home($user) ?? '/pendampingan');
         }
 
         return redirect($role->home());

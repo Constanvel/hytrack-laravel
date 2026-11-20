@@ -9,6 +9,7 @@ use App\Http\Controllers\PatientDataController;
 use App\Http\Controllers\PolyclinicController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\VisitController;
+use App\Services\CompanionInvitations;
 use App\Services\GeminiChat;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -27,10 +28,17 @@ Route::get('/pantauan/{token}', [CompanionController::class, 'show'])->middlewar
 Route::middleware('auth')->group(function () {
     Route::post('/keluar', [AuthController::class, 'destroy']);
 
-    // Staff and managers land on their own dashboard instead of the patient home.
-    Route::get('/', fn (Request $request) => $request->user()->role->value === 'patient'
-        ? Inertia::render('Home')
-        : redirect($request->user()->role->home()));
+    // Staff and managers land on their own dashboard instead of the patient home. Signed in as
+    // Pendamping, the app opens the followed visit while there is one, else the patient home.
+    Route::get('/', function (Request $request, CompanionInvitations $invitations) {
+        $user = $request->user();
+        if ($user->role->value !== 'patient') {
+            return redirect($user->role->home());
+        }
+        $companion = $request->session()->get('companion') ? $invitations->home($user) : null;
+
+        return $companion ? redirect($companion) : Inertia::render('Home');
+    });
 
     Route::middleware('role:patient')->group(function () {
         Route::get('/poliklinik', [PatientController::class, 'clinics']);
