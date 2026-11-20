@@ -157,7 +157,9 @@ test('patient books in one browser, staff scan and confirm in another', async ({
   const item = patient.locator('.history-list li').first();
   await expect(item).toContainText(ticket);
   await expect(item).toContainText('Sudah check-in');
-  await expect(item).toContainText(`Check-in tercatat`);
+  await item.getByRole('button', { name: 'Lihat detail' }).click();
+  await expect(item.locator('.history-detail')).toContainText('Check-in');
+  await expect(item.locator('.history-detail')).not.toContainText('Tidak tercatat');
 
   await signIn(staff, 'dina', STAFF_PASSWORD);
   await staff.getByRole('button', { name: 'Daftar booking' }).click();

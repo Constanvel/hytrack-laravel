@@ -129,6 +129,9 @@ class PatientController extends Controller
                 'doctor' => $queue->doctor->doctor_name,
                 'date' => HospitalTime::dateLabel($queue->service_date),
                 'time' => $queue->doctor->scheduleLabel(),
+                // Card heading "28 Oktober 2026 · 09.00": check-in time, else the session start.
+                'day' => CarbonImmutable::parse($queue->service_date)->locale('id')->translatedFormat('j F Y'),
+                'clock' => HospitalTime::clock($queue->checkin_at) ?? substr($queue->doctor->scheduleLabel(), 0, 5),
                 'status' => $queue->queue_status->value,
                 // A booking left unconfirmed on an earlier date was never checked in.
                 'statusLabel' => $queue->queue_status === QueueStatus::Booked && $queue->service_date < HospitalTime::today()

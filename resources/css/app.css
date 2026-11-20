@@ -1196,28 +1196,132 @@ details p {
   text-decoration: underline;
 }
 
-/* Riwayat kunjungan */
+/* Riwayat kunjungan (Figma 31:3). No navigation: the page ends after the note. */
+.history-shell {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.history-shell .page-content {
+  gap: 16px;
+  padding-top: 19px;
+  padding-bottom: 32px;
+}
+.history-lead h2 {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 29px;
+}
+.history-lead p {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 19px;
+}
 .history-list {
   list-style: none;
-  margin: 0;
+  margin: 4px 0 0;
   padding: 0;
   display: grid;
+  gap: 16px;
+}
+.history-card {
+  padding: 16px 20px 28px;
+  background: #fff;
+  border-radius: 22px;
+}
+.history-top,
+.history-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
 }
-.history-number {
-  font-size: 22px;
+.history-top p,
+.history-foot p {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 19px;
 }
 .history-status {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 12px;
+  flex: none;
+  min-width: 70px;
+  padding: 4.5px 8px;
+  border-radius: 8px;
   background: var(--pale);
   color: var(--primary);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 17px;
+  text-align: center;
 }
 .history-status.no_show,
 .history-status.cancelled,
 .history-status.booked {
   background: var(--warning);
   color: var(--warning-text);
+}
+.history-card h3 {
+  margin-top: 14px;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 29px;
+}
+.history-doctor {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 20px;
+}
+.history-foot {
+  margin-top: 16px;
+  padding-top: 20px;
+  border-top: 1px solid #dce3dd;
+}
+.history-foot button {
+  flex: none;
+  margin: -12px -8px;
+  padding: 12px 8px;
+  border: 0;
+  background: none;
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.history-foot button:hover {
+  text-decoration: underline;
+}
+.history-detail {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0 0;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #f6f8f4;
+}
+.history-detail dt {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+.history-detail dd {
+  margin: 2px 0 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+.history-shell .button {
+  min-height: 50px;
+  margin-top: 20px;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 23px;
+}
+.history-note {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 17px;
+  text-align: center;
 }
