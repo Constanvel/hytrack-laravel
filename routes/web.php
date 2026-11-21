@@ -20,6 +20,9 @@ Route::middleware('guest')->group(function () {
     Route::post('/masuk', [AuthController::class, 'store'])->middleware('throttle:6,1');
     Route::get('/daftar', [AuthController::class, 'createAccount']);
     Route::post('/daftar', [AuthController::class, 'storeAccount'])->middleware('throttle:6,1');
+    Route::get('/daftar/verifikasi', [AuthController::class, 'verification']);
+    Route::post('/daftar/verifikasi', [AuthController::class, 'verify'])->middleware('throttle:10,1');
+    Route::post('/daftar/verifikasi/kirim-ulang', [AuthController::class, 'resend'])->middleware('throttle:10,1');
 });
 
 // Family Companion invitation link: public so guests can be asked to sign in, but throttled.
@@ -27,6 +30,7 @@ Route::get('/pantauan/{token}', [CompanionController::class, 'show'])->middlewar
 
 Route::middleware('auth')->group(function () {
     Route::post('/keluar', [AuthController::class, 'destroy']);
+    Route::get('/daftar/selesai', [AuthController::class, 'verified']);
 
     // Staff and managers land on their own dashboard instead of the patient home. Signed in as
     // Pendamping, the app opens the followed visit while there is one, else the patient home.

@@ -80,13 +80,15 @@ class AccessTest extends TestCase
     {
         $this->get('/daftar')->assertInertia(fn (AssertableInertia $page) => $page->component('Register'));
 
-        $this->post('/daftar', [
+        $this->signUp([
             'name' => '  Budi Santoso ',
             'phone' => '0813-2222-3333',
             'password' => 'rahasia-123',
             'password_confirmation' => 'rahasia-123',
             'terms' => true,
-        ])->assertRedirect('/');
+        ])->assertRedirect('/daftar/selesai');
+        $this->get('/daftar/selesai')->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('RegisterVerified')->where('phone', '+62 813 •••• 3333')->where('next', url('/')));
 
         $user = User::where('username', '6281322223333')->firstOrFail();
         $this->assertAuthenticatedAs($user);
@@ -96,6 +98,51 @@ class AccessTest extends TestCase
 
         $this->post('/keluar');
         $this->post('/masuk', ['username' => '+62 813 2222 3333', 'password' => 'rahasia-123'])->assertRedirect('/');
+    }
+
+    public function test_no_account_exists_until_the_phone_is_verified(): void
+    {
+        $form = ['name' => 'Budi', 'phone' => '0813-2222-3333', 'password' => 'rahasia-123', 'password_confirmation' => 'rahasia-123', 'terms' => '1'];
+        $this->get('/daftar/verifikasi')->assertRedirect('/daftar');
+        $this->post('/daftar', $form)->assertRedirect('/daftar/verifikasi');
+        $this->assertSame(0, User::count());
+        $code = $this->sentCode();
+        $this->get('/daftar/verifikasi')->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('RegisterOtp')->where('phone', '+62 813 •••• 3333')->where('demoCode', null)
+            ->where('resendIn', fn ($seconds) => $seconds > 40 && $seconds <= 45));
+
+        // Too early to resend, a wrong code, and a malformed one: still no account.
+        $this->post('/daftar/verifikasi/kirim-ulang')->assertSessionHasErrors('code');
+        $wrong = $code === '000000' ? '111111' : '000000';
+        $this->post('/daftar/verifikasi', ['code' => $wrong])->assertSessionHasErrors(['code' => 'Kode OTP salah. Periksa kembali SMS Anda.']);
+        $this->post('/daftar/verifikasi', ['code' => '12'])->assertSessionHasErrors('code');
+        $this->assertGuest();
+        $this->assertSame(0, User::count());
+
+        // Five wrong tries lock the code; a new code after 45 s unlocks it.
+        foreach (range(1, 4) as $try) {
+            $this->post('/daftar/verifikasi', ['code' => $wrong]);
+        }
+        $this->post('/daftar/verifikasi', ['code' => $code])->assertSessionHasErrors(['code' => 'Terlalu banyak percobaan. Minta kode baru.']);
+        $this->travel(61)->seconds(); // past the 45 s resend wait and the per-minute throttle
+        $this->post('/daftar/verifikasi/kirim-ulang')->assertRedirect()->assertSessionHasNoErrors();
+        $this->post('/daftar/verifikasi', ['code' => $this->sentCode()])->assertRedirect('/daftar/selesai');
+        $this->assertSame(1, User::count());
+    }
+
+    public function test_an_expired_code_is_refused_and_demo_mode_shows_the_code(): void
+    {
+        config(['hytrack.demo_controls' => true]);
+        $form = ['name' => 'Budi', 'phone' => '0813-2222-3333', 'password' => 'rahasia-123', 'password_confirmation' => 'rahasia-123', 'terms' => '1'];
+        $this->post('/daftar', $form);
+        $code = null;
+        $this->get('/daftar/verifikasi')->assertInertia(function (AssertableInertia $page) use (&$code) {
+            $code = $page->toArray()['props']['demoCode'];
+            $this->assertMatchesRegularExpression('/^\d{6}$/', $code);
+        });
+        $this->travel(301)->seconds();
+        $this->post('/daftar/verifikasi', ['code' => $code])->assertSessionHasErrors(['code' => 'Kode sudah kedaluwarsa. Minta kode baru.']);
+        $this->assertSame(0, User::count());
     }
 
     public function test_sign_up_validates_its_fields_and_rejects_a_registered_phone(): void

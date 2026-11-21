@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Doctor;
 use App\Models\Patient;
 use App\Models\Staff;
+use App\Models\User;
 use App\Services\QueueService;
 use App\Support\CheckInTicket;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -56,6 +57,24 @@ class ApiTest extends TestCase
 
         $this->as($token)->postJson('/api/keluar')->assertOk();
         $this->as($token)->getJson('/api/akun')->assertUnauthorized();
+    }
+
+    public function test_sign_up_over_the_api_needs_the_sms_code(): void
+    {
+        $form = ['name' => 'Budi', 'phone' => '0813-2222-3333', 'password' => 'rahasia-123', 'password_confirmation' => 'rahasia-123', 'terms' => true];
+        $signup = $this->postJson('/api/daftar', $form)->assertCreated()
+            ->assertJson(['phone' => '+62 813 •••• 3333', 'resendIn' => 45, 'demoCode' => null])->json('signup');
+        $this->assertSame(0, User::count());
+
+        $this->postJson('/api/daftar/kirim-ulang', ['signup' => $signup])->assertUnprocessable()->assertJsonValidationErrors('code');
+        $this->postJson('/api/daftar/verifikasi', ['signup' => 'salah', 'code' => '123456'])
+            ->assertUnprocessable()->assertJsonValidationErrors(['code' => 'Sesi verifikasi berakhir. Silakan daftar ulang.']);
+        $token = $this->postJson('/api/daftar/verifikasi', ['signup' => $signup, 'code' => $this->sentCode()])
+            ->assertOk()->assertJson(['phone' => '+62 813 •••• 3333', 'account' => ['role' => 'patient']])->json('token');
+        $this->as($token)->getJson('/api/akun')->assertOk();
+        // A verified sign-up cannot be replayed.
+        $this->as(null)->postJson('/api/daftar/verifikasi', ['signup' => $signup, 'code' => '123456'])->assertUnprocessable();
+        $this->postJson('/api/daftar', $form)->assertUnprocessable()->assertJsonValidationErrors('phone');
     }
 
     public function test_patient_data_and_the_companion_flow_over_the_api(): void

@@ -48,6 +48,32 @@ test('sign-in keeps each role on its own pages', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Akses ditolak' })).toBeVisible();
 });
 
+/** Sign-up step 2/3: a wrong code is refused, then the demo code (no SMS gateway) is typed. */
+async function enterOtp(page: Page) {
+  await expect(page).toHaveURL(/\/daftar\/verifikasi$/);
+  await expect(page.getByRole('heading', { name: /Masukkan\s*kode OTP/ })).toBeVisible();
+  const verify = page.getByRole('button', { name: 'Verifikasi & lanjutkan' });
+  await expect(verify).toBeDisabled();
+  const code = (await page.locator('.notice.info').textContent())!.match(/\d{6}/)![0];
+  const wrong = code === '000000' ? '111111' : '000000';
+  // Pasting fills all six boxes at once.
+  await page.getByLabel('Digit 1 dari 6').focus();
+  await page.evaluate((text) => {
+    const data = new DataTransfer();
+    data.setData('text', text);
+    document.activeElement!.dispatchEvent(
+      new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }),
+    );
+  }, wrong);
+  await expect(page.getByLabel('Digit 6 dari 6')).toHaveValue(wrong[5]);
+  await verify.click();
+  await expect(page.locator('#otp-error')).toHaveText('Kode OTP salah. Periksa kembali SMS Anda.');
+  // Typing moves from box to box.
+  await page.getByLabel('Digit 1 dari 6').focus();
+  await page.keyboard.type(code);
+  await verify.click();
+}
+
 test('sign-up validates, toggles password visibility and signs the new patient in', async ({
   page,
 }) => {
@@ -72,6 +98,10 @@ test('sign-up validates, toggles password visibility and signs the new patient i
   await page.getByLabel('Konfirmasi kata sandi').fill('rahasia-123');
   await page.getByRole('checkbox').check();
   await page.getByRole('button', { name: 'Buat akun' }).click();
+  await enterOtp(page);
+  await expect(page.getByRole('heading', { name: 'Nomor Anda terverifikasi.' })).toBeVisible();
+  await expect(page.getByText('+62 813 •••• 3333')).toBeVisible();
+  await page.getByRole('link', { name: 'Lanjut ke beranda' }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('heading', { name: 'Budi Santoso' })).toBeVisible();
 

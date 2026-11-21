@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Patient;
 use App\Models\User;
 use App\Services\PatientRecords;
+use App\Services\SignupVerification;
 use App\Support\VisitView;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -35,10 +36,44 @@ class AccountController extends Controller
             throw ValidationException::withMessages(['username' => 'Nomor ponsel atau kata sandi salah.']);
         }
 
+        return $this->issue($user);
+    }
+
+    /** Sign-up step 1/3, as on the web: the form, then a code by SMS (demo: in the response). */
+    public function register(Request $request, SignupVerification $signup): JsonResponse
+    {
+        $token = $signup->start($signup->validated($request));
+
+        return response()->json(['signup' => $token, ...$signup->screen($token)], 201);
+    }
+
+    public function resendCode(Request $request, SignupVerification $signup): JsonResponse
+    {
+        $token = $request->validate(['signup' => ['required', 'string', 'max:100']])['signup'];
+        $signup->resend($token);
+
+        return response()->json(['signup' => $token, ...$signup->screen($token)]);
+    }
+
+    /** Step 2/3: the right code creates the account and signs it in. */
+    public function verify(Request $request, SignupVerification $signup): JsonResponse
+    {
+        $data = $request->validate([
+            'signup' => ['required', 'string', 'max:100'],
+            'code' => ['required', 'digits:6'],
+        ], ['code.required' => 'Masukkan 6 digit kode OTP.', 'code.digits' => 'Masukkan 6 digit kode OTP.']);
+        $user = $signup->createAccount($signup->verify($data['signup'], $data['code']));
+
+        return $this->issue($user, ['phone' => SignupVerification::mask($user->username)]);
+    }
+
+    /** Issuing a token replaces the previous one. */
+    private function issue(User $user, array $extra = []): JsonResponse
+    {
         $token = Str::random(60);
         $user->forceFill(['api_token_hash' => hash('sha256', $token)])->save();
 
-        return response()->json(['token' => $token, 'account' => $this->account($user)]);
+        return response()->json(['token' => $token, 'account' => $this->account($user), ...$extra]);
     }
 
     public function logout(Request $request): JsonResponse

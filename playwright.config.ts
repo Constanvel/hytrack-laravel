@@ -34,6 +34,8 @@ export default defineConfig({
       DB_DATABASE: resolve('database/e2e.sqlite'),
       E2E_PORT: String(port),
       CACHE_STORE: 'array',
+      // Pending sign-ups must outlive one request of PHP's built-in server.
+      HYTRACK_SIGNUP_STORE: 'database',
       BCRYPT_ROUNDS: '4', // fast sign-in for seeded test accounts
       HYTRACK_DEMO_CONTROLS: 'true',
     },

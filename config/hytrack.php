@@ -16,6 +16,9 @@ return [
     // Password of the accounts created by the demo seeder.
     'demo_password' => env('HYTRACK_DEMO_PASSWORD', 'hytrack-demo'),
 
+    // Cache store holding sign-ups waiting for their SMS code (must persist between requests).
+    'signup_store' => env('HYTRACK_SIGNUP_STORE'),
+
     // Booking rules.
     'daily_quota' => (int) env('HYTRACK_DAILY_QUOTA', 30), // tickets per doctor per service date
     'booking_days' => (int) env('HYTRACK_BOOKING_DAYS', 60), // bookable service dates, today included
