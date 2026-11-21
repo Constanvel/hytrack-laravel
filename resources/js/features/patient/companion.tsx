@@ -1,7 +1,7 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { useState, type ReactNode } from 'react';
 import { Shell } from '@/components/shell';
-import { ActionLink, Notice, RowLink } from '@/components/ui';
+import { ActionLink, Icon, Notice, RowLink } from '@/components/ui';
 import { isActive, useAction, useLive } from '@/lib/live';
 import type { CompanionProgress } from '@/types';
 
@@ -29,24 +29,37 @@ export function CompanionAccess({ invitations }: { invitations: Invitation[] }) 
     );
   const link = flash.shareLink;
   return (
-    <Shell title="Akses pendamping" subtitle="KELOLA AKSES KUNJUNGAN" back="/kunjungan">
-      <h2>Biar keluarga ikut tenang.</h2>
-      <p className="muted">Undang keluarga memantau kunjungan ini, bukan informasi medis Anda.</p>
+    <Shell
+      title="Akses pendamping"
+      subtitle="KELOLA AKSES KUNJUNGAN"
+      back="/kunjungan"
+      className="share-shell"
+      action={
+        <button className="button" disabled={busy} onClick={() => post('/pendamping')}>
+          {invitations.length ? 'Bagikan tautan baru' : 'Bagikan tautan aman'}
+          <Icon name="arrow" />
+        </button>
+      }
+    >
+      <section className="intro">
+        <h2>Biar keluarga ikut tenang.</h2>
+        <p>Bagikan perkembangan kunjungan, bukan informasi medis Anda.</p>
+      </section>
       <section className="hero">
-        <p className="eyebrow">KUNJUNGAN ANDA</p>
+        <p className="eyebrow">{visit.isToday ? 'KUNJUNGAN HARI INI' : 'KUNJUNGAN ANDA'}</p>
         <h2 style={{ fontSize: 23 }}>
           {visit.patientName} · {visit.ticket}
         </h2>
-        <p className="small">
+        <p>
           {visit.dateLabel} · {hospital}
         </p>
       </section>
-      <section className="card">
+      <section className="card marked">
         <h3>Yang bisa dilihat pendamping</h3>
         <ul className="checklist">
           <li>✓ Status dan nomor antrean</li>
           <li>✓ Perkiraan waktu tunggu</li>
-          <li>✓ Lokasi dan tahapan pelayanan</li>
+          <li>✓ Lokasi layanan berikutnya</li>
           <li>✓ Proses penyiapan obat</li>
         </ul>
         <hr />
@@ -56,19 +69,16 @@ export function CompanionAccess({ invitations }: { invitations: Invitation[] }) 
         </p>
       </section>
       <section className="warning-card">
-        <h3>Satu undangan, satu pendamping</h3>
-        <p>
-          Pendamping menerima undangan dengan akun HyTrack-nya sendiri. Setelah diterima, tautan
-          tidak bisa dipakai orang lain. Akses berakhir saat kunjungan selesai atau pada hari
-          layanan pukul 23.59.
-        </p>
+        <h2>Akses otomatis berakhir</h2>
+        <p>Saat kunjungan selesai atau pada hari layanan pukul 23.59, mana yang lebih dulu.</p>
       </section>
       {link && (
         <section className="card stack" data-testid="share-link">
           <h3>Tautan undangan</h3>
           <p className="small share-link">{link}</p>
           <p className="small muted">
-            Kirim ke satu anggota keluarga. Demi keamanan, tautan ini hanya ditampilkan satu kali.
+            Kirim ke satu anggota keluarga. Tautan hanya bisa diterima satu pendamping dengan akun
+            HyTrack-nya sendiri, dan demi keamanan hanya ditampilkan satu kali.
           </p>
           <button
             className="button secondary"
@@ -90,9 +100,6 @@ export function CompanionAccess({ invitations }: { invitations: Invitation[] }) 
           )}
         </section>
       )}
-      <button className="button" disabled={busy} onClick={() => post('/pendamping')}>
-        {invitations.length ? 'Undang pendamping lain' : 'Undang pendamping'}
-      </button>
       {invitations.length > 0 && (
         <section className="stack-list" aria-label="Undangan pendamping">
           <h3>Undangan untuk kunjungan ini</h3>
@@ -125,6 +132,9 @@ export function CompanionAccess({ invitations }: { invitations: Invitation[] }) 
           })}
         </section>
       )}
+      <p className="muted share-note">
+        Hanya bagikan kepada orang tepercaya. Anda dapat mencabut akses kapan saja di halaman ini.
+      </p>
     </Shell>
   );
 }

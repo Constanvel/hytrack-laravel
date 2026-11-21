@@ -128,7 +128,7 @@ test('patient flow, companion revocation and pharmacy completion', async ({ page
 
   // The invitation is accepted with the companion's own account and is single-use.
   await page.getByRole('link', { name: 'Bagikan ke pendamping' }).click();
-  await page.getByRole('button', { name: 'Undang pendamping' }).click();
+  await page.getByRole('button', { name: 'Bagikan tautan aman' }).click();
   const link = (await page.locator('.share-link').textContent())!;
   const companion = await (await page.context().browser()!.newContext()).newPage();
   await companion.goto(link);
@@ -151,7 +151,7 @@ test('patient flow, companion revocation and pharmacy completion', async ({ page
   await expect(companion.getByText('Akses pendamping dicabut.')).toBeVisible();
   await companion.context().close();
 
-  await page.getByRole('link', { name: 'Kunjungan', exact: true }).click();
+  await page.getByRole('link', { name: 'Kembali' }).click();
   await page.getByRole('button', { name: 'Simulasikan pemeriksaan selesai' }).click();
   await page.getByRole('button', { name: 'Simulasikan lanjut ke farmasi' }).click();
   await page.getByRole('button', { name: 'Simulasikan obat siap' }).click();

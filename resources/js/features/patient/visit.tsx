@@ -1,7 +1,7 @@
 import { usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Shell, HyaHelp } from '@/components/shell';
-import { ActionLink, Icon, Notice, RowLink, Steps, TicketQr } from '@/components/ui';
+import { ActionLink, Notice, RowLink, Steps, TicketQr } from '@/components/ui';
 import { splitRoom, useAction, useLive } from '@/lib/live';
 import type { Visit as VisitData } from '@/types';
 
@@ -35,7 +35,10 @@ function Simulate({
 }
 
 export function Visit() {
-  const { visit } = usePage().props;
+  const {
+    props: { visit },
+    flash,
+  } = usePage();
   const live = useLive();
   const { busy, destroy } = useAction();
   if (!visit)
@@ -100,7 +103,8 @@ export function Visit() {
     );
   return (
     <Shell title="Tiket kunjungan" subtitle={visit.dateLabel.toUpperCase()} back="/" guide="tiket">
-      <Notice>✓ Antrean berhasil diambil</Notice>
+      {/* Right after booking the flash already says so; one confirmation is enough. */}
+      {!flash.status && <Notice>✓ Antrean berhasil diambil</Notice>}
       <div className="connection-row" role="status">
         <strong>{live.online ? '● Terhubung' : '○ Koneksi terputus'}</strong>
         <span>
@@ -172,7 +176,11 @@ export function Visit() {
 export function CheckIn() {
   const { visit, hospital } = usePage().props;
   const [manual, setManual] = useState(false);
+  const manualRef = useRef<HTMLDivElement>(null);
   const live = useLive();
+  useEffect(() => {
+    if (manual) manualRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [manual]);
   if (!visit || ['completed', 'no_show', 'cancelled'].includes(visit.stage)) return <Visit />;
   const booked = visit.stage === 'booked';
   return (
@@ -181,6 +189,16 @@ export function CheckIn() {
       subtitle={hospital.toUpperCase()}
       back="/kunjungan"
       guide="checkin"
+      action={
+        <button
+          className="button secondary"
+          aria-expanded={manual}
+          aria-controls="manual-check-in"
+          onClick={() => setManual(!manual)}
+        >
+          Nomor check-in manual
+        </button>
+      }
     >
       <h2>
         Tunjukkan QR ini
@@ -220,14 +238,13 @@ export function CheckIn() {
         QR hanya berlaku untuk kunjungan ini pada tanggal layanannya. Bila sulit terbaca, sebutkan
         nomor check-in kepada petugas.
       </p>
-      <button
-        className="button secondary"
-        aria-expanded={manual}
-        onClick={() => setManual(!manual)}
-      >
-        Nomor check-in manual
-      </button>
-      {manual && <Notice>Nomor check-in: {visit.checkInCode}. Sebutkan kepada petugas.</Notice>}
+      <div id="manual-check-in" ref={manualRef}>
+        {manual && (
+          <Notice role="status">
+            Nomor check-in: {visit.checkInCode}. Sebutkan kepada petugas.
+          </Notice>
+        )}
+      </div>
       {booked ? (
         <Simulate legend="Kontrol demo · menggantikan konfirmasi petugas" action="check-in">
           Simulasikan konfirmasi petugas
@@ -242,9 +259,9 @@ function Queue({ visit, live }: { visit: VisitData; live: ReturnType<typeof useL
   const serving = visit.stage === 'serving';
   const [room, building] = splitRoom(visit.room);
   return (
-    <Shell title="Antrean saya" subtitle="RAWAT JALAN · HARI INI" queue guide="antrean">
+    <Shell title="Antrean saya" subtitle="RAWAT JALAN · HARI INI" back="/" queue guide="antrean">
       <div className="connection-row" role="status">
-        <strong>{live.online ? '● Terhubung' : '○ Koneksi terputus'}</strong>
+        <strong>{live.online ? '● Terhubung langsung' : '○ Koneksi terputus'}</strong>
         <span>
           {live.online ? 'Diperbarui' : 'Data terakhir'} {live.syncedAt}
         </span>
@@ -272,23 +289,23 @@ function Queue({ visit, live }: { visit: VisitData; live: ReturnType<typeof useL
           </div>
         </div>
       </section>
-      <section className="queue-location">
+      <section className="card marked queue-location">
         <p className="eyebrow">{serving ? 'MASUK KE SINI' : 'TUNGGU DI SINI'}</p>
         <h2>Poli {visit.clinic}</h2>
         <p className="muted">{building ? `${room} · ${building}` : room}</p>
         <ActionLink href="/petunjuk-ruangan" secondary>
-          Lihat petunjuk ruangan <Icon name="arrow" />
+          Lihat petunjuk ruangan
         </ActionLink>
       </section>
+      {/* Figma says "saat 2 pasien lagi"; the server warns once the patient is next (up_next). */}
       <p className="muted queue-reminder">
-        Tetap di dekat ruang. Dengarkan juga
-        <br />
-        panggilan petugas rumah sakit.
+        Tetap di dekat ruang. Kami beri tahu saat giliran Anda berikutnya; dengarkan juga panggilan
+        petugas.
       </p>
       <div className="queue-share">
         <RowLink href="/pendamping">Bagikan ke pendamping</RowLink>
       </div>
-      <HyaHelp />
+      <Notice tone="warning">Saat sinyal putus, ikuti layar antrean rumah sakit.</Notice>
       <Simulate legend="Kontrol demo · menggantikan tindakan petugas" action="examined" secondary>
         Simulasikan pemeriksaan selesai
       </Simulate>
@@ -322,6 +339,7 @@ function NextService({ visit }: { visit: VisitData }) {
         <p>Turun 1 lantai · ±3 menit berjalan</p>
       </section>
       <Steps
+        current={2}
         items={[
           { title: 'Gunakan lift di sebelah kanan', detail: `Dari ${room}, ikuti tanda lift.` },
           { title: 'Turun ke lantai 1', detail: 'Keluar lift, lalu belok kiri.' },
@@ -345,6 +363,11 @@ function Pharmacy({ visit }: { visit: VisitData }) {
   const order = visit.pharmacy;
   const ready = order?.status === 'ready';
   const pickup = order?.pickupNumber ?? '—';
+  // A received prescription is being prepared: earlier steps ticked, the present one filled.
+  const step = Math.max(
+    1,
+    ['received', 'preparing', 'checking', 'ready'].indexOf(order?.status ?? ''),
+  );
   return (
     <Shell title="Status obat" subtitle="FARMASI RAWAT JALAN" back="/kunjungan" guide="layanan">
       <Notice>● Status farmasi · {order?.label ?? 'Menunggu resep'}</Notice>
@@ -363,6 +386,8 @@ function Pharmacy({ visit }: { visit: VisitData }) {
         </div>
       </section>
       <Steps
+        done={step}
+        current={step}
         items={[
           { title: 'Resep diterima', detail: 'Resep dari dokter diterima.' },
           { title: 'Obat disiapkan', detail: 'Sedang dikerjakan petugas farmasi.' },
@@ -374,7 +399,7 @@ function Pharmacy({ visit }: { visit: VisitData }) {
         ]}
       />
       <section className="info-card">
-        <h3>{ready ? 'Ambil obat di Farmasi' : 'Tunggu di area Farmasi'}</h3>
+        <h2>{ready ? 'Ambil obat di Farmasi' : 'Tunggu di area Farmasi'}</h2>
         <p>
           Gedung A, lantai 1 · Loket F2
           <br />
