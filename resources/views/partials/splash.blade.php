@@ -37,7 +37,7 @@
     .splash-name,
     .splash-tagline {
         margin: 0;
-        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        font-family: 'Inter', system-ui, sans-serif;
     }
     .splash-name {
         margin-top: 16px;
