@@ -1,5 +1,5 @@
 import { test, expect, chromium, type Page } from '@playwright/test';
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 
 /*
  * The demonstration from two separate sessions, in operational mode (no demo controls):
@@ -73,7 +73,19 @@ test('patient books in one browser, staff scan and confirm in another', async ({
   await patient.getByLabel('Konfirmasi kata sandi').fill(PATIENT_PASSWORD);
   await patient.locator('.auth-consent input').check();
   await patient.getByRole('button', { name: 'Buat akun' }).click();
-  await expect(patient).not.toHaveURL(/\/daftar$/);
+  // Sign-up step 2/3: outside demo mode the code goes to the log (no SMS gateway yet).
+  await expect(patient).toHaveURL(/\/daftar\/verifikasi$/);
+  await expect(patient.getByText('+62 813 •••• 1357')).toBeVisible();
+  const code = [
+    ...readFileSync('storage/logs/laravel.log', 'utf8').matchAll(
+      /Kode OTP pendaftaran .*?"code":"(\d{6})"/g,
+    ),
+  ].pop()![1];
+  await patient.getByLabel('Digit 1 dari 6').focus();
+  await patient.keyboard.type(code);
+  await patient.getByRole('button', { name: 'Verifikasi & lanjutkan' }).click();
+  await patient.getByRole('link', { name: 'Lanjut ke beranda' }).click();
+  await expect(patient).toHaveURL(new RegExp(`${baseURL}/?$`));
   await patient.goto('/akun');
   await patient.getByRole('button', { name: 'Keluar' }).click();
   await expect(patient).toHaveURL(/\/masuk$/);

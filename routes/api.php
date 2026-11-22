@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\Route;
  * web screens; authenticated with "Authorization: Bearer <token>" from POST /api/masuk.
  */
 Route::post('/masuk', [AccountController::class, 'login'])->middleware('throttle:6,1');
+Route::post('/daftar', [AccountController::class, 'register'])->middleware('throttle:6,1');
+Route::post('/daftar/verifikasi', [AccountController::class, 'verify'])->middleware('throttle:10,1');
+Route::post('/daftar/kirim-ulang', [AccountController::class, 'resendCode'])->middleware('throttle:10,1');
 
 Route::middleware(['auth:api', 'throttle:120,1'])->group(function () {
     Route::post('/keluar', [AccountController::class, 'logout']);

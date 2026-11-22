@@ -6,11 +6,10 @@ use App\Enums\UserRole;
 use App\Models\Patient;
 use App\Models\User;
 use App\Services\CompanionInvitations;
-use Illuminate\Database\UniqueConstraintViolationException;
+use App\Services\SignupVerification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -53,54 +52,57 @@ class AuthController extends Controller
         return Inertia::render('Register');
     }
 
-    /** Self sign-up creates a patient account; staff and manager accounts stay hospital-issued. */
-    public function storeAccount(Request $request): RedirectResponse
+    /** Step 1/3: check the form, then send the code. The account is created after step 2. */
+    public function storeAccount(Request $request, SignupVerification $signup): RedirectResponse
     {
-        $request->merge(['phone' => Patient::normalizePhone((string) $request->input('phone'))]);
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:100'],
-            'phone' => ['required', 'regex:/^628\d{7,11}$/'],
-            'password' => ['required', 'string', 'min:8', 'max:255', 'confirmed'],
-            'terms' => ['accepted'],
-        ], [
-            'name.required' => 'Nama lengkap wajib diisi.',
-            'name.max' => 'Nama lengkap maksimal 100 karakter.',
-            'phone.required' => 'Nomor ponsel wajib diisi.',
-            'phone.regex' => 'Masukkan nomor ponsel yang valid, mis. 0812-3456-7890.',
-            'password.required' => 'Kata sandi wajib diisi.',
-            'password.min' => 'Kata sandi minimal 8 karakter.',
-            'password.confirmed' => 'Konfirmasi kata sandi tidak sama.',
-            'terms.accepted' => 'Setujui Syarat & Ketentuan dan Kebijakan Privasi untuk melanjutkan.',
-        ]);
+        $request->session()->put('signup', $signup->start($signup->validated($request)));
 
-        if (Patient::whereNotNull('user_id')->wherePhone($data['phone'])->exists() || User::where('username', $data['phone'])->exists()) {
-            throw ValidationException::withMessages(['phone' => 'Nomor ponsel sudah terdaftar. Silakan masuk.']);
+        return redirect('/daftar/verifikasi');
+    }
+
+    /** Step 2/3, Figma "Kode OTP" (32:286). */
+    public function verification(Request $request, SignupVerification $signup): Response|RedirectResponse
+    {
+        $token = $request->session()->get('signup');
+        if (! $signup->exists($token)) {
+            return redirect('/daftar');
         }
 
-        try {
-            // users + patients in one transaction: never an account without a profile.
-            $user = DB::transaction(function () use ($data) {
-                $user = User::create([
-                    'username' => $data['phone'],
-                    'password_hash' => $data['password'], // hashed by the model's "hashed" cast
-                    'role' => UserRole::Patient,
-                ]);
-                Patient::create([
-                    'user_id' => $user->user_id,
-                    'full_name' => trim($data['name']),
-                    'phone_number' => Patient::formatPhone($data['phone']),
-                ]);
+        return Inertia::render('RegisterOtp', $signup->screen($token));
+    }
 
-                return $user;
-            });
-        } catch (UniqueConstraintViolationException) {
-            // Two sign-ups with the same number at the same moment: users.username is unique.
-            throw ValidationException::withMessages(['phone' => 'Nomor ponsel sudah terdaftar. Silakan masuk.']);
-        }
+    public function verify(Request $request, SignupVerification $signup): RedirectResponse
+    {
+        $code = $request->validate(['code' => ['required', 'digits:6']], [
+            'code.required' => 'Masukkan 6 digit kode OTP.',
+            'code.digits' => 'Masukkan 6 digit kode OTP.',
+        ])['code'];
+        $user = $signup->createAccount($signup->verify((string) $request->session()->get('signup'), $code));
+        $request->session()->forget('signup');
 
         Auth::login($user);
+        // Where the app would have gone (e.g. back to an invitation link), behind the success screen.
+        $request->session()->put('signup_next', $this->signedIn($request)->getTargetUrl());
 
-        return $this->signedIn($request);
+        return redirect('/daftar/selesai');
+    }
+
+    public function resend(Request $request, SignupVerification $signup): RedirectResponse
+    {
+        $signup->resend((string) $request->session()->get('signup'));
+
+        return back()->with('status', 'Kode baru telah dikirim.');
+    }
+
+    /** Step 3/3, Figma "Verifikasi berhasil" (32:330). */
+    public function verified(Request $request): Response
+    {
+        $user = $request->user();
+
+        return Inertia::render('RegisterVerified', [
+            'phone' => SignupVerification::mask($user->patient?->phone_number ?? $user->username),
+            'next' => $request->session()->get('signup_next', '/'),
+        ]);
     }
 
     public function destroy(Request $request): RedirectResponse

@@ -5,19 +5,24 @@
 @import './companion.css';
 @import './scanner.css';
 :root {
-  --bg: #f8f7f1;
-  --text: #183d39;
-  --muted: #566c65;
-  --primary: #0b7268;
-  --primary-hover: #085d55;
-  --pale: #e1efe9;
+  /* Figma "Perubahan lagi" (31:2): Inter, mint atmosphere, softer cream. */
+  --bg: #f6f8f4;
+  --text: #173d3b;
+  --muted: #5c706c;
+  --primary: #086f65;
+  --primary-hover: #075c54;
+  --pale: #e1efe7;
+  --pale-border: #cfe3d8;
   --border: #dce3dd;
+  --card-border: #dfe9e1;
+  --gradient: linear-gradient(129deg, #086b62 0%, #188777 71.4%);
+  --shadow: 0 6px 18px rgba(23, 78, 64, 0.05);
   --warning: #fff0d1;
   --warning-text: #805216;
   --info: #e5edf5;
   --info-text: #345978;
   --radius: 20px;
-  --font: 'Plus Jakarta Sans', sans-serif;
+  --font: 'Inter', sans-serif;
 }
 * {
   box-sizing: border-box;
@@ -76,15 +81,12 @@ h3 {
 }
 h1 {
   font-size: 24px;
-  letter-spacing: -0.65px;
 }
 h2 {
   font-size: 26px;
-  letter-spacing: -0.7px;
 }
 h3 {
   font-size: 18px;
-  letter-spacing: -0.3px;
 }
 p {
   line-height: 1.65;
@@ -155,6 +157,12 @@ summary:focus-visible {
   position: relative;
   /* Lets the decorative accents (z-index: -1) sit behind content but above the shell background. */
   isolation: isolate;
+  /* Mint atmosphere on top and a soft mint fade at the page end, as in every 31:2 frame. */
+  background:
+    url('/assets/atmos-mint.svg') left top / 100% 220px no-repeat,
+    linear-gradient(rgba(224, 239, 230, 0), rgba(224, 239, 230, 0.8)) left bottom / 100% 230px
+      no-repeat,
+    var(--bg);
 }
 /*
   Background accents from the design. They belong to the page, not the viewport: placed at the
@@ -235,10 +243,21 @@ summary:focus-visible {
   font-size: 21px;
   line-height: 28px;
 }
+.heading h1 {
+  line-height: 1.3;
+}
+/* Sub-pages: a 21px title beside the back chip. */
+.back + .heading h1 {
+  font-size: 21px;
+}
 .heading p {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
-  margin-top: 3px;
+  margin-top: 2px;
+}
+.back + .heading p {
+  font-size: 10px;
+  font-weight: 500;
 }
 .icon-button {
   width: 44px;
@@ -254,9 +273,16 @@ summary:focus-visible {
   background: var(--pale);
 }
 .back {
-  margin-left: -10px;
-  margin-right: 0;
-  width: 32px;
+  margin-left: -8px;
+  margin-right: 2px;
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid #d9e8de;
+}
+.back:hover {
+  background: #fff;
 }
 .page-content {
   padding: 16px 24px 28px;
@@ -277,16 +303,21 @@ summary:focus-visible {
   height: calc(80px + env(safe-area-inset-bottom));
   padding: 6px 12px calc(6px + env(safe-area-inset-bottom));
   background: #fff;
-  border-top: 1px solid var(--border);
+  border: 1px solid var(--pale-border);
+  border-bottom: 0;
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -4px 18px rgba(23, 78, 64, 0.04);
   z-index: 10;
 }
 .bottom-nav a {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 6px;
   flex-direction: column;
   font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
 }
 /* A screen's main action pinned in place of the bottom nav, same frame and height. */
 .action-bar {
@@ -298,45 +329,66 @@ summary:focus-visible {
   max-width: 540px;
   height: calc(80px + env(safe-area-inset-bottom));
   padding: 14px 24px calc(14px + env(safe-area-inset-bottom));
-  background: var(--bg);
+  /* Content fades out under the pinned button instead of meeting a hard edge. */
+  background: linear-gradient(rgba(238, 245, 240, 0), #eef5f0 14px);
   z-index: 10;
 }
 .nav-marker {
-  width: 76px;
-  height: 32px;
+  width: 60px;
+  height: 30px;
   display: grid;
   place-items: center;
-  border-radius: 30px;
+  border-radius: 18px;
 }
 .bottom-nav a[aria-current] {
-  font-weight: 700;
+  font-weight: 600;
+  color: var(--primary);
 }
 .bottom-nav a[aria-current] .nav-marker {
   background: var(--pale);
 }
 .bottom-nav .icon {
-  width: 22px;
-  height: 22px;
+  width: 21px;
+  height: 21px;
 }
 .card {
   padding: 20px;
   background: #fff;
-  border-radius: var(--radius);
+  border: 1px solid var(--card-border);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+}
+/* Card with the short teal marker on its left edge (Figma "Penanda kartu"). */
+.card.marked {
+  position: relative;
+}
+.card.marked::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 22px;
+  width: 4px;
+  height: 32px;
+  border-radius: 2px;
+  background: #6baf99;
 }
 .card > * + * {
   margin-top: 12px;
 }
 .hero {
   padding: 24px;
-  background: var(--primary);
+  background:
+    url('/assets/card-contour.svg') right top / 364px 321px no-repeat,
+    var(--gradient);
   color: white;
-  border-radius: var(--radius);
+  border-radius: 24px;
+  box-shadow: 0 6px 18px rgba(23, 78, 64, 0.09);
 }
 .hero > * + * {
   margin-top: 16px;
 }
 .hero .eyebrow {
-  color: #d4ece3;
+  color: #b8ded1;
 }
 .hero p {
   color: #e2efea;
@@ -347,7 +399,7 @@ summary:focus-visible {
 }
 .eyebrow {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--muted);
   line-height: 1.5;
 }
@@ -359,25 +411,41 @@ summary:focus-visible {
   align-items: center;
   gap: 12px;
   padding: 13px 16px;
-  background: var(--primary);
+  background: linear-gradient(168deg, #086b62, #188777);
   color: #fff;
   border: 0;
-  border-radius: 12px;
-  font-weight: 700;
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(23, 78, 64, 0.12);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
   text-align: center;
 }
 .button:hover {
-  background: var(--primary-hover);
+  background: linear-gradient(168deg, #075c54, #13776a);
+}
+/* The arrow asset is teal; on the gradient it turns white. */
+.button:not(.secondary, .white, .danger) .icon img {
+  filter: brightness(0) invert(1);
+}
+.button.split {
+  justify-content: space-between;
+  padding-inline: 18px;
 }
 .button.secondary {
+  min-height: 50px;
   background: var(--pale);
+  border: 1px solid var(--pale-border);
+  border-radius: 12px;
+  box-shadow: none;
   color: var(--primary);
 }
 .button.secondary:hover {
-  background: #cfe5db;
+  background: #d4e9de;
 }
 .button.white {
   background: white;
+  box-shadow: none;
   color: var(--primary);
 }
 .button.white:hover {
@@ -385,6 +453,7 @@ summary:focus-visible {
 }
 .button.danger {
   background: var(--warning);
+  box-shadow: none;
   color: var(--warning-text);
 }
 .text-button {
@@ -453,26 +522,34 @@ hr {
 .notice {
   background: var(--pale);
   color: var(--primary);
-  border-radius: 10px;
-  padding: 10px 12px;
-  font-size: 12px;
+  border: 1px solid var(--pale-border);
+  border-radius: 12px;
+  padding: 9px 12px;
+  font-size: 13px;
   font-weight: 600;
-  line-height: 1.6;
+  line-height: 1.45;
 }
 .notice.warning,
 .warning-card {
   background: var(--warning);
+  border: 1px solid #ecdbb7;
   color: var(--warning-text);
 }
 .notice.info,
 .info-card {
   background: var(--info);
+  border: 1px solid #d3e0ec;
   color: var(--info-text);
 }
 .warning-card,
 .info-card {
   padding: 16px;
-  border-radius: var(--radius);
+  border-radius: 18px;
+}
+.warning-card h2,
+.info-card h2 {
+  font-size: 17px;
+  font-weight: 600;
 }
 .warning-card > * + *,
 .info-card > * + * {
@@ -623,28 +700,33 @@ hr {
   margin-top: 6px;
 }
 .queue-location {
-  margin-top: 24px;
+  margin-top: 14px;
+  padding: 18px 18px 16px;
 }
-.queue-location .button {
-  min-height: 50px;
+.queue-location > * + * {
+  margin-top: 0;
 }
 .queue-location h2 {
-  font-size: 21px;
-  margin-top: 8px;
-}
-.queue-location p {
+  font-size: 20px;
   margin-top: 6px;
+}
+.queue-location p.muted {
+  margin-top: 4px;
+  font-size: 15px;
 }
 .queue-location .button {
   margin-top: 14px;
-  justify-content: space-between;
 }
 .queue-reminder {
-  margin-top: 14px;
-  line-height: 1.65;
+  margin-top: 16px;
+  font-size: 14px;
+  line-height: 1.6;
 }
 .queue-share {
   margin-top: 4px;
+}
+.queue-shell .notice.warning {
+  margin-top: 12px;
 }
 .hya-help {
   background: var(--pale);
@@ -657,9 +739,21 @@ hr {
   position: relative;
   gap: 8px;
 }
-/* The queue screen has no page gap, so the card brings its own spacing there. */
-.queue-shell .hya-help {
-  margin-top: 22px;
+/* "Masih bingung? Tanya Hya" (Figma 23): the large Hya portrait overlaps the card's left edge. */
+.hya-help.with-avatar {
+  justify-content: flex-start;
+  gap: 16px;
+  padding: 10px 18px 10px 0;
+  margin-left: 8px;
+  border: 1px solid var(--pale-border);
+}
+.hya-help.with-avatar .avatar-large {
+  margin: -8px 0 -8px -8px;
+  width: 72px;
+  height: 72px;
+}
+.hya-help.with-avatar > span:not(.avatar) {
+  flex: 1;
 }
 .guide-hint {
   background: #fff;
@@ -797,10 +891,41 @@ hr {
   flex: none;
 }
 .steps strong {
-  font-size: 15px;
+  font-size: 16px;
+  font-weight: 600;
 }
 .steps p {
-  margin-top: 3px;
+  margin-top: 2px;
+}
+.steps .current .step-number {
+  background: var(--primary);
+  color: #fff;
+}
+.steps .done .step-number {
+  font-size: 13px;
+}
+/* Guide steps (Figma 23): teal "01" in place of the circle, text aligned to the top. */
+.steps.numbered {
+  padding: 22px 20px;
+}
+.steps.numbered li {
+  align-items: flex-start;
+  gap: 16px;
+}
+.steps.numbered li + li {
+  margin-top: 22px;
+}
+.steps.numbered .step-number {
+  width: 24px;
+  height: auto;
+  background: none;
+  border-radius: 0;
+  line-height: 22px;
+}
+.steps.numbered p {
+  font-size: 13px;
+  line-height: 1.55;
+  margin-top: 4px;
 }
 .stack {
   display: flex;
@@ -933,8 +1058,12 @@ hr {
   border-bottom: 1px solid var(--border);
   padding: 12px 0;
 }
+.faq-list .row-link {
+  color: var(--text);
+}
 .faq-list strong {
-  font-size: 15px;
+  font-size: 16px;
+  font-weight: 600;
 }
 .guide-steps li {
   align-items: flex-start;
@@ -968,6 +1097,7 @@ hr {
 }
 .support-card {
   background: var(--pale);
+  border: 1px solid var(--pale-border);
   display: block;
   padding: 16px;
   border-radius: 18px;
@@ -975,6 +1105,20 @@ hr {
 .support-card .profile-row {
   justify-content: flex-start;
   margin-bottom: 8px;
+}
+/* Figma's muted on the mint card is 4.3:1; a shade darker reaches WCAG AA at 12px. */
+.support-card .muted {
+  color: #4d625e;
+}
+.support-card .avatar {
+  width: 56px;
+  height: 56px;
+  background: none;
+}
+.support-card .avatar img {
+  width: 86px;
+  height: 65px;
+  left: -15px;
 }
 .support-card h2 {
   font-size: 21px;
@@ -986,6 +1130,11 @@ hr {
   display: grid;
   gap: 10px;
   color: var(--primary);
+  font-size: 15px;
+  font-weight: 500;
+}
+.share-note {
+  font-size: 14px;
 }
 details {
   padding: 16px;
@@ -1070,7 +1219,6 @@ details p {
   }
   .app-shell {
     max-width: 800px;
-    background: var(--bg);
     box-shadow: 0 0 0 1px var(--border);
     min-height: 100dvh;
   }

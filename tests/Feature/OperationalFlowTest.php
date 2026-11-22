@@ -49,13 +49,13 @@ class OperationalFlowTest extends TestCase
         $this->assertFalse(config('hytrack.demo_controls'));
 
         // 1. Sign-up: users + patients in one go, password hashed.
-        $this->post('/daftar', [
+        $this->signUp([
             'name' => 'Budi Santoso',
             'phone' => '+62 812-7777-1234',
             'password' => self::PASSWORD,
             'password_confirmation' => self::PASSWORD,
             'terms' => '1',
-        ])->assertRedirect('/');
+        ])->assertRedirect('/daftar/selesai');
         $user = User::where('username', '6281277771234')->firstOrFail();
         $this->assertNotSame(self::PASSWORD, $user->password_hash);
         $this->assertTrue(Hash::check(self::PASSWORD, $user->password_hash));
@@ -165,7 +165,7 @@ class OperationalFlowTest extends TestCase
 
     public function test_one_phone_number_in_any_format_is_one_account(): void
     {
-        $this->post('/daftar', ['name' => 'A', 'phone' => '0812-3333-4444', 'password' => self::PASSWORD, 'password_confirmation' => self::PASSWORD, 'terms' => '1']);
+        $this->signUp(['name' => 'A', 'phone' => '0812-3333-4444', 'password' => self::PASSWORD, 'password_confirmation' => self::PASSWORD, 'terms' => '1']);
         $this->post('/keluar');
         $this->post('/daftar', ['name' => 'B', 'phone' => '+62 812 3333 4444', 'password' => self::PASSWORD, 'password_confirmation' => self::PASSWORD, 'terms' => '1'])
             ->assertSessionHasErrors(['phone' => 'Nomor ponsel sudah terdaftar. Silakan masuk.']);

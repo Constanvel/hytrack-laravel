@@ -48,7 +48,7 @@ const SAVED = 'Mode prototype: perubahan hanya contoh dan tidak disimpan.';
 
 /** Roles own their own area; everyone else is sent home, as Laravel's role middleware does. */
 function owner(path: string): 'patient' | 'staff' | 'manager' | 'guest' | 'any' {
-  if (path === '/masuk' || path === '/daftar') return 'guest';
+  if (path === '/masuk' || path === '/daftar' || path === '/daftar/verifikasi') return 'guest';
   if (path.startsWith('/pantauan/')) return 'any';
   if (path.startsWith('/petugas')) return 'staff';
   if (path.startsWith('/manajemen')) return 'manager';
@@ -58,6 +58,14 @@ function owner(path: string): 'patient' | 'staff' | 'manager' | 'guest' | 'any' 
 function lookup(state: State, path: string, query: URLSearchParams): Recorded | null {
   const user = state.user ?? 'guest';
   if (path === '/') return { component: 'Home', props: {} };
+  // Sign-up steps 2 and 3: no SMS in the prototype, so the code is shown (any 6 digits pass).
+  if (path === '/daftar/verifikasi')
+    return {
+      component: 'RegisterOtp',
+      props: { phone: '+62 812 •••• 0842', resendIn: 45, expiresIn: 300, demoCode: '123456' },
+    };
+  if (path === '/daftar/selesai')
+    return { component: 'RegisterVerified', props: { phone: '+62 812 •••• 0842', next: '/' } };
   if (path.startsWith('/pantauan/'))
     return fixtures.pages[`${user === 'guest' ? 'guest' : 'ahmad'}|/pantauan/*`];
   if (/^\/pendampingan\/\d+$/.test(path)) path = `/pendampingan/${fixtures.shareId}`;
@@ -157,10 +165,15 @@ export function respond(
     if (s.companion) return go('/pendampingan');
     return go(fixtures.users[s.user].home);
   }
-  if (route === '/daftar') {
+  if (route === '/daftar') return go('/daftar/verifikasi');
+  if (route === '/daftar/verifikasi/kirim-ulang')
+    return back({ status: 'Kode baru telah dikirim.' });
+  if (route === '/daftar/verifikasi') {
     s.user = 'siti';
     s.companion = false;
-    return go('/', { status: 'Mode prototype: Anda masuk sebagai pasien contoh, Siti Aminah.' });
+    return go('/daftar/selesai', {
+      status: 'Mode prototype: Anda masuk sebagai pasien contoh, Siti Aminah.',
+    });
   }
   if (route === '/keluar') {
     s.user = null;

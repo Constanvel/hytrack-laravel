@@ -171,13 +171,15 @@ function useTuckedFab(url: string) {
     };
   }, [url]);
 }
-export function HyaHelp() {
+export function HyaHelp({ title = 'Ada yang bisa Hya bantu?', avatar = false }) {
   return (
-    <Link href="/hya" className="hya-help">
+    <Link href="/hya" className={`hya-help ${avatar ? 'with-avatar' : ''}`}>
+      {avatar && <Avatar large />}
       <span>
-        <strong>Ada yang bisa Hya bantu?</strong>
+        <strong>{title}</strong>
         <small>Tanya Hya</small>
       </span>
+      {avatar && <Icon name="arrow" />}
     </Link>
   );
 }
