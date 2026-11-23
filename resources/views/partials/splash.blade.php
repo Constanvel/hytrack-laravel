@@ -56,8 +56,10 @@
         gap: 0.12em;
         font-size: min(45px, 10.9vw);
     }
+    /* Above the wordmark, which comes out from behind it. */
     .splash-mark {
         position: relative;
+        z-index: 1;
         flex: none;
         width: 2.152em;
         height: 1.568em;
