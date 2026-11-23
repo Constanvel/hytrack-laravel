@@ -1,7 +1,7 @@
 import { router } from '@inertiajs/react';
 import { useState } from 'react';
 import { DashboardShell } from './dashboard-shell';
-import { Stat } from './staff';
+import { Stat } from './dashboard-shell';
 import { Notice } from '@/components/ui';
 
 interface Report {

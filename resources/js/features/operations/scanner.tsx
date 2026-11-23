@@ -168,7 +168,7 @@ export function QrScanner({ desk }: { desk: string }) {
       <div className="scan-title">
         <div>
           <h1>Scan QR kedatangan</h1>
-          <p>Pindai tiket pasien, cocokkan identitasnya, lalu konfirmasi hadir.</p>
+          <p>Pindai tiket pasien, cocokkan data, lalu konfirmasi check-in.</p>
         </div>
         <span className="scan-mode">{desk.toUpperCase().replace('LANTAI', 'LT.')}</span>
       </div>
@@ -336,7 +336,7 @@ export function QrScanner({ desk }: { desk: string }) {
                     disabled={phase === 'confirming'}
                     onClick={confirm}
                   >
-                    {phase === 'confirming' ? 'Mencatat…' : 'Konfirmasi hadir'}
+                    {phase === 'confirming' ? 'Mencatat…' : 'Konfirmasi check-in'}
                   </button>
                   <button className="scan-link center" onClick={rescan}>
                     Batalkan pemindaian
@@ -347,7 +347,7 @@ export function QrScanner({ desk }: { desk: string }) {
           ) : (
             <p className="scan-empty">
               Data pasien tampil di sini setelah QR terbaca. Tidak ada yang dicatat sebelum Anda
-              menekan Konfirmasi hadir.
+              menekan Konfirmasi check-in.
             </p>
           )}
         </section>

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\JourneyStage;
+use App\Enums\PrescriptionStatus;
 use App\Enums\QueueStatus;
 use App\Enums\StageStatus;
 use App\Exceptions\QueueRuleException;
@@ -72,27 +74,17 @@ class StaffController extends Controller
                 'waiting' => $line->where('queue_status', QueueStatus::Waiting)->count(),
                 'examined' => $line->whereIn('queue_status', [QueueStatus::Laboratory, QueueStatus::Pharmacy, QueueStatus::Completed])->count(),
                 'notCheckedIn' => $line->where('queue_status', QueueStatus::Booked)->count(),
+                'registered' => $line->where('queue_status', '!=', QueueStatus::Cancelled)->count(),
             ],
             'queue' => $line->where('queue_status', QueueStatus::Waiting)->map($row)->values(),
             'current' => $current ? [
                 ...$row($current),
-                'startedAt' => HospitalTime::clock($current->journeys->firstWhere('stage_order', 2)?->started_at),
+                'startedAt' => HospitalTime::clock($started = $current->journey(JourneyStage::Consultation)?->started_at),
+                'minutes' => $started ? (int) $started->diffInMinutes(now()) : null,
                 'calledCount' => $current->called_count,
             ] : null,
-            'laboratory' => Queue::where('service_date', $today)->where('queue_status', QueueStatus::Laboratory)
-                ->with(['patient', 'polyclinic'])->orderBy('queue_id')->get()
-                ->map(fn (Queue $queue) => [...$row($queue), 'clinic' => $queue->polyclinic->polyclinic_name]),
-            'pharmacy' => PharmacyOrder::whereHas('queue', fn ($queue) => $queue
-                ->where('service_date', $today)->where('queue_status', QueueStatus::Pharmacy))
-                ->with('queue.patient')->orderBy('pharmacy_order_id')->get()
-                ->map(fn (PharmacyOrder $order) => [
-                    'id' => $order->pharmacy_order_id,
-                    'pickup' => $order->pickupNumber(),
-                    'number' => $order->queue->queue_number,
-                    'name' => $order->queue->patient->full_name,
-                    'status' => $order->prescription_status->label(),
-                    'next' => $order->prescription_status->next()?->label(),
-                ]),
+            'flow' => $this->flow($today),
+            ...$this->pharmacy($today),
             'history' => $this->history($today),
             'checkInDesk' => config('hytrack.rooms.check_in'),
             // Master data (CRUD "Data poliklinik"), with how much still depends on each one.
@@ -433,36 +425,143 @@ class StaffController extends Controller
     }
 
     /**
-     * Today's staff activity, newest first. patient_journeys keeps the last update of
-     * each stage, so this is a working log, not a complete audit trail.
+     * Alur pelayanan (Figma 43:2 frame 21): every visit still open today, by the stage it is in.
      *
-     * @return Collection<int, string>
+     * @return array<string, mixed>
+     */
+    private function flow(string $today): array
+    {
+        $target = config('hytrack.wait_target_minutes');
+        $visits = Queue::where('service_date', $today)
+            ->with(['patient', 'polyclinic', 'pharmacyOrder'])
+            ->orderByRaw('checkin_at is null')->orderBy('checkin_at')->orderBy('queue_id')->get();
+
+        return [
+            'visits' => $visits->filter(fn (Queue $queue) => $queue->queue_status->isActive())
+                ->map(function (Queue $queue) use ($target) {
+                    $status = $queue->queue_status;
+                    $waited = $queue->checkin_at ? (int) $queue->checkin_at->diffInMinutes(now()) : 0;
+
+                    return [
+                        'id' => $queue->queue_id,
+                        'number' => $queue->queue_number,
+                        'name' => $queue->patient->full_name,
+                        'clinicId' => $queue->polyclinic_id,
+                        'stage' => match ($status) {
+                            QueueStatus::Booked => 'arrival',
+                            QueueStatus::Waiting, QueueStatus::Serving => 'clinic',
+                            QueueStatus::Laboratory => 'support',
+                            default => 'pharmacy',
+                        },
+                        'note' => match ($status) {
+                            QueueStatus::Booked => 'Belum check-in'.($queue->checkin_deadline ? ' · batas '.HospitalTime::clock($queue->checkin_deadline) : ''),
+                            QueueStatus::Serving => 'Sedang dilayani · '.($queue->polyclinic->room_location ?? $queue->polyclinic->polyclinic_name),
+                            QueueStatus::Waiting => "Menunggu · {$queue->polyclinic->polyclinic_name} · {$waited} mnt",
+                            QueueStatus::Laboratory => 'Laboratorium · menunggu hasil',
+                            default => $queue->pharmacyOrder?->prescription_status->label() ?? 'Farmasi',
+                        },
+                        'late' => $status === QueueStatus::Waiting && $waited > $target,
+                    ];
+                })->values(),
+            'completed' => $visits->where('queue_status', QueueStatus::Completed)->countBy('polyclinic_id'),
+        ];
+    }
+
+    /**
+     * Farmasi (Figma 43:2 frame 22): open prescriptions plus today's totals.
+     *
+     * @return array<string, mixed>
+     */
+    private function pharmacy(string $today): array
+    {
+        $orders = PharmacyOrder::whereHas('queue', fn ($queue) => $queue->where('service_date', $today))
+            ->with(['queue.patient', 'queue.polyclinic', 'updatedBy'])->orderBy('pharmacy_order_id')->get();
+        $prepared = $orders->filter(fn (PharmacyOrder $order) => $order->received_at && $order->ready_at)
+            ->map(fn (PharmacyOrder $order) => $order->received_at->diffInSeconds($order->ready_at) / 60);
+
+        return [
+            'pharmacy' => $orders->filter(fn (PharmacyOrder $order) => $order->queue->queue_status === QueueStatus::Pharmacy)
+                ->map(fn (PharmacyOrder $order) => [
+                    'id' => $order->pharmacy_order_id,
+                    'pickup' => $order->pickupNumber(),
+                    'number' => $order->queue->queue_number,
+                    'name' => $order->queue->patient->full_name,
+                    'clinic' => $order->queue->polyclinic->polyclinic_name,
+                    'record' => $order->queue->patient->medical_record_number
+                        ? '•••• '.substr($order->queue->patient->medical_record_number, -4) : null,
+                    'receivedAt' => HospitalTime::clock($order->received_at),
+                    'status' => $order->prescription_status->value,
+                    'statusLabel' => $order->prescription_status->label(),
+                    'next' => $order->prescription_status->next()?->label(),
+                    'handledBy' => $order->updatedBy?->full_name,
+                ])->values(),
+            'pharmacyStats' => [
+                'done' => $orders->where('prescription_status', PrescriptionStatus::Completed)->count(),
+                'average' => $prepared->isEmpty() ? null : (int) round($prepared->avg()),
+            ],
+        ];
+    }
+
+    /**
+     * Riwayat aktivitas (Figma 43:2 frame 23): today's staff actions, newest first.
+     * patient_journeys keeps the last update of each stage, so this is a working log,
+     * not a complete audit trail.
+     *
+     * @return Collection<int, array<string, string|null>>
      */
     private function history(string $today): Collection
     {
-        return PatientJourney::whereNotNull('updated_by_staff_id')
+        $row = fn (?CarbonInterface $at, string $key, Queue $queue, string $activity, ?Staff $staff, string $unit, string $result) => [
+            'at' => $at,
+            'key' => $key,
+            'time' => HospitalTime::clock($at),
+            'activity' => $activity,
+            'patient' => strtok($queue->patient->full_name, ' ').' · '.$queue->queue_number,
+            'staff' => $staff?->full_name,
+            'unit' => $unit,
+            'result' => $result,
+        ];
+
+        $stages = PatientJourney::whereNotNull('updated_by_staff_id')
             ->whereHas('queue', fn ($queue) => $queue->where('service_date', $today))
-            ->with(['queue', 'updatedBy'])
-            ->get()
-            ->map(fn (PatientJourney $stage) => [
-                'at' => $stage->completed_at ?? $stage->started_at,
-                'id' => $stage->journey_id,
-                'text' => sprintf(
-                    '%s · %s %s oleh %s',
-                    $stage->queue->queue_number,
-                    $stage->stage_name,
-                    match ($stage->stage_status) {
-                        StageStatus::Done => 'selesai',
-                        StageStatus::Skipped => 'dilewati,',
-                        default => 'dimulai',
-                    },
-                    $stage->updatedBy->full_name,
-                ),
-            ])
+            ->with(['queue.patient', 'queue.polyclinic', 'updatedBy'])->get()
+            ->map(function (PatientJourney $stage) use ($row) {
+                $kind = JourneyStage::from($stage->stage_order);
+                $done = $stage->stage_status === StageStatus::Done;
+                $unit = match ($kind) {
+                    JourneyStage::CheckIn => 'Kedatangan',
+                    JourneyStage::Consultation => $stage->queue->polyclinic->polyclinic_name,
+                    JourneyStage::Laboratory => 'Laboratorium',
+                    JourneyStage::Pharmacy => 'Farmasi',
+                };
+                [$activity, $result] = $stage->stage_status === StageStatus::Skipped
+                    ? ["{$stage->stage_name} dilewati", 'Dilewati']
+                    : match ($kind) {
+                        JourneyStage::CheckIn => ['Check-in dikonfirmasi', 'Berhasil'],
+                        JourneyStage::Consultation => $done ? ['Pemeriksaan dokter selesai', 'Selesai'] : ['Pemeriksaan dimulai', 'Dilayani'],
+                        JourneyStage::Laboratory => $done ? ['Laboratorium selesai', 'Selesai'] : ['Laboratorium dimulai', 'Diperiksa'],
+                        JourneyStage::Pharmacy => $done ? ['Obat diserahkan', 'Diserahkan'] : ['Resep diterima', 'Verifikasi'],
+                    };
+
+                return $row($stage->completed_at ?? $stage->started_at, sprintf('j%08d', $stage->journey_id), $stage->queue, $activity, $stage->updatedBy, $unit, $result);
+            });
+
+        $pharmacy = PharmacyOrder::whereNotNull('updated_by_staff_id')
+            ->whereIn('prescription_status', [PrescriptionStatus::Checking, PrescriptionStatus::Ready])
+            ->whereHas('queue', fn ($queue) => $queue->where('service_date', $today))
+            ->with(['queue.patient', 'updatedBy'])->get()
+            ->map(fn (PharmacyOrder $order) => $order->prescription_status === PrescriptionStatus::Ready
+                ? $row($order->ready_at, sprintf('p%08d', $order->pharmacy_order_id), $order->queue, 'Resep siap diambil', $order->updatedBy, 'Farmasi', 'Siap diambil')
+                : $row($order->prepared_at, sprintf('p%08d', $order->pharmacy_order_id), $order->queue, 'Resep selesai disiapkan', $order->updatedBy, 'Farmasi', 'Pemeriksaan akhir'));
+
+        $noShows = Queue::where('service_date', $today)->whereNotNull('no_show_by_staff_id')
+            ->with(['patient', 'polyclinic', 'noShowBy'])->get()
+            ->map(fn (Queue $queue) => $row($queue->no_show_at, sprintf('n%08d', $queue->queue_id), $queue, 'Ditandai tidak hadir', $queue->noShowBy, $queue->polyclinic->polyclinic_name, 'Tidak hadir'));
+
+        return $stages->concat($pharmacy)->concat($noShows)
             ->filter(fn (array $event) => $event['at'] !== null)
-            ->sortBy([['at', 'desc'], ['id', 'desc']])
-            ->take(30)
-            ->map(fn (array $event) => HospitalTime::clock($event['at']).' · '.$event['text'])
+            ->sortBy([['at', 'desc'], ['key', 'desc']])
+            ->map(fn (array $event) => collect($event)->except('at')->all())
             ->values();
     }
 }

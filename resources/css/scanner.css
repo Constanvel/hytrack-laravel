@@ -27,6 +27,7 @@
   display: flex;
   align-items: center;
   gap: 20px;
+  margin-top: 4px;
 }
 .scan-title > div {
   flex: 1;
@@ -58,9 +59,11 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 20px;
+  padding: 18px;
+  border: 1px solid #dfe9e1;
   border-radius: 20px;
   background: #fff;
+  box-shadow: 0 6px 18px rgba(23, 78, 64, 0.05);
 }
 .scan-card.scanner {
   flex: 1;
@@ -183,8 +186,9 @@
 .scan-card.result {
   flex: none;
   width: 368px;
+  min-height: 596px;
   gap: 10px;
-  padding: 24px;
+  padding: 22px;
 }
 .scan-eyebrow {
   color: var(--scan-muted);
@@ -265,9 +269,20 @@
   background: #075c54;
 }
 .scan-manual {
+  position: relative;
   flex-direction: row;
   align-items: center;
   gap: 24px;
+}
+.scan-manual::before {
+  content: '';
+  position: absolute;
+  left: 18px;
+  top: -1px;
+  width: 42px;
+  height: 4px;
+  border-radius: 2px;
+  background: #4c9b85;
 }
 .scan-manual > div {
   display: flex;

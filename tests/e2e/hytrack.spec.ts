@@ -273,7 +273,11 @@ test('staff guards, queue actions and history', async ({ page }) => {
   await page.getByRole('button', { name: 'Panggil pasien berikutnya' }).click();
   await page.getByRole('button', { name: 'Selesai & lanjutkan layanan' }).click();
   await page.getByRole('button', { name: 'Riwayat aktivitas' }).click();
-  await expect(page.getByText(/A-024 · Pemeriksaan dokter selesai oleh Dina/)).toBeVisible();
+  await expect(
+    page
+      .locator('.activity-table tr', { hasText: 'Pemeriksaan dokter selesai' })
+      .filter({ hasText: 'A-024' }),
+  ).toContainText('Dina');
 });
 
 test('management filtering, empty state and CSV download', async ({ page }) => {
