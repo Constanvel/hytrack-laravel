@@ -139,7 +139,7 @@ test('the splash covers only the first load and leaves without a fixed delay', a
   await page.getByRole('link', { name: 'Daftar sekarang' }).click();
   await expect(page).toHaveURL(/\/daftar$/);
   await expect(page.locator('#splash')).toHaveCount(0);
-  // Reduced motion: removed at once, without the fade.
+  // Reduced motion: removed at once, without the sweep.
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/masuk');
   await expect(page.locator('#splash')).toHaveCount(0);
