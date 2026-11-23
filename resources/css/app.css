@@ -755,6 +755,23 @@ hr {
 .hya-help.with-avatar > span:not(.avatar) {
   flex: 1;
 }
+/* "Ada yang bisa Hya bantu?" (Figma 43:2 frame 04): arrow, then Hya's 65px portrait
+   flush with the card's height and 13px past its right edge. */
+.hya-help:not(.with-avatar) {
+  justify-content: flex-start;
+  gap: 0;
+  padding: 0 0 0 21px;
+}
+.hya-help:not(.with-avatar) > span:not(.avatar, .icon) {
+  flex: 1;
+  min-width: 0;
+}
+.hya-help:not(.with-avatar) > .icon {
+  margin-right: 58px;
+}
+.hya-help:not(.with-avatar) > .avatar-large {
+  margin: 0 -13px 0 0;
+}
 .guide-hint {
   background: #fff;
   border: 1px solid var(--border);
@@ -822,6 +839,10 @@ hr {
 }
 .hya-fab .avatar-large {
   margin: 0;
+}
+/* A page with the Hya card already shows Hya there (Figma 43:2 frame 04). */
+.page-content:has(.hya-help) ~ .hya-fab {
+  display: none;
 }
 .hya-help strong {
   font-size: 14px;
