@@ -968,6 +968,22 @@ hr {
 }
 .chat-shell .page-header {
   border-bottom: 1px solid var(--border);
+  /* Figma 43:2 frames 19/21: back chip at x 11, Hya (32px) at x 74, title at x 118. */
+  padding-left: 11px;
+  padding-right: 12px;
+}
+.chat-shell .page-header > .back {
+  margin-left: 0;
+  margin-right: 11px;
+}
+.chat-shell .page-header > .avatar {
+  width: 32px;
+  height: 32px;
+}
+.chat-shell .page-header > .avatar img {
+  width: 49.6px;
+  height: auto;
+  left: -9px;
 }
 .chat-shell .page-content {
   gap: 20px;
