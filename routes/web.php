@@ -19,6 +19,11 @@ Route::middleware('guest')->group(function () {
     Route::post('/masuk', [AuthController::class, 'store'])->middleware('throttle:6,1');
     Route::get('/daftar', [AuthController::class, 'createAccount']);
     Route::post('/daftar', [AuthController::class, 'storeAccount'])->middleware('throttle:6,1');
+    // WhatsApp OTP before a self sign-up creates the account (only when WANGSAF_API_KEY is set).
+    Route::get('/daftar/verifikasi', [AuthController::class, 'verifyAccount']);
+    Route::post('/daftar/verifikasi', [AuthController::class, 'confirmAccount'])->middleware('throttle:10,1');
+    Route::post('/daftar/verifikasi/kirim-ulang', [AuthController::class, 'resendCode'])->middleware('throttle:3,1');
+    Route::post('/daftar/verifikasi/batal', [AuthController::class, 'cancelVerification']);
 });
 
 // Family Companion invitation link: public so guests can be asked to sign in, but throttled.

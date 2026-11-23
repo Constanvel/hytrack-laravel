@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\UserRole;
 use App\Models\Patient;
 use App\Models\User;
+use App\Services\SignupVerification;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -51,7 +52,7 @@ class AuthController extends Controller
     }
 
     /** Self sign-up creates a patient account; staff and manager accounts stay hospital-issued. */
-    public function storeAccount(Request $request): RedirectResponse
+    public function storeAccount(Request $request, SignupVerification $verification): RedirectResponse
     {
         $request->merge(['phone' => Patient::normalizePhone((string) $request->input('phone'))]);
         $data = $request->validate([
@@ -70,22 +71,82 @@ class AuthController extends Controller
             'terms.accepted' => 'Setujui Syarat & Ketentuan dan Kebijakan Privasi untuk melanjutkan.',
         ]);
 
-        if (Patient::whereNotNull('user_id')->wherePhone($data['phone'])->exists() || User::where('username', $data['phone'])->exists()) {
-            throw ValidationException::withMessages(['phone' => 'Nomor ponsel sudah terdaftar. Silakan masuk.']);
+        $this->ensurePhoneIsFree($data['phone'], 'phone');
+
+        // With WhatsApp OTP on, the account is created only after the code is confirmed.
+        if ($verification->required()) {
+            $verification->start($request->session(), $data);
+
+            return redirect('/daftar/verifikasi');
         }
 
+        return $this->createPatient($request, $data['name'], $data['phone'], $data['password']);
+    }
+
+    public function verifyAccount(Request $request, SignupVerification $verification): Response|RedirectResponse
+    {
+        $pending = $verification->pending($request->session());
+        if (! isset($pending['sent_at'])) {
+            return redirect('/daftar');
+        }
+
+        return Inertia::render('VerifyPhone', [
+            'phone' => Patient::formatPhone($pending['phone']),
+            'minutesValid' => SignupVerification::MINUTES_VALID,
+            'resendIn' => $verification->secondsUntilResend($request->session()),
+        ]);
+    }
+
+    public function confirmAccount(Request $request, SignupVerification $verification): RedirectResponse
+    {
+        $data = $request->validate(['code' => ['required', 'digits:6']], [
+            'code.required' => 'Masukkan kode 6 angka dari WhatsApp.',
+            'code.digits' => 'Kode terdiri dari 6 angka.',
+        ]);
+        $pending = $verification->verify($request->session(), $data['code']);
+        // Someone may have registered the same number while the code was on its way.
+        $this->ensurePhoneIsFree($pending['phone'], 'code');
+
+        return $this->createPatient($request, $pending['name'], $pending['phone'], $pending['password_hash']);
+    }
+
+    public function resendCode(Request $request, SignupVerification $verification): RedirectResponse
+    {
+        $verification->send($request->session());
+
+        return redirect('/daftar/verifikasi');
+    }
+
+    /** "Ganti nomor": drop the pending sign-up and go back to the form. */
+    public function cancelVerification(Request $request, SignupVerification $verification): RedirectResponse
+    {
+        $verification->cancel($request->session());
+
+        return redirect('/daftar');
+    }
+
+    private function ensurePhoneIsFree(string $phone, string $field): void
+    {
+        if (Patient::whereNotNull('user_id')->wherePhone($phone)->exists() || User::where('username', $phone)->exists()) {
+            throw ValidationException::withMessages([$field => 'Nomor ponsel sudah terdaftar. Silakan masuk.']);
+        }
+    }
+
+    /** @param  string  $password  plain text or an existing hash; the model's "hashed" cast keeps a hash as is */
+    private function createPatient(Request $request, string $name, string $phone, string $password): RedirectResponse
+    {
         try {
             // users + patients in one transaction: never an account without a profile.
-            $user = DB::transaction(function () use ($data) {
+            $user = DB::transaction(function () use ($name, $phone, $password) {
                 $user = User::create([
-                    'username' => $data['phone'],
-                    'password_hash' => $data['password'], // hashed by the model's "hashed" cast
+                    'username' => $phone,
+                    'password_hash' => $password,
                     'role' => UserRole::Patient,
                 ]);
                 Patient::create([
                     'user_id' => $user->user_id,
-                    'full_name' => trim($data['name']),
-                    'phone_number' => Patient::formatPhone($data['phone']),
+                    'full_name' => trim($name),
+                    'phone_number' => Patient::formatPhone($phone),
                 ]);
 
                 return $user;

@@ -109,6 +109,7 @@ npm run test:e2e            # 24 tes browser: alur, responsif 320–1440px, axe,
 | Live Control Dashboard | Berfungsi       | Check-in, panggil, panggil ulang, tidak hadir, lanjut laboratorium/farmasi, riwayat aktivitas.           |
 | Service Insights       | Berfungsi       | Agregat per tanggal/poliklinik, grafik per jam, ekspor CSV tanpa identitas pasien.                       |
 | Hya (chat bubble)      | Berfungsi       | Chatbot Gemini dari fakta antrean (tanpa identitas); tanpa saran medis; aturan tetap bila AI mati.       |
+| OTP daftar akun        | Berfungsi       | Kode 6 angka lewat WhatsApp (Wangsaf), berlaku 5 menit; aktif hanya bila `WANGSAF_API_KEY` diisi.        |
 | Panduan interaktif     | Berfungsi       | Disimpan di localStorage tanpa data pasien.                                                              |
 | Indikator koneksi      | Berfungsi       | Status online/offline browser dan waktu sinkron terakhir dari server.                                    |
 | Petunjuk ruangan       | Teks statis     | Tanpa denah atau navigasi peta.                                                                          |

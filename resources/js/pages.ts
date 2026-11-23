@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import { Login } from '@/features/auth/login';
 import { Register } from '@/features/auth/register';
+import { VerifyPhone } from '@/features/auth/verify-phone';
 import { ErrorPage } from '@/features/errors/error-page';
 import { CheckInGuide, Directions, Help, Notifications, QueueGuide } from '@/features/help/help';
 import { Hya } from '@/features/help/hya';
@@ -27,6 +28,7 @@ import './types';
 export const pages: Record<string, ComponentType<any>> = {
   Login,
   Register,
+  VerifyPhone,
   ErrorPage,
   Home,
   Account,
