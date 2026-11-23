@@ -286,7 +286,10 @@ test('management filtering, empty state and CSV download', async ({ page }) => {
   await page.getByRole('link', { name: /Ekspor laporan/ }).click();
   expect((await download).suggestedFilename()).toBe(`hytrack-laporan-${today}.csv`);
   await page.getByRole('combobox', { name: 'Filter poliklinik' }).selectOption('Saraf');
-  await expect(page.getByRole('heading', { name: 'Belum ada data' })).toBeVisible();
+  await expect(page.locator('.chart-empty')).toContainText('Belum ada data waktu tunggu');
+  await expect(page.getByRole('button', { name: /Ekspor laporan/ })).toBeDisabled();
+  await page.getByRole('navigation').getByRole('button', { name: 'Kinerja poliklinik' }).click();
+  await expect(page.getByRole('heading', { name: 'Evaluasi menunggu data' })).toBeVisible();
 });
 
 const pages: [string, string][] = [

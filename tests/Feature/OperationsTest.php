@@ -146,6 +146,9 @@ class OperationsTest extends TestCase
         $this->assertSame(50, $report['withinTarget']);
         $this->assertSame(67, $report['onTime']);
         $this->assertSame([['hour' => '08.00', 'wait' => 25]], $report['hourly']);
+        $this->assertSame('Dokter → laboratorium', $report['stages'][1]['label']);
+        $this->assertSame([['hour' => '08.00', 'wait' => 25]], $report['stages'][0]['hourly']);
+        $this->assertSame('09.10', $report['updatedAt']);
         $this->assertSame('Penyakit Dalam', $report['clinics'][0]['clinic']);
         $this->assertSame(0, app(ServiceInsights::class)->report(self::TODAY, 999)['registered']);
 

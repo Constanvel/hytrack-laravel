@@ -95,15 +95,17 @@ export function DashboardTitle({
   subtitle,
   aside,
   flat = false,
+  className = '',
 }: {
   title: string;
   subtitle: string;
   aside?: ReactNode;
   /** Frames 21–26: a 46px pill and a tighter subtitle. */
   flat?: boolean;
+  className?: string;
 }) {
   return (
-    <div className={`dashboard-title ${flat ? 'flat' : ''}`}>
+    <div className={`dashboard-title ${flat ? 'flat' : ''} ${className}`}>
       <div>
         <h1>{title}</h1>
         <p className="muted">{subtitle}</p>
