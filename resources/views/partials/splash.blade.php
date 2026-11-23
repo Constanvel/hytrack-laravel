@@ -49,8 +49,12 @@
     }
     /* Mark + wordmark. The wordmark box has a fixed width, so the lockup never shifts when Inter
        replaces the fallback font, and --shift (half of gap + wordmark) centres the mark alone. */
+    /* Figma 43:2 (45:33862, 45:34048) sets the wordmark at x 158 of 412, so the lockup sits
+       0.3em left of centre; the tagline and loader stay centred. */
     .splash-lockup {
         --shift: 1.96em;
+        position: relative;
+        left: -0.3em;
         display: flex;
         align-items: center;
         gap: 0.12em;
@@ -99,7 +103,7 @@
         animation: splash-name 0.46s cubic-bezier(0.65, 0, 0.35, 1) 0.42s backwards;
     }
     .splash-tagline {
-        margin-top: 34px;
+        margin-top: 37px;
         /* Letter spacing trails the last letter; the same on the left keeps it centred. */
         padding-left: 0.23em;
         color: #47736d;

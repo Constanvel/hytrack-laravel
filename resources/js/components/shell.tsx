@@ -179,7 +179,9 @@ export function HyaHelp({ title = 'Ada yang bisa Hya bantu?', avatar = false }) 
         <strong>{title}</strong>
         <small>Tanya Hya</small>
       </span>
-      {avatar && <Icon name="arrow" />}
+      <Icon name="arrow" />
+      {/* Figma 43:2 frame 04: Hya sits on the card's right end, past its edge. */}
+      {!avatar && <Avatar large />}
     </Link>
   );
 }

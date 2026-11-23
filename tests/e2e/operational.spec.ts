@@ -135,12 +135,12 @@ test('patient books in one browser, staff scan and confirm in another', async ({
   await expect(detail).toContainText('Belum check-in');
 
   // 4. Scan QR → match → "Konfirmasi hadir".
-  await staff.getByRole('button', { name: 'Scan QR', exact: true }).click();
+  await staff.getByRole('button', { name: 'Scan QR kedatangan', exact: true }).click();
   const result = staff.locator('.scan-card.result');
   await expect(result).toContainText('Rina Wulandari', { timeout: 20000 });
   await expect(result).toContainText(ticket);
   await expect(result).toContainText('Penyakit Dalam');
-  await staff.getByRole('button', { name: 'Konfirmasi hadir' }).click();
+  await staff.getByRole('button', { name: 'Konfirmasi check-in' }).click();
   await expect(staff.locator('.scan-status')).toContainText(`${ticket} berhasil check-in pukul`);
 
   // 5. The patient's screen changes on its own within one polling interval (3 s here).

@@ -35,6 +35,12 @@ class PharmacyOrder extends Model
         return $this->belongsTo(Queue::class, 'queue_id', 'queue_id');
     }
 
+    /** The staff member behind the latest status change. */
+    public function updatedBy(): BelongsTo
+    {
+        return $this->belongsTo(Staff::class, 'updated_by_staff_id', 'staff_id');
+    }
+
     /** Number called at the pharmacy counter, e.g. "F-018". */
     public function pickupNumber(): string
     {
