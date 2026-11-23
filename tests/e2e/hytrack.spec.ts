@@ -197,9 +197,11 @@ test('staff check-in reaches the patient screen', async ({ page, browser }) => {
   const code = (await page.locator('.qr-card .small').textContent())!.split(' ')[0];
 
   const staff = await asStaff(browser, 'dina');
-  await staff.getByPlaceholder(/Nomor check-in/).fill(code);
-  await staff.getByRole('button', { name: 'Konfirmasi hadir' }).click();
-  await expect(staff.locator('.dashboard-footnote')).toContainText('A-027 berhasil check-in pukul');
+  await staff.getByRole('button', { name: 'Scan QR kedatangan' }).click();
+  await staff.getByPlaceholder('Contoh: HT-000027').fill(code);
+  await staff.getByRole('button', { name: 'Cari tiket' }).click();
+  await staff.getByRole('button', { name: 'Konfirmasi check-in' }).click();
+  await expect(staff.locator('.scan-status')).toContainText('A-027 berhasil check-in pukul');
 
   await page.reload();
   await expect(page.getByText(/✓ Sudah check-in pukul/)).toBeVisible();
@@ -228,7 +230,7 @@ test('staff scanner identifies a ticket before confirming and rejects reuse', as
   await page.reload();
   await expect(page.getByText(/Belum check-in/)).toBeVisible();
 
-  await staff.getByRole('button', { name: 'Konfirmasi hadir' }).click();
+  await staff.getByRole('button', { name: 'Konfirmasi check-in' }).click();
   await expect(staff.locator('.scan-status')).toContainText('berhasil check-in');
   await manual.fill(code);
   await staff.getByRole('button', { name: 'Cari tiket' }).click();
@@ -272,7 +274,7 @@ test('staff guards, queue actions and history', async ({ page }) => {
   await expect(page.locator('.dashboard-footnote')).toContainText('A-023 ditandai tidak hadir.');
   await page.getByRole('button', { name: 'Panggil pasien berikutnya' }).click();
   await page.getByRole('button', { name: 'Selesai & lanjutkan layanan' }).click();
-  await page.getByRole('button', { name: 'Riwayat aktivitas' }).click();
+  await page.getByRole('button', { name: 'Riwayat aktivitas', exact: true }).click();
   await expect(
     page
       .locator('.activity-table tr', { hasText: 'Pemeriksaan dokter selesai' })
@@ -382,6 +384,11 @@ for (const [width, height] of [
     for (const route of ['/', '/poliklinik', '/bantuan']) {
       await page.goto(route);
       await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      // Pages with the Hya card show Hya there instead of the bubble (Figma 43:2 frame 04).
+      if (await page.locator('.hya-help').count()) {
+        await expect(page.locator('.hya-fab')).toBeHidden();
+        continue;
+      }
       const fab = await page.locator('.hya-fab').boundingBox();
       const nav = await page.locator('.bottom-nav').boundingBox();
       expect(fab && nav).toBeTruthy();
@@ -482,10 +489,9 @@ test('the last section ends right above the bottom nav, with no band for the Hya
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   // Only the page's own 28px bottom padding is left above the nav.
   expect(await gap()).toBeLessThanOrEqual(29);
-  await expect(fab).toHaveClass(/is-tucked/);
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await expect(fab).not.toHaveClass(/is-tucked/);
-  await expect(fab).toBeVisible();
+  // Home ends with the Hya card, so the bubble stays hidden there (Figma 43:2 frame 04).
+  await expect(fab).toBeHidden();
+  await expect(page.locator('.hya-help')).toBeVisible();
 });
 
 test('first paint and refresh stay stable (CLS ≤ 0.1) with the guide shown', async ({ page }) => {
