@@ -580,15 +580,37 @@ hr {
   flex-direction: column;
   gap: 20px;
 }
+/* Figma 43:2 frame 02: marked card, arrow on the name's line. */
 .clinic-list .row-link {
-  padding: 16px;
+  position: relative;
+  align-items: flex-start;
+  padding: 15px;
   background: white;
-  border-radius: 14px;
+  border: 1px solid var(--card-border);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
   color: var(--text);
-  min-height: 82px;
+  min-height: 81px;
+}
+.clinic-list .row-link::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 22px;
+  width: 4px;
+  height: 32px;
+  border-radius: 2px;
+  background: #6baf99;
 }
 .clinic-list .row-link strong {
   font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.clinic-list .row-link small {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.4;
 }
 .clinic-list .row-link:hover {
   background: var(--pale);
@@ -631,6 +653,30 @@ hr {
 }
 .ticket-card {
   padding: 22px;
+}
+.ticket-badge {
+  position: absolute;
+  top: 74px;
+  right: 27px;
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  border: 2px solid rgba(77, 184, 161, 0.55);
+  border-radius: 19.6px;
+  background: rgba(15, 71, 66, 0.9);
+  color: #a8f0d9;
+  margin: 0;
+  font-size: 39.2px;
+  font-weight: 700;
+  line-height: 1;
+}
+.ticket-pulse {
+  position: absolute;
+  top: 218.5px;
+  right: 16.5px;
+  margin: 0;
+  pointer-events: none;
 }
 .qr-card {
   display: flex;

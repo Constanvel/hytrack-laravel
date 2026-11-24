@@ -133,7 +133,7 @@ export function Shell({
 }
 /**
  * The page reserves no room for the Hya bubble, so its last section sits right above the nav.
- * Once scrolled to the end, the bubble steps aside wherever it would cover a link or button.
+ * Once scrolled to the end, the bubble steps aside wherever it would cover a control or text.
  */
 function useTuckedFab(url: string) {
   useEffect(() => {
@@ -146,7 +146,7 @@ function useTuckedFab(url: string) {
       const box = fab.getBoundingClientRect();
       const covers =
         atEnd &&
-        [...document.querySelectorAll('main a, main button, main input, main select')].some(
+        [...document.querySelectorAll('main :is(a, button, input, select, p, li, h2, h3)')].some(
           (control) => {
             const b = control.getBoundingClientRect();
             return (
@@ -171,7 +171,22 @@ function useTuckedFab(url: string) {
     };
   }, [url]);
 }
-export function HyaHelp({ title = 'Ada yang bisa Hya bantu?', avatar = false }) {
+export function HyaHelp({ title = 'Ada yang bisa Hya bantu?', avatar = false, large = false }) {
+  // Akun (Figma 43:2 frame 16): a taller card, title on two lines, Hya's portrait on the right.
+  if (large)
+    return (
+      <Link href="/hya" className="hya-help large">
+        <span>
+          <strong>
+            Ada yang bisa
+            <br />
+            Hya bantu?
+          </strong>
+          <small>Panduan antrean dan arah layanan.</small>
+        </span>
+        <Avatar large />
+      </Link>
+    );
   return (
     <Link href="/hya" className={`hya-help ${avatar ? 'with-avatar' : ''}`}>
       {avatar && <Avatar large />}

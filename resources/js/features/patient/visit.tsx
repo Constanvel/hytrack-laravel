@@ -111,9 +111,20 @@ export function Visit() {
           {live.online ? 'Diperbarui' : 'Data terakhir'} {live.syncedAt}
         </span>
       </div>
-      <section className="card ticket-card">
+      <section className="card marked ticket-card">
         <p className="eyebrow">NOMOR ANTREAN ANDA</p>
         <div className="ticket-number">{visit.ticket}</div>
+        {/* Figma 43:2 frame 04: the plus badge beside the number and a pulse line below it. */}
+        <span className="ticket-badge" aria-hidden="true">
+          +
+        </span>
+        <img
+          className="ticket-pulse"
+          src="/assets/ticket-pulse.svg"
+          alt=""
+          width={137}
+          height={53}
+        />
         <h3>{visit.patientName}</h3>
         <hr />
         <h3>{visit.clinic}</h3>
@@ -206,7 +217,7 @@ export function CheckIn() {
         kepada petugas
       </h2>
       <p className="muted">Meja check-in · Gedung A, lantai 2</p>
-      <section className="card qr-card" data-guide="">
+      <section className="card marked qr-card" data-guide="">
         <h3>
           {visit.ticket} · {visit.patientName}
         </h3>
