@@ -1190,33 +1190,137 @@ hr {
   margin-top: 10px;
   text-align: center;
 }
+/* Conversation, Figma 43:2 frame 21. */
+.chat-context {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0b7268;
+}
+.chat-context small {
+  font-size: 11px;
+  font-weight: 400;
+}
+.chat-day {
+  margin: -6px 0 -10px;
+  color: #607570;
+  font-size: 11px;
+  text-align: center;
+}
 .messages {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
 }
 .message {
-  background: white;
-  border-radius: 18px;
-  padding: 16px;
-  max-width: 94%;
-  line-height: 1.65;
-}
-.message.user {
-  background: var(--primary);
-  color: white;
-  align-self: flex-end;
-}
-.message.assistant {
-  align-self: flex-start;
-}
-/* Hya's numbered steps arrive one per line. */
-.message p {
+  line-height: 1.6;
   white-space: pre-line;
 }
-.message strong {
-  display: block;
-  margin-bottom: 6px;
+.message.user {
+  align-self: flex-end;
+  max-width: calc(100% - 98px);
+  padding: 16px;
+  border-radius: 20px 20px 6px 20px;
+  background: linear-gradient(145deg, #086b62 0%, #188777 71.4%);
+  box-shadow: 0 6px 14px rgba(8, 107, 98, 0.18);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 400;
+}
+.message.assistant {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.message-from {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  color: #183d39;
+  font-size: 13px;
+}
+.message-from .avatar {
+  width: 32px;
+  height: 32px;
+}
+.message-from .avatar img {
+  width: 49.6px;
+  height: auto;
+  left: -9px;
+}
+.message.assistant p {
+  margin-left: 40px;
+  padding: 14px 16px;
+  border: 1px solid var(--card-border);
+  border-radius: 6px 20px 20px 20px;
+  background: #fff;
+  color: #183d39;
+  font-size: 14px;
+}
+.chat-follow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin-left: 40px;
+}
+.chat-follow > * {
+  align-self: stretch;
+}
+.chat-place {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  line-height: 1.45;
+  padding: 16px;
+  border: 1px solid #cfe3d8;
+  border-radius: 18px;
+  background: #e1efe7;
+  color: #183d39;
+}
+.chat-place small {
+  color: #0b7268;
+  font-size: 11px;
+  font-weight: 700;
+}
+.chat-place strong {
+  margin-top: 6px;
+  font-size: 20px;
+}
+.chat-place span {
+  color: #607570;
+  font-size: 14px;
+}
+.chat-place b {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  color: #0b7268;
+  font-size: 14px;
+}
+.chat-source {
+  margin: -4px 0 6px 2px;
+  color: #607570;
+  font-size: 11px;
+}
+.chat-follow > .chat-chip {
+  align-self: flex-start;
+  padding: 10px 16px;
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  background: #fff;
+  color: #0b7268;
+  font-size: 12px;
+}
+.chat-follow .notice.warning {
+  padding: 12px 14px;
+  font-size: 12px;
+  font-weight: 400;
+  color: #765218;
 }
 .faq-list .row-link {
   border-bottom: 1px solid var(--border);
