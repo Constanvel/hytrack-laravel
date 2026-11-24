@@ -377,9 +377,7 @@ summary:focus-visible {
 }
 .hero {
   padding: 24px;
-  background:
-    url('/assets/card-contour.svg') right top / 364px 321px no-repeat,
-    var(--gradient);
+  background: var(--gradient);
   color: white;
   border-radius: 24px;
   box-shadow: 0 6px 18px rgba(23, 78, 64, 0.09);

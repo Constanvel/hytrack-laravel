@@ -149,7 +149,6 @@ export function Staff({
                   detail="Pasien sudah check-in"
                 />
                 <Stat
-                  className="gold"
                   label="Selesai"
                   value={String(stats.examined)}
                   detail={`Dari ${stats.registered} pasien terdaftar`}

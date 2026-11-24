@@ -115,7 +115,7 @@ export function DashboardTitle({
   );
 }
 
-/** Metric card. Class names pick the accent bar (mint, gold, slate, olive) and layout. */
+/** Metric card. Class names pick the accent bar (mint, slate, olive) and layout. */
 export function Stat({
   label,
   value,
