@@ -2005,7 +2005,7 @@ table.activity-table {
     margin: 0;
   }
   .dashboard-sidebar {
-    background-image: none;
+    background: linear-gradient(99.7deg, #173d3b 0%, #235c50 71.4%);
   }
   .sidebar-footer {
     padding: 0;
