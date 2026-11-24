@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -27,6 +28,10 @@ class SignupVerification
     public const RESEND_AFTER = 45;
 
     public const MAX_ATTEMPTS = 5;
+
+    private const SENDS_PER_HOUR = 5;
+
+    public function __construct(private readonly WhatsApp $whatsapp) {}
 
     /**
      * Step 1/3: the sign-up form. Self sign-up creates a patient account; staff and manager
@@ -102,7 +107,7 @@ class SignupVerification
             'name' => trim($data['name']),
             'phone' => $data['phone'],
             'password_hash' => Hash::make($data['password']),
-        ]);
+        ], 'phone');
 
         return $token;
     }
@@ -113,7 +118,7 @@ class SignupVerification
         if (now()->timestamp < $pending['resend_at']) {
             throw ValidationException::withMessages(['code' => 'Tunggu sebentar sebelum meminta kode baru.']);
         }
-        $this->send($token, $pending);
+        $this->send($token, $pending, 'code');
     }
 
     /**
@@ -133,7 +138,8 @@ class SignupVerification
         if (! hash_equals($pending['code_hash'], $this->hash($token, $code))) {
             $pending['attempts']++;
             $this->cache()->put($this->key($token), $pending, now()->addMinutes(30));
-            throw ValidationException::withMessages(['code' => 'Kode OTP salah. Periksa kembali SMS Anda.']);
+            throw ValidationException::withMessages(['code' => 'Kode OTP salah. Periksa kembali '
+                .($this->whatsapp->enabled() ? 'pesan WhatsApp' : 'SMS').' Anda.']);
         }
         $this->cache()->forget($this->key($token));
 
@@ -149,6 +155,7 @@ class SignupVerification
             'phone' => self::mask($pending['phone']),
             'resendIn' => max(0, $pending['resend_at'] - now()->timestamp),
             'expiresIn' => max(0, $pending['expires_at'] - now()->timestamp),
+            'channel' => $this->channel(),
             // No SMS gateway yet: demo mode shows the code on screen so the flow can be tried.
             'demoCode' => config('hytrack.demo_controls') ? $pending['demo_code'] ?? null : null,
         ];
@@ -167,9 +174,13 @@ class SignupVerification
         return '+62 '.substr($digits, 2, 3).' •••• '.substr($digits, -4);
     }
 
-    private function send(string $token, array $pending): void
+    /** Errors land on $field: "phone" on the sign-up form, "code" on the OTP screen. */
+    private function send(string $token, array $pending, string $field): void
     {
         $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        if ($this->whatsapp->enabled()) {
+            $this->deliver($pending['phone'], $code, $field);
+        }
         $pending = array_merge($pending, [
             'code_hash' => $this->hash($token, $code),
             'expires_at' => now()->timestamp + self::CODE_TTL,
@@ -178,11 +189,34 @@ class SignupVerification
             'demo_code' => config('hytrack.demo_controls') ? $code : null,
         ]);
         $this->cache()->put($this->key($token), $pending, now()->addMinutes(30));
-        // ponytail: no SMS provider is configured (README "Status fitur"); outside demo mode the
-        // code only reaches the log. Plug the SMS gateway in here.
-        if (! config('hytrack.demo_controls')) {
+        // Without WANGSAF_API_KEY no message is sent: outside demo mode the code only reaches
+        // the log. With WhatsApp on, the code never goes to the log.
+        if (! $this->whatsapp->enabled() && ! config('hytrack.demo_controls')) {
             Log::info('Kode OTP pendaftaran', ['phone' => self::mask($pending['phone']), 'code' => $code]);
         }
+    }
+
+    /** WhatsApp through Wangsaf, at most SENDS_PER_HOUR codes per number so the quota can't be drained. */
+    private function deliver(string $phone, string $code, string $field): void
+    {
+        $limit = 'signup-otp:'.$phone;
+        if (RateLimiter::tooManyAttempts($limit, self::SENDS_PER_HOUR)) {
+            $minutes = (int) ceil(RateLimiter::availableIn($limit) / 60);
+            throw ValidationException::withMessages([$field => "Terlalu banyak permintaan kode untuk nomor ini. Coba lagi dalam {$minutes} menit."]);
+        }
+        RateLimiter::hit($limit, 3600);
+
+        $message = "Kode OTP HyTrack: {$code}\n\nBerlaku ".(self::CODE_TTL / 60).' menit. '
+            .'Jangan berikan kode ini kepada siapa pun, termasuk petugas rumah sakit.';
+        if (! $this->whatsapp->send($phone, $message)) {
+            throw ValidationException::withMessages([$field => 'Kode OTP gagal dikirim ke WhatsApp '.self::mask($phone)
+                .'. Pastikan nomor ini aktif di WhatsApp, lalu coba lagi.']);
+        }
+    }
+
+    private function channel(): string
+    {
+        return $this->whatsapp->enabled() ? 'WhatsApp' : 'SMS';
     }
 
     private function pending(string $token): array
