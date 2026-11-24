@@ -66,11 +66,14 @@ export function RegisterOtp({
   phone,
   resendIn,
   demoCode,
+  channel = 'SMS',
 }: {
   phone: string;
   resendIn: number;
   expiresIn: number;
   demoCode: string | null;
+  /** "WhatsApp" once the Wangsaf gateway is configured. */
+  channel?: string;
 }) {
   const page = usePage();
   const form = useForm({ code: '' });
@@ -147,7 +150,7 @@ export function RegisterOtp({
       }
     >
       <p className="verify-lead">
-        Kode 6 digit telah dikirim melalui SMS ke
+        Kode 6 digit telah dikirim melalui {channel} ke
         <br />
         <strong>{phone}</strong>{' '}
         <Link href="/daftar" className="auth-link">
