@@ -322,7 +322,7 @@ function NextService({ visit }: { visit: VisitData }) {
       back="/kunjungan"
       guide="layanan"
     >
-      <Notice>✓ Pemeriksaan dokter selesai</Notice>
+      <Notice>✓ Pemeriksaan dokter selesai{visit.examinedAt && ` · ${visit.examinedAt}`}</Notice>
       <h2>
         Selanjutnya, ke
         <br />
@@ -347,12 +347,16 @@ function NextService({ visit }: { visit: VisitData }) {
           { title: 'Lapor di meja laboratorium', detail: `Tunjukkan tiket ${visit.ticket}.` },
         ]}
       />
-      <section>
-        <h3>Lapor dulu di meja laboratorium</h3>
-        <p className="muted small">Antrean laboratorium dimulai setelah Anda melapor.</p>
+      <section className="lab-wait">
+        <h3>Perkiraan antrean 10–20 menit</h3>
+        <p className="muted">
+          Dimulai setelah lapor di laboratorium.
+          <br />
+          Permintaan pemeriksaan sudah dikirim dokter.
+        </p>
       </section>
       <ActionLink href="/petunjuk-ruangan" secondary>
-        Lihat petunjuk ruangan
+        Lihat denah &amp; rute aksesibel
       </ActionLink>
       <Simulate legend="Kontrol demo · menggantikan tindakan petugas" action="laboratory">
         Simulasikan lanjut ke farmasi
@@ -371,11 +375,28 @@ function Pharmacy({ visit }: { visit: VisitData }) {
   );
   return (
     <Shell title="Status obat" subtitle="FARMASI RAWAT JALAN" back="/kunjungan" guide="layanan">
-      <Notice>● Status farmasi · {order?.label ?? 'Menunggu resep'}</Notice>
+      <Notice>
+        ●{' '}
+        {visit.syncedAt
+          ? `Pembaruan farmasi · ${visit.syncedAt}`
+          : `Status farmasi · ${order?.label ?? 'Menunggu resep'}`}
+      </Notice>
       <section className="hero">
         <p className="eyebrow">{ready ? 'OBAT SIAP DIAMBIL' : 'OBAT SEDANG DISIAPKAN'}</p>
-        <h2>{ready ? 'Silakan ke loket F2' : (order?.label ?? 'Menunggu resep')}</h2>
-        <p>{ready ? 'Tunjukkan nomor pengambilan Anda.' : 'Tunggu sampai nomor Anda dipanggil.'}</p>
+        <h2>
+          {ready
+            ? 'Silakan ke loket F2'
+            : order?.readyIn
+              ? `${order.readyIn} menit`
+              : (order?.label ?? 'Menunggu resep')}
+        </h2>
+        <p>
+          {ready
+            ? 'Tunjukkan nomor pengambilan Anda.'
+            : order?.readyBetween
+              ? `Perkiraan siap ${order.readyBetween}`
+              : 'Tunggu sampai nomor Anda dipanggil.'}
+        </p>
         <hr />
         <div className="profile-row">
           <strong style={{ fontSize: 38 }}>{pickup}</strong>
@@ -390,7 +411,10 @@ function Pharmacy({ visit }: { visit: VisitData }) {
         done={step}
         current={step}
         items={[
-          { title: 'Resep diterima', detail: 'Resep dari dokter diterima.' },
+          {
+            title: 'Resep diterima',
+            detail: `${order?.receivedAt ? `${order.receivedAt} · ` : ''}Resep dari dokter diterima.`,
+          },
           { title: 'Obat disiapkan', detail: 'Sedang dikerjakan petugas farmasi.' },
           { title: 'Pemeriksaan akhir', detail: 'Obat diperiksa apoteker.' },
           {

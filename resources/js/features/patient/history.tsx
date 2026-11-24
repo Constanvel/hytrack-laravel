@@ -30,6 +30,7 @@ export function History({ items }: { items: HistoryItem[] }) {
       subtitle={today.toUpperCase()}
       back="/akun"
       bare
+      nav
       className="inter-shell history-shell"
     >
       {!items.length ? (

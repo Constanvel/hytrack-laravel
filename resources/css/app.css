@@ -737,6 +737,15 @@ hr {
   font-size: 14px;
   text-align: center;
 }
+.lab-wait h3 {
+  font-size: 19px;
+  line-height: 1.4;
+}
+.lab-wait p {
+  margin-top: 6px;
+  font-size: 14px;
+  line-height: 1.45;
+}
 .ticket-badge {
   position: absolute;
   top: 74px;
@@ -1648,9 +1657,22 @@ details p {
   gap: 16px;
 }
 .history-card {
+  position: relative;
   padding: 16px 20px 28px;
+  border: 1px solid var(--card-border);
   background: #fff;
   border-radius: 22px;
+  box-shadow: 0 6px 18px rgba(23, 78, 64, 0.05);
+}
+.history-card::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 21px;
+  width: 4px;
+  height: 32px;
+  border-radius: 0 2px 2px 0;
+  background: #6baf99;
 }
 .history-top,
 .history-foot {

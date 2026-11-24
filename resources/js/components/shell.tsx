@@ -11,6 +11,7 @@ export function Shell({
   hya = false,
   queue = false,
   bare = false,
+  nav = false,
   guide,
   decor,
   brand = false,
@@ -25,6 +26,8 @@ export function Shell({
   queue?: boolean;
   /** No navigation, bell or Hya: for the sign-in screen and the public companion link. */
   bare?: boolean;
+  /** Keep the bottom nav on a bare page (Figma 43:2 Riwayat kunjungan). */
+  nav?: boolean;
   guide?: GuideStep;
   /** Background accent from the design: mint waves above the nav, or a corner wave behind Hya. */
   decor?: 'waves' | 'corner';
@@ -107,7 +110,7 @@ export function Shell({
         <div className="action-bar">{action}</div>
       ) : (
         !hya &&
-        !bare && (
+        (!bare || nav) && (
           <nav className="bottom-nav" aria-label="Navigasi utama">
             {[
               { href: '/', icon: 'home', label: 'Beranda' },

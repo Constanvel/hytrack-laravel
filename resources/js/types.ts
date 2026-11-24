@@ -21,7 +21,11 @@ export interface VisitProgress {
     status: 'received' | 'preparing' | 'checking' | 'ready' | 'completed';
     label: string;
     pickupNumber: string;
+    receivedAt: string | null;
+    readyIn: string | null;
+    readyBetween: string | null;
   } | null;
+  examinedAt: string | null;
   syncedAt: string | null;
   patientName: string;
 }

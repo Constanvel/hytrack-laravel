@@ -10,6 +10,7 @@ use App\Models\Patient;
 use App\Models\Queue;
 use App\Services\WaitEstimator;
 use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 
 /**
  * What the frontend receives about a visit. Expects doctor, polyclinic, patient
@@ -136,6 +137,27 @@ final class VisitView
             ])->values()->all();
     }
 
+    /**
+     * Figma 43:2 frame 08: "15–25 menit · Perkiraan siap 10.30–10.40".
+     * ponytail: a fixed 25–35 minute preparation window from receipt; use pharmacy history if it drifts.
+     *
+     * @return array{readyIn: ?string, readyBetween: ?string}
+     */
+    private static function readyEstimate(?CarbonInterface $receivedAt): array
+    {
+        if (! $receivedAt) {
+            return ['readyIn' => null, 'readyBetween' => null];
+        }
+        $from = CarbonImmutable::instance($receivedAt)->addMinutes(25);
+        $to = $from->addMinutes(10);
+        $left = fn (CarbonImmutable $at) => max(0, (int) ceil(HospitalTime::now()->diffInMinutes($at, false)));
+
+        return [
+            'readyIn' => $left($from).'–'.$left($to),
+            'readyBetween' => HospitalTime::clock($from).'–'.HospitalTime::clock($to),
+        ];
+    }
+
     /** @return array<string, mixed> */
     private static function progress(Queue $queue): array
     {
@@ -154,10 +176,13 @@ final class VisitView
                 ? Queue::forDoctorOn($queue->doctor_id, $queue->service_date)
                     ->where('queue_status', QueueStatus::Serving)->value('queue_number')
                 : null,
+            'examinedAt' => HospitalTime::clock($queue->journey(JourneyStage::Consultation)?->completed_at),
             'pharmacy' => $order ? [
                 'status' => $order->prescription_status->value,
                 'label' => $order->prescription_status->label(),
                 'pickupNumber' => $order->pickupNumber(),
+                'receivedAt' => HospitalTime::clock($order->received_at),
+                ...self::readyEstimate($order->received_at),
             ] : null,
             'syncedAt' => HospitalTime::clock($queue->last_synced_at),
         ];
