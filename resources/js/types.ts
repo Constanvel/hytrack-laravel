@@ -42,6 +42,7 @@ export interface Visit extends VisitProgress {
   leadMinutes: number;
   travelMinutes: number;
   companionActive: boolean;
+  laboratoryDone: boolean;
 }
 /** What an accepted companion sees (VisitView::forCompanion, Figma 27:303). */
 export interface CompanionProgress extends VisitProgress {

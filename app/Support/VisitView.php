@@ -41,6 +41,8 @@ final class VisitView
             'leadMinutes' => config('hytrack.check_in_lead_minutes'),
             'travelMinutes' => config('hytrack.travel_minutes'),
             'companionActive' => $queue->companionShares()->live()->exists(),
+            // For the summary once the visit is done (Figma 43:2 frame 10).
+            'laboratoryDone' => $queue->journey(JourneyStage::Laboratory)?->stage_status === StageStatus::Done,
         ];
     }
 

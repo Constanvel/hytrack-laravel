@@ -654,6 +654,89 @@ hr {
 .ticket-card {
   padding: 22px;
 }
+/* Kunjungan telah selesai (Figma 43:2 frame 10). */
+.done-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  border-radius: 24px;
+  background: linear-gradient(145deg, #086b62 0%, #188777 71.4%);
+  box-shadow: 0 6px 18px rgba(23, 78, 64, 0.09);
+  color: #fff;
+}
+.done-mark {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.done-title {
+  font-weight: 700;
+  font-size: 28px;
+  line-height: 1.4;
+}
+.done-hero p:last-child {
+  font-size: 15px;
+  line-height: 1.4;
+}
+.done-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--card-border);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+.done-summary h3 {
+  font-size: 18px;
+  line-height: 1.4;
+}
+.done-summary ul {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.done-summary li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.4;
+}
+.done-summary strong {
+  color: var(--primary);
+  font-size: 15px;
+  font-weight: 600;
+}
+.done-summary span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.done-note {
+  padding: 12px;
+  border: 0;
+}
+.done-note h2 {
+  font-size: 14px;
+  line-height: 1.4;
+}
+.done-note p {
+  font-size: 13px;
+  line-height: 1.4;
+}
+.info-card.done-note > * + * {
+  margin-top: 4px;
+}
+.done-end {
+  margin-top: 24px;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+}
 .ticket-badge {
   position: absolute;
   top: 74px;

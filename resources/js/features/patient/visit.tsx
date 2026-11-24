@@ -56,17 +56,7 @@ export function Visit() {
     return <Queue visit={visit} live={live} />;
   if (visit.stage === 'laboratory') return <NextService visit={visit} />;
   if (visit.stage === 'pharmacy') return <Pharmacy visit={visit} />;
-  if (visit.stage === 'completed')
-    return (
-      <Shell title="Kunjungan selesai">
-        <Notice>Kunjungan selesai. Akses pendamping telah berakhir.</Notice>
-        <section className="card empty">
-          <h2>Terima kasih.</h2>
-          <p>Semoga lekas sehat, {visit.patientName}.</p>
-          <ActionLink href="/poliklinik">Mulai kunjungan baru</ActionLink>
-        </section>
-      </Shell>
-    );
+  if (visit.stage === 'completed') return <Completed visit={visit} />;
   if (visit.stage === 'cancelled')
     return (
       <Shell title="Kunjungan" subtitle="RAWAT JALAN">
@@ -433,6 +423,61 @@ function Pharmacy({ visit }: { visit: VisitData }) {
           Simulasikan pengambilan selesai
         </Simulate>
       )}
+    </Shell>
+  );
+}
+
+/** Kunjungan telah selesai (Figma 43:2 frame 10): what was done, then back to Beranda. */
+function Completed({ visit }: { visit: VisitData }) {
+  const medicine = visit.pharmacy;
+  return (
+    <Shell
+      title="Kunjungan selesai"
+      subtitle={`KUNJUNGAN ${visit.ticket}`}
+      action={<ActionLink href="/">Kembali ke Beranda</ActionLink>}
+    >
+      <Notice>✓ Kunjungan telah diselesaikan</Notice>
+      <section className="done-hero">
+        <p className="done-mark" aria-hidden="true">
+          ✓
+        </p>
+        <p className="done-title">Kunjungan selesai</p>
+        <p>
+          Terima kasih, {visit.patientName}.
+          <br />
+          {medicine && 'Obat sudah diterima. '}Semoga lekas sehat.
+        </p>
+      </section>
+      <section className="done-summary">
+        <h3>Ringkasan kunjungan</h3>
+        <ul>
+          <li>
+            <strong>✓ Check-in kedatangan</strong>
+            <span>
+              {visit.ticket} · {visit.patientName}
+            </span>
+          </li>
+          {visit.laboratoryDone && (
+            <li>
+              <strong>✓ Layanan berikutnya</strong>
+              <span>Kunjungan laboratorium selesai</span>
+            </li>
+          )}
+          {medicine && (
+            <li>
+              <strong>✓ Pengambilan obat</strong>
+              <span>{medicine.pickupNumber} · Diterima di Loket F2</span>
+            </li>
+          )}
+        </ul>
+      </section>
+      {medicine && (
+        <section className="info-card done-note">
+          <h2>Sebelum meninggalkan rumah sakit</h2>
+          <p>Pastikan obat dan aturan pakai sudah dijelaskan oleh petugas farmasi.</p>
+        </section>
+      )}
+      <p className="done-end">Kunjungan Anda telah selesai.</p>
     </Shell>
   );
 }
