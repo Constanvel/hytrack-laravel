@@ -52,6 +52,7 @@
 }
 .inter-shell .button.ghost {
   background: transparent;
+  box-shadow: none;
   color: var(--primary);
 }
 .inter-shell .button.ghost:hover {
@@ -79,12 +80,14 @@
   font-weight: 500;
   line-height: 18px;
 }
+/* Figma 43:2 frames 13–15: mint note with its own border. */
 .tip-card {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 16px;
-  border-radius: 12px;
+  padding: 15px;
+  border: 1px solid #cfe3d8;
+  border-radius: 18px;
   background: var(--pale);
 }
 .tip-card strong {
@@ -105,14 +108,27 @@
   gap: 24px;
   padding-bottom: 24px;
 }
+/* Figma 43:2 frame 13: the card has the short teal marker on its left edge. */
 .patient-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 16px;
   padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: 20px;
+  border: 1px solid #dfe9e1;
+  border-radius: 22px;
   background: #fff;
+  box-shadow: 0 6px 18px rgba(23, 78, 64, 0.05);
+}
+.patient-card::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 22px;
+  width: 4px;
+  height: 32px;
+  border-radius: 2px;
+  background: #6baf99;
 }
 .patient-card header {
   display: flex;
@@ -187,14 +203,19 @@
 .patient-form .lead {
   gap: 6px;
 }
+/* Figma 43:2 frames 14–15: each group sits on a white card 10px wider than its fields on every
+   side; the negative margin keeps the fields on the page gutter and 24px apart. */
 .patient-form fieldset {
   display: flex;
   flex-direction: column;
   gap: 16px;
   min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
+  margin: -10px;
+  padding: 10px;
+  border: 1px solid #e0eae2;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 5px 14px rgba(23, 78, 64, 0.04);
 }
 /* A floated legend is laid out like the other fields, so the gap applies to it too. */
 .patient-form legend {
@@ -222,21 +243,22 @@
   width: 100%;
   min-height: 50px;
   padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #fff;
+  border: 1px solid #d9e4db;
+  border-radius: 12px;
+  background: #f6f9f6;
   color: var(--text);
   font-size: 14px;
   line-height: 20px;
 }
 .form-field textarea {
   min-height: 88px;
+  border-radius: 22px;
   resize: vertical;
 }
 .form-field select {
   appearance: none;
   padding-right: 40px;
-  background: #fff
+  background: #f6f9f6
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%235c706c' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
     right 16px center / 12px 8px no-repeat;
 }
@@ -295,13 +317,27 @@
 .account-shell .page-content {
   padding-top: 12px;
 }
+/* Figma 43:2 frame 16: pale mint card with the teal marker. */
 .account-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 20px 22px;
+  padding: 18px 20px 28px;
+  border: 1px solid #dfe9e1;
   border-radius: 22px;
-  background: #fff;
+  background: #ecf4ee;
+  box-shadow: 0 6px 18px rgba(23, 78, 64, 0.05);
+}
+.account-card::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 21px;
+  width: 4px;
+  height: 32px;
+  border-radius: 2px;
+  background: #6baf99;
 }
 .account-card .eyebrow {
   font-size: 12px;
@@ -332,6 +368,49 @@
   border-radius: 12px;
   line-height: 24px;
 }
+.account-menu .button:not(.secondary) {
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(23, 78, 64, 0.12);
+}
+.account-menu .button.secondary {
+  background: #e1efe7;
+  border-color: #cfe3d8;
+}
+.account-menu .button.logout {
+  background: #f8ece5;
+  border-color: #eed8cc;
+}
+.account-menu .button.logout:hover {
+  background: #f3e0d6;
+}
+/* Asisten Hya (Figma 43:2 frame 16): 142px card, 40px under the menu. */
+.account-shell .hya-help.large {
+  min-height: 142px;
+  margin-top: 16px;
+  padding: 0 21px 0 20px;
+  border: 1px solid #cde1d3;
+  border-radius: 24px;
+  background: linear-gradient(152.5deg, #deeee3 0%, #ecf4e9 71.4%);
+  color: var(--text);
+}
+.account-shell .hya-help.large strong {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 28px;
+}
+.account-shell .hya-help.large small {
+  margin-top: 13px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 17px;
+}
+.account-shell .hya-help.large .avatar-large {
+  flex: none;
+  width: 72px;
+  height: 72px;
+  margin: 0;
+}
 
 @media (max-width: 359px) {
   .field-row {
@@ -340,17 +419,20 @@
 }
 
 /* Hapus data pasien: the trigger under a family record, then the confirmation (Figma 31:273). */
+/* Figma 43:2 frame 13: a pale red button under "Ubah data pasien". */
 .patient-card .text-button.danger {
-  align-self: center;
-  margin: -8px 0 -10px;
-  padding: 12px;
-  color: #b63832;
-  font-size: 14px;
+  min-height: 52px;
+  margin-top: -4px;
+  padding: 15px;
+  border-radius: 12px;
+  background: #fff4f2;
+  color: #b02e29;
+  font-size: 16px;
   font-weight: 600;
-  line-height: 20px;
+  line-height: 22px;
 }
 .patient-card .text-button.danger:hover {
-  text-decoration: underline;
+  background: #fde7e3;
 }
 .delete-dialog {
   width: min(364px, calc(100% - 48px));

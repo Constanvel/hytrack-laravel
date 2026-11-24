@@ -140,16 +140,29 @@
   flex-direction: column;
   gap: 10px;
 }
+/* Figma 43:2 frame 03: marked cards; the chosen one has a 2px teal border. */
 .doctor-option {
+  position: relative;
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: 4px;
   padding: 14px;
-  border: 2px solid transparent;
-  border-radius: 20px;
+  border: 1px solid #dfe9e1;
+  border-radius: 22px;
   background: #fff;
+  box-shadow: 0 6px 18px rgba(23, 78, 64, 0.05);
   text-align: left;
+}
+.doctor-option::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 21px;
+  width: 4px;
+  height: 32px;
+  border-radius: 2px;
+  background: #6baf99;
 }
 .doctor-option:hover {
   background: #fcfffd;
@@ -169,8 +182,12 @@
 }
 .doctor-option[aria-pressed='true'] {
   gap: 10px;
-  padding: 20px;
-  border-color: var(--primary);
+  padding: 18px;
+  border: 2px solid #08786b;
+}
+.doctor-option[aria-pressed='true']::before {
+  left: -2px;
+  top: 19px;
 }
 .doctor-option[aria-pressed='true'] > strong {
   font-size: 19px;

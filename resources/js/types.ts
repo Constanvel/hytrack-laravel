@@ -21,7 +21,11 @@ export interface VisitProgress {
     status: 'received' | 'preparing' | 'checking' | 'ready' | 'completed';
     label: string;
     pickupNumber: string;
+    receivedAt: string | null;
+    readyIn: string | null;
+    readyBetween: string | null;
   } | null;
+  examinedAt: string | null;
   syncedAt: string | null;
   patientName: string;
 }
@@ -42,6 +46,7 @@ export interface Visit extends VisitProgress {
   leadMinutes: number;
   travelMinutes: number;
   companionActive: boolean;
+  laboratoryDone: boolean;
 }
 /** What an accepted companion sees (VisitView::forCompanion, Figma 27:303). */
 export interface CompanionProgress extends VisitProgress {

@@ -288,7 +288,6 @@ function Summary(page: Page) {
           detail={`${report.completed} selesai · ${report.active} aktif · ${report.notArrived} belum tiba`}
         />
         <Stat
-          className="gold"
           label="Rata-rata tunggu"
           value={minutes(report.averageWait, empty)}
           tone={over !== null && over > 0 ? 'warm' : undefined}

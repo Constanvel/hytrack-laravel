@@ -56,17 +56,7 @@ export function Visit() {
     return <Queue visit={visit} live={live} />;
   if (visit.stage === 'laboratory') return <NextService visit={visit} />;
   if (visit.stage === 'pharmacy') return <Pharmacy visit={visit} />;
-  if (visit.stage === 'completed')
-    return (
-      <Shell title="Kunjungan selesai">
-        <Notice>Kunjungan selesai. Akses pendamping telah berakhir.</Notice>
-        <section className="card empty">
-          <h2>Terima kasih.</h2>
-          <p>Semoga lekas sehat, {visit.patientName}.</p>
-          <ActionLink href="/poliklinik">Mulai kunjungan baru</ActionLink>
-        </section>
-      </Shell>
-    );
+  if (visit.stage === 'completed') return <Completed visit={visit} />;
   if (visit.stage === 'cancelled')
     return (
       <Shell title="Kunjungan" subtitle="RAWAT JALAN">
@@ -111,9 +101,20 @@ export function Visit() {
           {live.online ? 'Diperbarui' : 'Data terakhir'} {live.syncedAt}
         </span>
       </div>
-      <section className="card ticket-card">
+      <section className="card marked ticket-card">
         <p className="eyebrow">NOMOR ANTREAN ANDA</p>
         <div className="ticket-number">{visit.ticket}</div>
+        {/* Figma 43:2 frame 04: the plus badge beside the number and a pulse line below it. */}
+        <span className="ticket-badge" aria-hidden="true">
+          +
+        </span>
+        <img
+          className="ticket-pulse"
+          src="/assets/ticket-pulse.svg"
+          alt=""
+          width={137}
+          height={53}
+        />
         <h3>{visit.patientName}</h3>
         <hr />
         <h3>{visit.clinic}</h3>
@@ -206,7 +207,7 @@ export function CheckIn() {
         kepada petugas
       </h2>
       <p className="muted">Meja check-in · Gedung A, lantai 2</p>
-      <section className="card qr-card" data-guide="">
+      <section className="card marked qr-card" data-guide="">
         <h3>
           {visit.ticket} · {visit.patientName}
         </h3>
@@ -321,7 +322,7 @@ function NextService({ visit }: { visit: VisitData }) {
       back="/kunjungan"
       guide="layanan"
     >
-      <Notice>✓ Pemeriksaan dokter selesai</Notice>
+      <Notice>✓ Pemeriksaan dokter selesai{visit.examinedAt && ` · ${visit.examinedAt}`}</Notice>
       <h2>
         Selanjutnya, ke
         <br />
@@ -346,12 +347,16 @@ function NextService({ visit }: { visit: VisitData }) {
           { title: 'Lapor di meja laboratorium', detail: `Tunjukkan tiket ${visit.ticket}.` },
         ]}
       />
-      <section>
-        <h3>Lapor dulu di meja laboratorium</h3>
-        <p className="muted small">Antrean laboratorium dimulai setelah Anda melapor.</p>
+      <section className="lab-wait">
+        <h3>Perkiraan antrean 10–20 menit</h3>
+        <p className="muted">
+          Dimulai setelah lapor di laboratorium.
+          <br />
+          Permintaan pemeriksaan sudah dikirim dokter.
+        </p>
       </section>
       <ActionLink href="/petunjuk-ruangan" secondary>
-        Lihat petunjuk ruangan
+        Lihat denah &amp; rute aksesibel
       </ActionLink>
       <Simulate legend="Kontrol demo · menggantikan tindakan petugas" action="laboratory">
         Simulasikan lanjut ke farmasi
@@ -370,11 +375,28 @@ function Pharmacy({ visit }: { visit: VisitData }) {
   );
   return (
     <Shell title="Status obat" subtitle="FARMASI RAWAT JALAN" back="/kunjungan" guide="layanan">
-      <Notice>● Status farmasi · {order?.label ?? 'Menunggu resep'}</Notice>
+      <Notice>
+        ●{' '}
+        {visit.syncedAt
+          ? `Pembaruan farmasi · ${visit.syncedAt}`
+          : `Status farmasi · ${order?.label ?? 'Menunggu resep'}`}
+      </Notice>
       <section className="hero">
         <p className="eyebrow">{ready ? 'OBAT SIAP DIAMBIL' : 'OBAT SEDANG DISIAPKAN'}</p>
-        <h2>{ready ? 'Silakan ke loket F2' : (order?.label ?? 'Menunggu resep')}</h2>
-        <p>{ready ? 'Tunjukkan nomor pengambilan Anda.' : 'Tunggu sampai nomor Anda dipanggil.'}</p>
+        <h2>
+          {ready
+            ? 'Silakan ke loket F2'
+            : order?.readyIn
+              ? `${order.readyIn} menit`
+              : (order?.label ?? 'Menunggu resep')}
+        </h2>
+        <p>
+          {ready
+            ? 'Tunjukkan nomor pengambilan Anda.'
+            : order?.readyBetween
+              ? `Perkiraan siap ${order.readyBetween}`
+              : 'Tunggu sampai nomor Anda dipanggil.'}
+        </p>
         <hr />
         <div className="profile-row">
           <strong style={{ fontSize: 38 }}>{pickup}</strong>
@@ -389,7 +411,10 @@ function Pharmacy({ visit }: { visit: VisitData }) {
         done={step}
         current={step}
         items={[
-          { title: 'Resep diterima', detail: 'Resep dari dokter diterima.' },
+          {
+            title: 'Resep diterima',
+            detail: `${order?.receivedAt ? `${order.receivedAt} · ` : ''}Resep dari dokter diterima.`,
+          },
           { title: 'Obat disiapkan', detail: 'Sedang dikerjakan petugas farmasi.' },
           { title: 'Pemeriksaan akhir', detail: 'Obat diperiksa apoteker.' },
           {
@@ -422,6 +447,61 @@ function Pharmacy({ visit }: { visit: VisitData }) {
           Simulasikan pengambilan selesai
         </Simulate>
       )}
+    </Shell>
+  );
+}
+
+/** Kunjungan telah selesai (Figma 43:2 frame 10): what was done, then back to Beranda. */
+function Completed({ visit }: { visit: VisitData }) {
+  const medicine = visit.pharmacy;
+  return (
+    <Shell
+      title="Kunjungan selesai"
+      subtitle={`KUNJUNGAN ${visit.ticket}`}
+      action={<ActionLink href="/">Kembali ke Beranda</ActionLink>}
+    >
+      <Notice>✓ Kunjungan telah diselesaikan</Notice>
+      <section className="done-hero">
+        <p className="done-mark" aria-hidden="true">
+          ✓
+        </p>
+        <p className="done-title">Kunjungan selesai</p>
+        <p>
+          Terima kasih, {visit.patientName}.
+          <br />
+          {medicine && 'Obat sudah diterima. '}Semoga lekas sehat.
+        </p>
+      </section>
+      <section className="done-summary">
+        <h3>Ringkasan kunjungan</h3>
+        <ul>
+          <li>
+            <strong>✓ Check-in kedatangan</strong>
+            <span>
+              {visit.ticket} · {visit.patientName}
+            </span>
+          </li>
+          {visit.laboratoryDone && (
+            <li>
+              <strong>✓ Layanan berikutnya</strong>
+              <span>Kunjungan laboratorium selesai</span>
+            </li>
+          )}
+          {medicine && (
+            <li>
+              <strong>✓ Pengambilan obat</strong>
+              <span>{medicine.pickupNumber} · Diterima di Loket F2</span>
+            </li>
+          )}
+        </ul>
+      </section>
+      {medicine && (
+        <section className="info-card done-note">
+          <h2>Sebelum meninggalkan rumah sakit</h2>
+          <p>Pastikan obat dan aturan pakai sudah dijelaskan oleh petugas farmasi.</p>
+        </section>
+      )}
+      <p className="done-end">Kunjungan Anda telah selesai.</p>
     </Shell>
   );
 }

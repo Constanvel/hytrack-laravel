@@ -105,10 +105,11 @@ export function Account() {
         <ActionLink href="/hya" secondary>
           Tanya Hya
         </ActionLink>
-        <button className="button secondary" onClick={() => router.post('/keluar')}>
+        <button className="button secondary logout" onClick={() => router.post('/keluar')}>
           Keluar
         </button>
       </nav>
+      <HyaHelp large />
       {demo && isActive(visit) && (
         <fieldset className="demo-controls">
           <legend>Kontrol demo</legend>

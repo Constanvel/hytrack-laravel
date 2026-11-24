@@ -376,9 +376,6 @@
 .stat-card.mint {
   --accent: #4c9b85;
 }
-.stat-card.gold {
-  --accent: #d0a260;
-}
 .stat-card.slate {
   --accent: #6f9ba7;
 }
@@ -625,9 +622,7 @@ table.grid-table {
   min-height: 249px;
   padding: 18px;
   border-radius: 22px;
-  background:
-    url('/assets/contour-dashboard.svg') left top / 392px 249px no-repeat,
-    linear-gradient(138deg, #086b62 0%, #188777 71.4%);
+  background: linear-gradient(138deg, #086b62 0%, #188777 71.4%);
   box-shadow: 0 6px 18px rgba(23, 78, 64, 0.07);
 }
 .dashboard .hero.serving > * + * {
@@ -2010,7 +2005,7 @@ table.activity-table {
     margin: 0;
   }
   .dashboard-sidebar {
-    background-image: none;
+    background: linear-gradient(99.7deg, #173d3b 0%, #235c50 71.4%);
   }
   .sidebar-footer {
     padding: 0;
