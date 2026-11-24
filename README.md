@@ -74,6 +74,7 @@ Kata sandi: `hytrack-demo` (`HYTRACK_DEMO_PASSWORD`). Daftar akun hanya tampil d
 | `HYTRACK_DAILY_QUOTA`    | `30`               | Kuota tiket per dokter per hari                    |
 | `HYTRACK_TRAVEL_MINUTES` | `25`               | Perkiraan perjalanan untuk "Berangkat sebelum"     |
 | `HYTRACK_SIGNUP_STORE`   | `CACHE_STORE`      | Penyimpanan pendaftaran yang menunggu kode OTP     |
+| `WANGSAF_API_KEY`        | (kosong)           | Kunci perangkat Wangsaf untuk kirim OTP WhatsApp   |
 | `HYTRACK_POLL_SECONDS`   | `15`               | Interval pembaruan halaman antrean                 |
 
 Aturan lain (jendela booking 3 hari, check-in 15 menit sebelum praktik, target tunggu 30 menit, lokasi ruangan) ada di `config/hytrack.php`.
@@ -113,10 +114,10 @@ npm run test:e2e            # 24 tes browser: alur, responsif 320–1440px, axe,
 | Panduan interaktif     | Berfungsi       | Disimpan di localStorage tanpa data pasien.                                                              |
 | Indikator koneksi      | Berfungsi       | Status online/offline browser dan waktu sinkron terakhir dari server.                                    |
 | Petunjuk ruangan       | Teks statis     | Tanpa denah atau navigasi peta.                                                                          |
-| Pendaftaran + OTP      | Sebagian        | Akun dibuat setelah kode 6 digit benar (5 menit, 5 percobaan). Belum ada gateway SMS: mode demo menampilkan kode, selain itu kode hanya masuk log. |
+| Pendaftaran + OTP      | Berfungsi       | Akun dibuat setelah kode 6 digit benar (5 menit, 5 percobaan). Kode dikirim lewat WhatsApp (Wangsaf) bila `WANGSAF_API_KEY` diisi, maks. 5 kode per nomor per jam; tanpa kunci: mode demo menampilkan kode, selain itu kode hanya masuk log. |
 | Kontrol demo           | Demo            | Hanya bila `HYTRACK_DEMO_CONTROLS=true`.                                                                 |
 
-**Belum ada:** pengiriman SMS (OTP dan notifikasi), reset kata sandi, integrasi SIMRS/BPJS, pemindai QR, notifikasi luar aplikasi, push realtime, audit log lengkap (riwayat petugas hanya menampilkan pembaruan terakhir tiap tahap).
+**Belum ada:** notifikasi lewat SMS/WhatsApp, reset kata sandi, integrasi SIMRS/BPJS, pemindai QR, notifikasi luar aplikasi, push realtime, audit log lengkap (riwayat petugas hanya menampilkan pembaruan terakhir tiap tahap).
 
 ## Arsitektur
 

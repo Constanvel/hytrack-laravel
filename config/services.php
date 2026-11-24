@@ -27,6 +27,12 @@ return [
         'model' => env('GEMINI_MODEL', 'gemini-3.5-flash-lite'),
     ],
 
+    // WhatsApp OTP for self sign-up. Empty key: no message is sent (demo code or log only).
+    'wangsaf' => [
+        'key' => env('WANGSAF_API_KEY'),
+        'url' => env('WANGSAF_URL', 'https://api.wangsaf.com/v1'),
+    ],
+
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
