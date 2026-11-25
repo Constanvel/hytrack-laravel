@@ -42,7 +42,10 @@ class StaffController extends Controller
     public function index(Request $request): Response
     {
         $today = HospitalTime::today();
-        $clinics = Polyclinic::with('doctors')->orderBy('polyclinic_id')->get();
+        // An archived polyclinic stays on the live dashboard while it still has ongoing queues.
+        $clinics = Polyclinic::withTrashed()
+            ->where(fn ($query) => $query->whereNull('archived_at')->orWhereHas('queues', fn ($queues) => $queues->ongoing()))
+            ->with('doctors')->orderBy('polyclinic_id')->get();
         $clinic = $clinics->firstWhere('polyclinic_id', $request->integer('poli')) ?? $clinics->first();
         $doctor = $clinic?->doctors->firstWhere('doctor_id', $request->integer('dokter')) ?? $clinic?->doctors->first();
 
@@ -61,7 +64,7 @@ class StaffController extends Controller
         return Inertia::render('Staff', [
             'clinics' => $clinics->map(fn (Polyclinic $item) => [
                 'id' => $item->polyclinic_id,
-                'name' => $item->polyclinic_name,
+                'name' => $item->polyclinic_name.($item->trashed() ? ' (dihapus)' : ''),
                 'doctors' => $item->doctors->map(fn (Doctor $doc) => ['id' => $doc->doctor_id, 'name' => $doc->doctor_name]),
             ]),
             'clinicId' => $clinic?->polyclinic_id,

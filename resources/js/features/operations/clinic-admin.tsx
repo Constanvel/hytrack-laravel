@@ -55,7 +55,9 @@ export function ClinicAdmin({ clinics }: { clinics: ClinicRow[] }) {
         )}
         <div className="table-footer">
           <span>{clinics.length} poliklinik</span>
-          <span>Poliklinik yang masih dipakai dokter atau antrean tidak dapat dihapus.</span>
+          <span>
+            Poliklinik yang dihapus hilang dari daftar dan booking; riwayat antreannya tetap.
+          </span>
         </div>
       </section>
       <div className="stack">
@@ -79,9 +81,16 @@ function ClinicRowView({
   onEdit: () => void;
 }) {
   const { busy, destroy } = useAction();
-  const used = clinic.doctors + clinic.queues > 0;
   function remove() {
-    if (!window.confirm(`Hapus poliklinik ${clinic.name}? Tindakan ini tidak dapat dibatalkan.`))
+    const used =
+      clinic.doctors + clinic.queues > 0
+        ? ` ${clinic.doctors} dokter dan ${clinic.queues} antrean tetap tersimpan sebagai riwayat; antrean yang masih berjalan tetap bisa diselesaikan.`
+        : '';
+    if (
+      !window.confirm(
+        `Hapus poliklinik ${clinic.name}? Poliklinik tidak lagi muncul di daftar dan tidak bisa dipilih untuk booking.${used}`,
+      )
+    )
       return;
     destroy(`/petugas/poliklinik/${clinic.id}`);
   }
@@ -97,12 +106,7 @@ function ClinicRowView({
         <button className="text-button" aria-pressed={selected} onClick={onEdit}>
           Ubah
         </button>
-        <button
-          className="text-button danger"
-          disabled={busy || used}
-          title={used ? 'Masih dipakai dokter atau antrean' : undefined}
-          onClick={remove}
-        >
+        <button className="text-button danger" disabled={busy} onClick={remove}>
           Hapus
         </button>
       </td>

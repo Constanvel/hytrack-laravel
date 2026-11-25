@@ -62,6 +62,9 @@ class QueueService
             if ($polyclinicId !== null && $doctor->polyclinic_id !== $polyclinicId) {
                 throw new QueueRuleException('Dokter tidak praktik di poliklinik yang dipilih.');
             }
+            if ($doctor->polyclinic->trashed()) {
+                throw new QueueRuleException('Poliklinik ini sudah tidak menerima antrean.');
+            }
             if (! in_array($date, $this->bookingDates(), true)) {
                 throw new QueueRuleException('Tanggal kunjungan tidak tersedia.');
             }

@@ -28,20 +28,18 @@ class PolyclinicController extends Controller
         return $this->done("Poliklinik {$polyclinic->polyclinic_name} diperbarui.");
     }
 
-    /** Doctors and queues keep their polyclinic (restrict on delete), so only unused ones go. */
+    /**
+     * Archives the polyclinic, whatever still uses it: it leaves the lists and booking, while
+     * doctors and queues keep it, so no visit history is lost. Ongoing queues stay on the
+     * live dashboard until staff finish them.
+     */
     public function destroy(Polyclinic $polyclinic): RedirectResponse
     {
-        $doctors = $polyclinic->doctors()->count();
-        $queues = $polyclinic->queues()->count();
-        if ($doctors || $queues) {
-            Inertia::flash('error', "Poliklinik {$polyclinic->polyclinic_name} tidak dapat dihapus: masih dipakai {$doctors} dokter dan {$queues} antrean.");
-
-            return back();
-        }
-
+        $ongoing = $polyclinic->queues()->ongoing()->count();
         $polyclinic->delete();
 
-        return $this->done("Poliklinik {$polyclinic->polyclinic_name} dihapus.");
+        return $this->done("Poliklinik {$polyclinic->polyclinic_name} dihapus dari daftar. Riwayat antreannya tetap tersimpan."
+            .($ongoing ? " {$ongoing} antrean yang masih berjalan tetap bisa diselesaikan di dashboard." : ''));
     }
 
     /** @return array{polyclinic_name: string, room_location: ?string} */
@@ -54,7 +52,8 @@ class PolyclinicController extends Controller
         $data = $request->validate([
             'name' => [
                 'required', 'string', 'min:3', 'max:100',
-                Rule::unique('polyclinics', 'polyclinic_name')->ignore($current?->polyclinic_id, 'polyclinic_id'),
+                // An archived polyclinic frees its name for a new one.
+                Rule::unique('polyclinics', 'polyclinic_name')->ignore($current?->polyclinic_id, 'polyclinic_id')->whereNull('archived_at'),
             ],
             'room' => ['nullable', 'string', 'max:100'],
         ], [], ['name' => 'nama poliklinik', 'room' => 'lokasi ruangan']);

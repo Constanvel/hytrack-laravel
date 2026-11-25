@@ -51,7 +51,8 @@ class Queue extends Model
 
     public function polyclinic(): BelongsTo
     {
-        return $this->belongsTo(Polyclinic::class, 'polyclinic_id', 'polyclinic_id');
+        // Archived polyclinics included: old tickets and reports still show where the visit was.
+        return $this->belongsTo(Polyclinic::class, 'polyclinic_id', 'polyclinic_id')->withTrashed();
     }
 
     public function journeys(): HasMany
