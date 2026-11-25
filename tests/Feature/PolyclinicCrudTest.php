@@ -8,7 +8,9 @@ use App\Models\Patient;
 use App\Models\Polyclinic;
 use App\Models\Staff;
 use App\Models\User;
+use App\Services\QueueService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
@@ -35,10 +37,11 @@ class PolyclinicCrudTest extends TestCase
         $this->assertNull($clinic->room_location);
 
         $this->delete("/petugas/poliklinik/{$clinic->polyclinic_id}")->assertRedirect();
-        $this->assertModelMissing($clinic);
+        $this->assertSoftDeleted($clinic);
+        $this->get('/petugas')->assertInertia(fn (AssertableInertia $page) => $page->where('clinicAdmin', []));
     }
 
-    public function test_names_are_validated_and_clinics_in_use_are_kept(): void
+    public function test_names_are_validated_and_an_archived_name_can_be_used_again(): void
     {
         $staff = Staff::factory()->create();
         $doctor = Doctor::factory()->create();
@@ -50,8 +53,45 @@ class PolyclinicCrudTest extends TestCase
         // Saving a clinic under its own name is not a duplicate.
         $this->put("/petugas/poliklinik/{$clinic->polyclinic_id}", ['name' => $clinic->polyclinic_name])->assertSessionHasNoErrors();
 
+        // A clinic with doctors can be deleted too; the doctor keeps pointing at it.
         $this->delete("/petugas/poliklinik/{$clinic->polyclinic_id}")->assertRedirect();
-        $this->assertModelExists($clinic);
+        $this->assertSoftDeleted($clinic);
+        $this->assertSame($clinic->polyclinic_name, $doctor->fresh()->polyclinic->polyclinic_name);
+        $this->post('/petugas/poliklinik', ['name' => $clinic->polyclinic_name])->assertSessionHasNoErrors();
+    }
+
+    public function test_deleting_a_clinic_in_use_keeps_its_queues_and_lets_staff_finish_them(): void
+    {
+        $this->travelTo(Carbon::parse('2026-11-04 08:00', 'Asia/Jakarta'));
+        $staff = Staff::factory()->create();
+        $doctor = Doctor::factory()->create();
+        $clinic = $doctor->polyclinic;
+        $patient = Patient::factory()->create();
+        $queue = app(QueueService::class)->book($patient, $doctor, '2026-11-04');
+
+        $this->actingAs($staff->user)->from('/petugas')
+            ->delete("/petugas/poliklinik/{$clinic->polyclinic_id}")->assertRedirect('/petugas')
+            ->assertInertiaFlash('status', "Poliklinik {$clinic->polyclinic_name} dihapus dari daftar. Riwayat antreannya tetap tersimpan. "
+                .'1 antrean yang masih berjalan tetap bisa diselesaikan di dashboard.');
+        $this->assertSoftDeleted($clinic);
+        $this->assertModelExists($queue);
+        $this->assertSame($clinic->polyclinic_name, $queue->fresh()->polyclinic->polyclinic_name);
+
+        // Gone from the master list and walk-in booking, still on the live dashboard for its ongoing queue.
+        $this->get('/petugas')->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('clinicAdmin', [])
+            ->where('clinics.0.name', "{$clinic->polyclinic_name} (dihapus)"));
+        $this->getJson('/petugas/jadwal?tanggal=2026-11-04')->assertJsonPath('clinics', []);
+
+        // Patients no longer see it, and its doctors take no new bookings.
+        $other = Patient::factory()->create();
+        $this->actingAs($other->user)->get('/poliklinik')
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('clinics', []));
+        $this->post('/kunjungan', ['doctor_id' => $doctor->doctor_id, 'date' => '2026-11-04']);
+        $this->assertSame(0, $other->queues()->count());
+
+        // The patient who already had a ticket still sees where to go.
+        $this->actingAs($patient->user)->get('/kunjungan')->assertOk();
     }
 
     public function test_only_active_staff_manage_polyclinics(): void
