@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import { InternalLogin } from '@/features/auth/internal-login';
 import { Login } from '@/features/auth/login';
 import { Register } from '@/features/auth/register';
 import { RegisterOtp, RegisterVerified } from '@/features/auth/verify';
@@ -27,6 +28,7 @@ import './types';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const pages: Record<string, ComponentType<any>> = {
   Login,
+  InternalLogin,
   Register,
   RegisterOtp,
   RegisterVerified,

@@ -1,3 +1,4 @@
+import type { FormDataConvertible } from '@inertiajs/core';
 import { router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import type { Visit } from '@/types';
@@ -120,6 +121,8 @@ export function syncLabel(live: { online: boolean; syncedAt: string }) {
     : `○ Koneksi terputus · Data terakhir ${live.syncedAt}`;
 }
 
+export type Payload = Record<string, FormDataConvertible>;
+
 /** Runs a Laravel action and exposes whether it is still in flight. */
 export function useAction() {
   const [busy, setBusy] = useState(false);
@@ -128,7 +131,8 @@ export function useAction() {
   const run = (
     method: 'post' | 'put' | 'delete',
     url: string,
-    data: Record<string, string | number>,
+    // Files are sent as multipart form data automatically.
+    data: Payload,
     onSuccess?: () => void,
   ) =>
     router.visit(url, {
@@ -156,7 +160,7 @@ export function useAction() {
     error,
     clearError: () => setError(''),
     send: run,
-    post: (url: string, data: Record<string, string | number> = {}) => run('post', url, data),
+    post: (url: string, data: Payload = {}) => run('post', url, data),
     destroy: (url: string) => run('delete', url, {}),
   };
 }

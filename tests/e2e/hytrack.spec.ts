@@ -273,11 +273,13 @@ test('staff guards, queue actions and history', async ({ page }) => {
   await page.getByRole('button', { name: 'Tidak hadir', exact: true }).click();
   await expect(page.locator('.dashboard-footnote')).toContainText('A-023 ditandai tidak hadir.');
   await page.getByRole('button', { name: 'Panggil pasien berikutnya' }).click();
-  await page.getByRole('button', { name: 'Selesai & lanjutkan layanan' }).click();
+  // Only the doctor confirms (Figma 47:2); the desk sees the visit's status.
+  await page.getByRole('button', { name: 'Lihat pemeriksaan dokter' }).click();
+  await expect(page.getByRole('heading', { name: 'Pasien di ruang dokter' })).toBeVisible();
   await page.getByRole('button', { name: 'Riwayat aktivitas', exact: true }).click();
   await expect(
     page
-      .locator('.activity-table tr', { hasText: 'Pemeriksaan dokter selesai' })
+      .locator('.activity-table tr', { hasText: 'Pemeriksaan dimulai' })
       .filter({ hasText: 'A-024' }),
   ).toContainText('Dina');
 });
@@ -304,6 +306,9 @@ const pages: [string, string][] = [
   ['siti', '/data-pasien'],
   ['siti', '/data-pasien/tambah'],
   ['dina', '/petugas'],
+  ['rina', '/petugas'],
+  ['rani', '/petugas'],
+  ['dinda', '/petugas'],
   ['manajer', '/manajemen'],
 ];
 async function visitAll(page: Page, check: (route: string) => Promise<void>) {
@@ -343,6 +348,25 @@ test('representative pages pass automated accessibility and runtime checks', asy
     expect(scan.violations, route).toEqual([]);
   });
   expect(errors).toEqual([]);
+});
+
+test('internal sign-in checks the chosen role and passes accessibility checks', async ({
+  page,
+}) => {
+  await page.goto('/masuk/internal');
+  const scan = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
+    .analyze();
+  expect(scan.violations).toEqual([]);
+  await page.getByLabel('ID pengguna atau email').fill('rina');
+  await page.getByLabel('Kata sandi', { exact: true }).fill(password);
+  await page.getByText('Manajemen', { exact: true }).click();
+  await page.getByRole('button', { name: 'Masuk', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Pilih peran Petugas');
+  await page.getByText('Petugas', { exact: true }).click();
+  await page.getByLabel('Kata sandi', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Masuk', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Pemeriksaan & resep' })).toBeVisible();
 });
 
 test('onboarding guide follows the flow, can be skipped and reopened without losing the visit', async ({
