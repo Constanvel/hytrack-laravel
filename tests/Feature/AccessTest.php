@@ -33,7 +33,10 @@ class AccessTest extends TestCase
         $manager = User::factory()->manager()->create();
 
         foreach ([[$patient, '/'], [$staff, '/petugas'], [$manager, '/manajemen']] as [$user, $home]) {
-            $this->post('/masuk', ['username' => $user->username, 'password' => 'password'])->assertRedirect($home);
+            // Patients use /masuk; staff and managers only /masuk/internal with their own role.
+            $home === '/'
+                ? $this->post('/masuk', ['username' => $user->username, 'password' => 'password'])->assertRedirect($home)
+                : $this->post('/masuk/internal', ['username' => $user->username, 'password' => 'password', 'as' => $user->role->value])->assertRedirect($home);
             $this->assertAuthenticatedAs($user);
             $this->post('/keluar')->assertRedirect($home === '/' ? '/masuk' : '/masuk/internal');
             $this->assertGuest();
@@ -46,7 +49,7 @@ class AccessTest extends TestCase
         $patient = Patient::factory()->create()->user;
 
         $this->get('/kunjungan')->assertRedirect('/masuk');
-        $this->post('/masuk', ['username' => $staff->username, 'password' => 'password'])->assertRedirect('/petugas');
+        $this->post('/masuk/internal', ['username' => $staff->username, 'password' => 'password', 'as' => 'staff'])->assertRedirect('/petugas');
         $this->post('/keluar');
 
         $this->get('/kunjungan')->assertRedirect('/masuk');

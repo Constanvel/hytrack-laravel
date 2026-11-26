@@ -24,24 +24,29 @@ class SetupHytrack extends Command
 {
     protected $signature = 'hytrack:setup
         {--staff= : Nama pengguna akun petugas yang dibuat (kosongkan untuk melewati)}
-        {--name= : Nama lengkap petugas}';
+        {--manager= : Nama pengguna akun manajemen (analitik layanan) yang dibuat}
+        {--name= : Nama lengkap pemilik akun}';
 
-    protected $description = 'Isi data awal HyTrack (poliklinik, dokter) dan buat akun petugas tanpa sandi demo';
+    protected $description = 'Isi data awal HyTrack (poliklinik, dokter) dan buat akun petugas atau manajemen tanpa sandi demo';
 
     public function handle(): int
     {
         $this->line('Database: '.DB::connection()->getDriverName().' · '.DB::connection()->getDatabaseName());
 
         $this->clinics();
+        if (($manager = $this->option('manager')) !== null) {
+            return $this->account(strtolower(trim($manager)), UserRole::Manager);
+        }
         $username = $this->option('staff') ?? text('Nama pengguna petugas (kosongkan untuk melewati)', default: '');
 
-        return $username === '' ? self::SUCCESS : $this->staff(strtolower(trim($username)));
+        return $username === '' ? self::SUCCESS : $this->account(strtolower(trim($username)), UserRole::Staff);
     }
 
     private function clinics(): void
     {
-        if (Polyclinic::exists()) {
-            $this->info('Poliklinik sudah ada ('.Polyclinic::count().'), tidak diubah.');
+        // Archived ones count too: a database whose clinics were all deleted is not a new one.
+        if (Polyclinic::withTrashed()->exists()) {
+            $this->info('Poliklinik sudah ada ('.Polyclinic::withTrashed()->count().'), tidak diubah.');
 
             return;
         }
@@ -71,8 +76,10 @@ class SetupHytrack extends Command
         $this->info('Dibuat: '.Polyclinic::count().' poliklinik, '.Doctor::count().' dokter.');
     }
 
-    private function staff(string $username): int
+    /** A staff or manager account; both sign in at /masuk/internal and have a staff profile. */
+    private function account(string $username, UserRole $role): int
     {
+        $label = $role === UserRole::Manager ? 'manajemen' : 'petugas';
         if (! preg_match('/^[a-z0-9._-]{3,50}$/', $username)) {
             $this->error('Nama pengguna 3–50 karakter: huruf kecil, angka, titik, garis bawah, atau tanda hubung.');
 
@@ -84,12 +91,12 @@ class SetupHytrack extends Command
             return self::SUCCESS;
         }
 
-        $name = $this->option('name') ?? text('Nama lengkap petugas', required: true);
+        $name = $this->option('name') ?? text("Nama lengkap pemilik akun {$label}", required: true);
         // Hidden prompts do not work in every Windows terminal, so the password can also come
         // from HYTRACK_STAFF_PASSWORD, set for this shell only (e.g. Read-Host -AsSecureString).
         $secret = getenv('HYTRACK_STAFF_PASSWORD') ?: null;
         if ($secret === null) {
-            $secret = password('Kata sandi petugas (min. 10 karakter, tidak ditampilkan)', required: true);
+            $secret = password("Kata sandi {$label} (min. 10 karakter, tidak ditampilkan)", required: true);
             if (password('Ulangi kata sandi', required: true) !== $secret) {
                 $this->error('Kata sandi tidak sama. Tidak ada akun yang dibuat.');
 
@@ -106,12 +113,12 @@ class SetupHytrack extends Command
             'user_id' => User::create([
                 'username' => $username,
                 'password_hash' => Hash::make($secret),
-                'role' => UserRole::Staff,
+                'role' => $role,
             ])->user_id,
             'full_name' => trim($name),
-            'work_unit' => 'Pendaftaran rawat jalan',
+            'work_unit' => $role === UserRole::Manager ? 'Manajemen operasional' : 'Pendaftaran rawat jalan',
         ]));
-        $this->info("Akun petugas {$username} dibuat.");
+        $this->info("Akun {$label} {$username} dibuat. Masuk di /masuk/internal.");
 
         return self::SUCCESS;
     }

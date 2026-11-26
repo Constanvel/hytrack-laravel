@@ -4,11 +4,10 @@ import { Notice } from '@/components/ui';
 import { ACCOUNT_HELP, AuthInput, AuthPage, PasswordInput } from './auth-form';
 
 // Prototype mode (/prototipe) signs in as one of these sample accounts; no password is checked.
+// Staff and manager samples are on /masuk/internal, like the real accounts.
 const PROTOTYPE_ROLES = [
   ['Pasien', '0812-5550-0842'],
   ['Pendamping', '0812-5550-0843'],
-  ['Petugas', 'dina'],
-  ['Manajemen', 'manajer'],
 ] as const;
 
 type Role = 'patient' | 'companion';

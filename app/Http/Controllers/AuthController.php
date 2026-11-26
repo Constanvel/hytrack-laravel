@@ -21,11 +21,12 @@ class AuthController extends Controller
         return Inertia::render('Login', [
             // Shown only in demo mode, where the seeded accounts are meant to be shared.
             'demoAccounts' => config('hytrack.demo_controls')
-                ? 'Akun demo — pasien: 0812-5550-0842 · pendamping: 0812-5550-0843 · petugas: dina · manajemen: manajer · kata sandi: '.config('hytrack.demo_password')
+                ? 'Akun demo — pasien: 0812-5550-0842 · pendamping: 0812-5550-0843 · kata sandi: '.config('hytrack.demo_password')
                 : null,
         ]);
     }
 
+    /** Patient sign-in. Staff and manager accounts use /masuk/internal only. */
     public function store(Request $request): RedirectResponse
     {
         $credentials = $request->validate([
@@ -42,6 +43,10 @@ class AuthController extends Controller
         // Deactivated accounts keep their history but can no longer sign in.
         if (! Auth::attempt([...$credentials, 'is_active' => true])) {
             throw ValidationException::withMessages(['username' => 'Nomor ponsel atau kata sandi salah.']);
+        }
+        if ($request->user()->role !== UserRole::Patient) {
+            Auth::logout();
+            throw ValidationException::withMessages(['username' => 'Akun petugas dan manajemen masuk melalui halaman masuk internal.']);
         }
 
         return $this->signedIn($request, $as === 'companion');

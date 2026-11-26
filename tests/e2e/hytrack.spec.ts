@@ -14,12 +14,22 @@ test.beforeEach(() =>
 const password = process.env.HYTRACK_DEMO_PASSWORD ?? 'hytrack-demo';
 const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(new Date());
 
+// Staff and manager accounts sign in only at /masuk/internal, choosing their own role.
+const INTERNAL: Record<string, 'Petugas' | 'Manajemen'> = {
+  dina: 'Petugas',
+  rina: 'Petugas',
+  rani: 'Petugas',
+  dinda: 'Petugas',
+  manajer: 'Manajemen',
+};
 async function login(page: Page, username = 'siti', secret = password) {
-  await page.goto('/masuk');
-  await page.getByLabel('Nomor ponsel').fill(username);
+  const role = INTERNAL[username];
+  await page.goto(role ? '/masuk/internal' : '/masuk');
+  if (role) await page.getByText(role, { exact: true }).click();
+  await page.getByLabel(role ? 'ID pengguna atau email' : 'Nomor ponsel').fill(username);
   await page.getByLabel('Kata sandi', { exact: true }).fill(secret);
-  await page.getByRole('button', { name: 'Masuk' }).click();
-  await expect(page).not.toHaveURL(/\/masuk$/);
+  await page.getByRole('button', { name: 'Masuk', exact: true }).click();
+  await expect(page).not.toHaveURL(/\/masuk(\/internal)?$/);
 }
 async function bookDoctor(page: Page, doctor: RegExp) {
   await page.goto('/poliklinik');

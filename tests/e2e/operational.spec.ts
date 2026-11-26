@@ -13,12 +13,15 @@ const STAFF_PASSWORD = 'hytrack-demo'; // seeded demo staff account "dina"
 const WIDTH = 640;
 const HEIGHT = 480;
 
+/** Patients (phone numbers) use /masuk; the staff account "dina" uses /masuk/internal. */
 async function signIn(page: Page, username: string, password: string) {
-  await page.goto('/masuk');
-  await page.getByLabel('Nomor ponsel').fill(username);
+  const staff = /[a-z]/i.test(username);
+  await page.goto(staff ? '/masuk/internal' : '/masuk');
+  if (staff) await page.getByText('Petugas', { exact: true }).click();
+  await page.getByLabel(staff ? 'ID pengguna atau email' : 'Nomor ponsel').fill(username);
   await page.getByLabel('Kata sandi', { exact: true }).fill(password);
-  await page.getByRole('button', { name: 'Masuk' }).click();
-  await expect(page).not.toHaveURL(/\/masuk$/);
+  await page.getByRole('button', { name: 'Masuk', exact: true }).click();
+  await expect(page).not.toHaveURL(/\/masuk(\/internal)?$/);
 }
 
 async function skipGuide(page: Page) {
