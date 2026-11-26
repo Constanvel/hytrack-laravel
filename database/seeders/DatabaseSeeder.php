@@ -64,7 +64,7 @@ class DatabaseSeeder extends Seeder
         DB::transaction(function () {
             $this->accounts();
             [$rina, $budi, $maya, $andi] = $this->clinics();
-            $this->clinicalAccounts($rina);
+            [$this->doctor, $this->laboratory, $this->pharmacist] = (new ClinicalStaffSeeder)->accounts($rina);
 
             $today = HospitalTime::today();
             $yesterday = HospitalTime::now()->subDay()->toDateString();
@@ -139,22 +139,6 @@ class DatabaseSeeder extends Seeder
     }
 
     /** @return array{Doctor, Doctor, Doctor, Doctor} */
-    /** Figma 47:2 rooms: dr. Rina's doctor account, a laboratory analyst and a pharmacist. */
-    private function clinicalAccounts(Doctor $rina): void
-    {
-        $password = Hash::make(config('hytrack.demo_password'));
-        $staff = fn (string $username, string $name, string $unit, ?int $doctorId = null) => Staff::create([
-            'user_id' => User::create(['username' => $username, 'password_hash' => $password, 'role' => UserRole::Staff])->user_id,
-            'full_name' => $name,
-            'work_unit' => $unit,
-            'doctor_id' => $doctorId,
-        ]);
-
-        $this->doctor = $staff('rina', $rina->doctor_name, $rina->polyclinic->polyclinic_name, $rina->doctor_id);
-        $this->laboratory = $staff('rani', 'Rani', 'Laboratorium');
-        $this->pharmacist = $staff('dinda', 'Apt. Dinda', 'Farmasi');
-    }
-
     private function clinics(): array
     {
         $clinic = fn (string $name, ?string $room) => Polyclinic::create(['polyclinic_name' => $name, 'room_location' => $room]);
