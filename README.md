@@ -90,7 +90,7 @@ Aturan lain (jendela booking 3 hari, check-in 15 menit sebelum praktik, target t
 ## Tes
 
 ```sh
-vendor/bin/phpunit          # 91 tes fitur: aturan antrean, akses peran, privasi, alur pasien/dokter/penunjang/farmasi/manajemen
+vendor/bin/phpunit          # 93 tes fitur: aturan antrean, akses peran, privasi, alur pasien/dokter/penunjang/farmasi/manajemen
 vendor/bin/pint --test      # gaya kode PHP
 npm run lint
 npm run typecheck
@@ -126,6 +126,8 @@ npm run test:e2e            # 30 tes browser: alur, login internal, responsif 32
 | Petunjuk ruangan       | Teks statis     | Tanpa denah atau navigasi peta.                                                                          |
 | Pendaftaran + OTP      | Berfungsi       | Akun dibuat setelah kode 6 digit benar (5 menit, 5 percobaan). Kode dikirim lewat WhatsApp (Wangsaf) bila `WANGSAF_API_KEY` diisi, maks. 5 kode per nomor per jam; tanpa kunci: mode demo menampilkan kode, selain itu kode hanya masuk log. |
 | Kontrol demo           | Demo            | Hanya bila `HYTRACK_DEMO_CONTROLS=true`.                                                                 |
+
+**Migrasi di Vercel:** Vercel tidak menjalankan migrasi saat deploy, jadi `api/index.php` menyalakan `HYTRACK_AUTO_MIGRATE`. Permintaan pertama di setiap instans baru menjalankan `php artisan hytrack:upgrade`: migrasi yang belum jalan, lalu akun `rina`, `rani`, dan `dinda` bila database demo (ada akun `dina`) belum memilikinya. Data yang ada tidak diubah, dan database non-demo tidak mendapat akun bersandi demo. Perintah yang sama bisa dijalankan manual.
 
 **Catatan penyimpanan:** di Vercel, sistem file fungsi bersifat sementara, sehingga file hasil penunjang di disk `local` dapat hilang setelah deploy/instans berganti. Untuk produksi arahkan `HYTRACK_SUPPORT_RESULT_DISK` ke disk privat persisten (mis. S3 dengan `visibility=private`); belum dikonfigurasi di repositori ini.
 

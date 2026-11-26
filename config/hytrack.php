@@ -13,6 +13,10 @@ return [
      */
     'demo_controls' => (bool) env('HYTRACK_DEMO_CONTROLS', false),
 
+    // Run `hytrack:upgrade` (migrations + missing demo room accounts) on each new instance.
+    // On by default in api/index.php, the Vercel entry, which has no deploy-time migration step.
+    'auto_migrate' => (bool) env('HYTRACK_AUTO_MIGRATE', false),
+
     // Password of the accounts created by the demo seeder.
     'demo_password' => env('HYTRACK_DEMO_PASSWORD', 'hytrack-demo'),
 
