@@ -129,7 +129,31 @@ class PolyclinicCrudTest extends TestCase
         $this->assertSame(3, Polyclinic::count());
         $this->assertSame(1, User::count());
 
-        $this->post('/masuk', ['username' => 'petugas.rama', 'password' => 'sandi-rahasia-123'])->assertRedirect('/petugas');
+        $this->post('/masuk/internal', ['username' => 'petugas.rama', 'password' => 'sandi-rahasia-123', 'as' => 'staff'])->assertRedirect('/petugas');
+    }
+
+    public function test_setup_creates_a_manager_account_that_signs_in_only_internally(): void
+    {
+        putenv('HYTRACK_STAFF_PASSWORD=sandi-manajer-123');
+        try {
+            $this->artisan('hytrack:setup', ['--manager' => 'Manajemen.Rama', '--name' => 'Rama'])->assertSuccessful();
+        } finally {
+            putenv('HYTRACK_STAFF_PASSWORD');
+        }
+
+        $user = User::where('username', 'manajemen.rama')->firstOrFail();
+        $this->assertSame(UserRole::Manager, $user->role);
+        $this->assertSame('Manajemen operasional', $user->staff->work_unit);
+
+        // Not through the patient sign-in, nor as staff; only as Manajemen on /masuk/internal.
+        $this->post('/masuk', ['username' => 'manajemen.rama', 'password' => 'sandi-manajer-123'])
+            ->assertSessionHasErrors(['username' => 'Akun petugas dan manajemen masuk melalui halaman masuk internal.']);
+        $this->assertGuest();
+        $this->post('/masuk/internal', ['username' => 'manajemen.rama', 'password' => 'sandi-manajer-123', 'as' => 'staff'])
+            ->assertSessionHasErrors('as');
+        $this->post('/masuk/internal', ['username' => 'manajemen.rama', 'password' => 'sandi-manajer-123', 'as' => 'manager'])
+            ->assertRedirect('/manajemen');
+        $this->get('/manajemen')->assertOk();
     }
 
     public function test_setup_takes_the_password_from_the_environment_without_prompting(): void
@@ -145,6 +169,6 @@ class PolyclinicCrudTest extends TestCase
             putenv('HYTRACK_STAFF_PASSWORD');
         }
 
-        $this->post('/masuk', ['username' => 'petugas2', 'password' => 'sandi-dari-env-123'])->assertRedirect('/petugas');
+        $this->post('/masuk/internal', ['username' => 'petugas2', 'password' => 'sandi-dari-env-123', 'as' => 'staff'])->assertRedirect('/petugas');
     }
 }

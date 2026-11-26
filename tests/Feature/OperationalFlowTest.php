@@ -305,9 +305,12 @@ class OperationalFlowTest extends TestCase
             ->where('items.1.statusLabel', 'Tidak check-in'), $patient->user);
     }
 
+    /** Patients (phone numbers) sign in at /masuk; staff accounts at /masuk/internal. */
     private function login(string $username, string $password)
     {
-        return $this->post('/masuk', ['username' => $username, 'password' => $password]);
+        return preg_match('/[a-z]/i', $username)
+            ? $this->post('/masuk/internal', ['username' => $username, 'password' => $password, 'as' => 'staff'])
+            : $this->post('/masuk', ['username' => $username, 'password' => $password]);
     }
 
     private function patient(string $phone, string $name = 'Pasien Uji'): Patient

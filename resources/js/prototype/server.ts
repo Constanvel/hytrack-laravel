@@ -48,7 +48,7 @@ const SAVED = 'Mode prototype: perubahan hanya contoh dan tidak disimpan.';
 
 /** Roles own their own area; everyone else is sent home, as Laravel's role middleware does. */
 function owner(path: string): 'patient' | 'staff' | 'manager' | 'guest' | 'any' {
-  if (path === '/masuk' || path === '/daftar' || path === '/daftar/verifikasi') return 'guest';
+  if (['/masuk', '/masuk/internal', '/daftar', '/daftar/verifikasi'].includes(path)) return 'guest';
   if (path.startsWith('/pantauan/')) return 'any';
   if (path.startsWith('/petugas')) return 'staff';
   if (path.startsWith('/manajemen')) return 'manager';
@@ -58,6 +58,8 @@ function owner(path: string): 'patient' | 'staff' | 'manager' | 'guest' | 'any' 
 function lookup(state: State, path: string, query: URLSearchParams): Recorded | null {
   const user = state.user ?? 'guest';
   if (path === '/') return { component: 'Home', props: {} };
+  // Staff and manager sample accounts sign in here only, as in the real app.
+  if (path === '/masuk/internal') return { component: 'InternalLogin', props: {} };
   // Sign-up steps 2 and 3: no SMS in the prototype, so the code is shown (any 6 digits pass).
   if (path === '/daftar/verifikasi')
     return {
@@ -109,7 +111,10 @@ function render(state: State, url: string, flash: Flash = {}): Page {
     user === 'siti' || user === 'ahmad'
       ? fixtures.steps[state.step].shared[user]
       : { ...fixtures.steps[state.step].shared.siti, visit: null, unread: 0, following: 0 };
-  const extra = page.component === 'Login' ? { demoAccounts: null, prototype: true } : {};
+  const extra =
+    page.component === 'Login' || page.component === 'InternalLogin'
+      ? { demoAccounts: null, prototype: true }
+      : {};
   return {
     component: page.component,
     props: {
@@ -158,6 +163,11 @@ export function respond(
   const route = path.split('?')[0];
   if (method === 'GET') return go(path);
 
+  if (route === '/masuk/internal') {
+    s.user = accountFor(String(body.username ?? ''));
+    s.companion = false;
+    return go(fixtures.users[s.user].home);
+  }
   if (route === '/masuk') {
     s.user = accountFor(String(body.username ?? ''));
     // "Masuk sebagai: Pendamping" opens the companion view, as AuthController does.
@@ -176,9 +186,11 @@ export function respond(
     });
   }
   if (route === '/keluar') {
+    // Internal accounts go back to their own sign-in page, as AuthController::destroy does.
+    const internal = s.user !== null && fixtures.users[s.user].auth.role !== 'patient';
     s.user = null;
     s.companion = false;
-    return go('/masuk');
+    return go(internal ? '/masuk/internal' : '/masuk');
   }
   if (!s.user) return go('/masuk');
 

@@ -55,7 +55,7 @@ Data demo dibuat relatif terhadap **hari ini** (WIB). Jalankan `php artisan migr
 | Apoteker (Apt. Dinda)  | `dinda`       | `/masuk/internal` | Farmasi               |
 | Manajemen              | `manajer`     | `/masuk/internal` | `/manajemen`          |
 
-Kata sandi: `hytrack-demo` (`HYTRACK_DEMO_PASSWORD`). Daftar akun hanya tampil di halaman masuk saat `HYTRACK_DEMO_CONTROLS=true`. Di `/masuk/internal` peran yang dipilih (Petugas/Manajemen) harus sesuai akun; akun pasien diarahkan ke `/masuk`. Tidak ada reset kata sandi mandiri: akun internal dibuat dan diatur ulang oleh administrator.
+Kata sandi: `hytrack-demo` (`HYTRACK_DEMO_PASSWORD`). Daftar akun hanya tampil di halaman masuk saat `HYTRACK_DEMO_CONTROLS=true`. Di `/masuk/internal` peran yang dipilih (Petugas/Manajemen) harus sesuai akun; akun pasien diarahkan ke `/masuk`, dan `/masuk` menolak akun petugas/manajemen. Tidak ada reset kata sandi mandiri: akun internal dibuat dan diatur ulang oleh administrator, mis. `php artisan hytrack:setup --staff=<id>` atau `--manager=<id>` (kata sandi diketik operator atau dari `HYTRACK_STAFF_PASSWORD` untuk shell itu saja).
 
 ### Mencoba alur
 
@@ -131,7 +131,7 @@ npm run test:e2e            # 30 tes browser: alur, login internal, responsif 32
 
 **Catatan penyimpanan:** di Vercel, sistem file fungsi bersifat sementara, sehingga file hasil penunjang di disk `local` dapat hilang setelah deploy/instans berganti. Untuk produksi arahkan `HYTRACK_SUPPORT_RESULT_DISK` ke disk privat persisten (mis. S3 dengan `visibility=private`); belum dikonfigurasi di repositori ini.
 
-**Mode prototipe** (`/prototipe`) memutar ulang data rekaman (`npm run prototype:record`) untuk akun pasien, `dina`, dan `manajer`; layar dokter, penunjang, dan farmasi hanya tersedia di aplikasi asli.
+**Mode prototipe** (`/prototipe`) memutar ulang data rekaman (`npm run prototype:record`) untuk akun pasien (di `/prototipe/masuk`), `dina` dan `manajer` (di `/prototipe/masuk/internal`); layar dokter, penunjang, dan farmasi hanya tersedia di aplikasi asli.
 
 **Belum ada:** notifikasi lewat SMS/WhatsApp, reset kata sandi, integrasi SIMRS/BPJS, pemindai QR, notifikasi luar aplikasi, push realtime, audit log lengkap (riwayat petugas hanya menampilkan pembaruan terakhir tiap tahap).
 

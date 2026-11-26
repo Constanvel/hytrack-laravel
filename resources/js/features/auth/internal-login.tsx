@@ -1,4 +1,4 @@
-import { useForm } from '@inertiajs/react';
+import { router, useForm } from '@inertiajs/react';
 import { useState, type FormEvent } from 'react';
 import { Notice } from '@/components/ui';
 import { AuthInput, PasswordInput } from './auth-form';
@@ -18,6 +18,11 @@ const ROLES: { value: Role; label: string; detail: string; icon: string }[] = [
     icon: '/assets/role-manager.svg',
   },
 ];
+// Prototype mode sample accounts, moved here from the patient sign-in.
+const PROTOTYPE_ROLES = [
+  ['Petugas', 'dina', 'staff'],
+  ['Manajemen', 'manajer', 'manager'],
+] as const;
 const BENEFITS = [
   'Pantau antrean secara real-time',
   'Koordinasikan setiap tahap pelayanan',
@@ -29,7 +34,13 @@ const BENEFITS = [
  * account (AuthController::storeInternal). There is no self-service reset: accounts are
  * issued and reset by the hospital's administrator.
  */
-export function InternalLogin({ demoAccounts }: { demoAccounts: string | null }) {
+export function InternalLogin({
+  demoAccounts,
+  prototype = false,
+}: {
+  demoAccounts: string | null;
+  prototype?: boolean;
+}) {
   const form = useForm<{ as: Role; username: string; password: string }>({
     as: 'staff',
     username: '',
@@ -155,6 +166,40 @@ export function InternalLogin({ demoAccounts }: { demoAccounts: string | null })
           </form>
         </div>
         <p className="internal-foot">Gunakan akun Anda sendiri dan jaga kerahasiaan kata sandi.</p>
+        {/* Prototype mode (/prototipe): sample staff and manager accounts, no password checked. */}
+        <div className="auth-prototype">
+          <label className="auth-switch-toggle">
+            <input
+              type="checkbox"
+              role="switch"
+              checked={prototype}
+              onChange={() =>
+                window.location.assign(
+                  prototype ? '/masuk/internal' : '/prototipe/masuk/internal?reset=1',
+                )
+              }
+            />
+            <span>
+              <strong>Mode prototype</strong>
+              <small>Coba ruang kerja petugas dan manajemen dengan data contoh.</small>
+            </span>
+          </label>
+          {prototype && (
+            <div className="auth-prototype-roles" role="group" aria-label="Masuk sebagai">
+              {PROTOTYPE_ROLES.map(([label, username, as]) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() =>
+                    router.post('/masuk/internal', { as, username, password: 'prototype' })
+                  }
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </main>
     </div>
   );

@@ -229,9 +229,10 @@ class CompanionInvitationTest extends TestCase
         $this->post('/masuk', ['username' => $companion->username, 'password' => 'password', 'as' => 'staff'])
             ->assertSessionHasErrors('as');
 
-        // Staff ignore the choice and keep their own dashboard.
+        // Staff accounts cannot use the patient sign-in at all, whatever they choose.
         $staff = Staff::factory()->create()->user;
         $this->post('/masuk', ['username' => $staff->username, 'password' => 'password', 'as' => 'companion'])
-            ->assertRedirect('/petugas');
+            ->assertSessionHasErrors(['username' => 'Akun petugas dan manajemen masuk melalui halaman masuk internal.']);
+        $this->assertGuest();
     }
 }
