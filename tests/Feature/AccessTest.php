@@ -15,8 +15,12 @@ class AccessTest extends TestCase
 
     public function test_guests_are_sent_to_the_sign_in_page(): void
     {
-        foreach (['/', '/kunjungan', '/petugas', '/manajemen'] as $url) {
+        foreach (['/', '/kunjungan'] as $url) {
             $this->get($url)->assertRedirect('/masuk');
+        }
+        // Staff and management sign in on the internal page (Figma 47:2 "Login").
+        foreach (['/petugas', '/manajemen'] as $url) {
+            $this->get($url)->assertRedirect('/masuk/internal');
         }
 
         $this->get('/masuk')->assertInertia(fn (AssertableInertia $page) => $page->component('Login'));
@@ -31,7 +35,7 @@ class AccessTest extends TestCase
         foreach ([[$patient, '/'], [$staff, '/petugas'], [$manager, '/manajemen']] as [$user, $home]) {
             $this->post('/masuk', ['username' => $user->username, 'password' => 'password'])->assertRedirect($home);
             $this->assertAuthenticatedAs($user);
-            $this->post('/keluar')->assertRedirect('/masuk');
+            $this->post('/keluar')->assertRedirect($home === '/' ? '/masuk' : '/masuk/internal');
             $this->assertGuest();
         }
     }

@@ -2,7 +2,24 @@ import { usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { Bookings, BOOKINGS, visitDashboard, type BookingProps } from './bookings';
 import { ClinicAdmin, CLINICS, type ClinicRow } from './clinic-admin';
-import { DashboardShell, DashboardTitle, Pager, pageOf, SCAN, Stat } from './dashboard-shell';
+import {
+  DoctorExam,
+  PharmacyDetail,
+  SupportDesk,
+  type ExamRow,
+  type Me,
+  type SupportRow,
+} from './clinical';
+import {
+  DashboardShell,
+  DashboardTitle,
+  EXAM,
+  Pager,
+  pageOf,
+  SCAN,
+  Stat,
+  SUPPORT,
+} from './dashboard-shell';
 import { QrScanner } from './scanner';
 import {
   ActivityLog,
@@ -28,13 +45,25 @@ interface StaffProps {
   stats: { waiting: number; examined: number; notCheckedIn: number; registered: number };
   queue: QueuePatient[];
   current:
-    | (QueuePatient & { startedAt: string | null; minutes: number | null; calledCount: number })
+    | (QueuePatient & {
+        startedAt: string | null;
+        minutes: number | null;
+        calledCount: number;
+        confirmed: boolean;
+      })
     | null;
+  me: Me;
+  examinations: ExamRow[];
+  support: SupportRow[];
+  supportUnits: Record<string, string>;
   flow: FlowProps;
   history: Activity[];
   checkInDesk: string;
   clinicAdmin: ClinicRow[];
 }
+/** Where each room starts (Figma 47:2 frames 31, 33, 34). */
+const HOME = { desk: 'Antrean poli', doctor: EXAM, support: SUPPORT, pharmacy: 'Farmasi' };
+
 /** Figma 43:2 frame 11: six patients per page. */
 const PAGE = 6;
 
@@ -55,14 +84,25 @@ export function Staff({
   history,
   checkInDesk,
   clinicAdmin,
+  me,
+  examinations,
+  support,
+  supportUnits,
   ...bookingProps
 }: StaffProps & PharmacyProps & Omit<BookingProps, 'clinics'>) {
   const { flash, props } = usePage();
-  const [section, setSection] = useState('Antrean poli');
+  const [section, setSection] = useState<string>(HOME[me.room]);
+  const [examPick, setExamPick] = useState<number | null>(null);
+  const [orderPick, setOrderPick] = useState<number | null>(null);
+  const order = pharmacy.find((item) => item.id === orderPick);
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [detail, setDetail] = useState<string | null>(null);
-  const { busy, post } = useAction();
+  const { busy, post, send, error, clearError } = useAction();
+  const go = (next: string) => {
+    clearError();
+    setSection(next);
+  };
   const clinic = clinics.find((item) => item.id === clinicId);
   const filtered = queue.filter((patient) =>
     `${patient.name} ${patient.number}`.toLowerCase().includes(query.toLowerCase()),
@@ -73,7 +113,14 @@ export function Staff({
   const sample = <Notice>Data contoh · {props.now}</Notice>;
   const callNext = () => post(`/petugas/dokter/${doctor!.id}/panggil`);
   return (
-    <DashboardShell section={section} onSection={setSection}>
+    <DashboardShell
+      room={me.room}
+      section={section}
+      onSection={(next) => {
+        setOrderPick(null);
+        go(next);
+      }}
+    >
       {section === SCAN ? (
         <QrScanner desk={checkInDesk} />
       ) : section === BOOKINGS ? (
@@ -94,10 +141,58 @@ export function Staff({
           />
           <ClinicAdmin clinics={clinicAdmin} />
         </>
+      ) : section === EXAM ? (
+        <DoctorExam
+          me={me}
+          rows={examinations}
+          supportUnits={supportUnits}
+          picked={examPick}
+          onPick={setExamPick}
+          busy={busy}
+          error={error}
+          send={send}
+          onSection={go}
+          onOrder={(id) => {
+            setOrderPick(id);
+            go('Farmasi');
+          }}
+        />
+      ) : section === SUPPORT ? (
+        <SupportDesk
+          me={me}
+          rows={support}
+          units={supportUnits}
+          busy={busy}
+          error={error}
+          send={send}
+        />
       ) : section === 'Alur pelayanan' ? (
-        <ServiceFlow clinics={clinics} flow={flow} busy={busy} post={post} />
+        <ServiceFlow clinics={clinics} flow={flow} onSection={go} />
+      ) : section === 'Farmasi' && order ? (
+        <PharmacyDetail
+          order={order}
+          me={me}
+          busy={busy}
+          error={error}
+          send={send}
+          onBack={() => {
+            clearError();
+            setOrderPick(null);
+          }}
+          onHistory={() => {
+            setOrderPick(null);
+            go('Riwayat aktivitas');
+          }}
+        />
       ) : section === 'Farmasi' ? (
-        <PharmacyDesk pharmacy={pharmacy} pharmacyStats={pharmacyStats} busy={busy} post={post} />
+        <PharmacyDesk
+          pharmacy={pharmacy}
+          pharmacyStats={pharmacyStats}
+          onOpen={(id) => {
+            clearError();
+            setOrderPick(id);
+          }}
+        />
       ) : section === 'Riwayat aktivitas' ? (
         <ActivityLog history={history} />
       ) : (
@@ -250,20 +345,28 @@ export function Staff({
                 </section>
                 <div className="stack queue-controls">
                   <section className="hero serving">
-                    <p className="eyebrow">SEDANG DILAYANI</p>
+                    <p className="eyebrow">
+                      {current
+                        ? `SEDANG DIPERIKSA · MULAI ${current.startedAt}`
+                        : 'SEDANG DIPERIKSA'}
+                    </p>
                     <h2>{current?.number ?? '—'}</h2>
                     <h3>{current?.name ?? 'Belum ada pasien'}</h3>
                     <p className="small">
                       {current
-                        ? `Mulai ${current.startedAt}${current.minutes !== null ? ` · Berjalan ${current.minutes} menit` : ''}`
+                        ? `${current.minutes ?? 0} mnt · ${current.confirmed ? 'sudah dikonfirmasi dokter' : 'menunggu konfirmasi dokter'}`
                         : 'Panggil pasien berikutnya'}
                     </p>
+                    {/* Figma 47:2 frame 11: only the doctor confirms; the desk opens that screen. */}
                     <button
                       className="button white"
-                      disabled={!current || busy}
-                      onClick={() => post(`/petugas/antrean/${current!.id}/selesai-periksa`)}
+                      disabled={!current}
+                      onClick={() => {
+                        setExamPick(current!.id);
+                        go(EXAM);
+                      }}
                     >
-                      Selesai & lanjutkan layanan
+                      Lihat pemeriksaan dokter
                     </button>
                   </section>
                   <section className="card next-call">
@@ -294,7 +397,8 @@ export function Staff({
                     </div>
                   </section>
                   <Notice tone="warning">
-                    Perubahan status tercatat. Tandai tidak hadir hanya setelah panggilan ulang.
+                    Hanya dokter mengonfirmasi pemeriksaan &amp; resep. Tidak hadir: tandai setelah
+                    panggilan ulang.
                   </Notice>
                 </div>
               </div>

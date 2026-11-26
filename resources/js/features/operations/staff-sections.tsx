@@ -1,11 +1,19 @@
 import { usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import { DashboardTitle, Pager, pageOf, shortDate, Stat } from './dashboard-shell';
+import { Dialog, type OrderRow } from './clinical';
+import {
+  DashboardTitle,
+  EXAM,
+  Pager,
+  pageOf,
+  SCAN,
+  shortDate,
+  Stat,
+  SUPPORT,
+} from './dashboard-shell';
 import { Notice } from '@/components/ui';
 
-type Post = (url: string) => void;
-
-// ── Alur pelayanan (Figma 43:2 frame 21) ──────────────────────────────────────
+// ── Alur pelayanan (Figma 47:2 frame 21, dialogs 47:2267–47:2325) ─────────────
 
 export interface FlowProps {
   visits: {
@@ -19,40 +27,40 @@ export interface FlowProps {
   }[];
   completed: Record<number, number>;
 }
+/** Stage, title, the service page it leads to and that button's label. */
 const COLUMNS = [
-  ['arrival', 'Verifikasi kedatangan'],
-  ['clinic', 'Antrean poli'],
-  ['support', 'Penunjang'],
-  ['pharmacy', 'Farmasi'],
+  ['arrival', 'Verifikasi kedatangan', SCAN, 'Verifikasi kedatangan →'],
+  ['clinic', 'Poli & dokter', EXAM, 'Pemeriksaan dokter →'],
+  ['support', 'Penunjang', SUPPORT, 'Ringkasan penunjang →'],
+  ['pharmacy', 'Farmasi', 'Farmasi', 'Kelola pemrosesan obat →'],
 ] as const;
 
 export function ServiceFlow({
   clinics,
   flow,
-  busy,
-  post,
+  onSection,
 }: {
   clinics: { id: number; name: string }[];
   flow: FlowProps;
-  busy: boolean;
-  post: Post;
+  onSection: (section: string) => void;
 }) {
   const { flash, props } = usePage();
   const [clinic, setClinic] = useState(0);
-  const [open, setOpen] = useState<string[]>([]);
+  const [summary, setSummary] = useState<number | null>(null);
   const visits = flow.visits.filter((visit) => !clinic || visit.clinicId === clinic);
   const late = visits.filter((visit) => visit.late);
   const completed = Object.entries(flow.completed)
     .filter(([id]) => !clinic || Number(id) === clinic)
     .reduce((sum, [, count]) => sum + count, 0);
-  const toggle = (stage: string) =>
-    setOpen(open.includes(stage) ? open.filter((item) => item !== stage) : [...open, stage]);
+  const rowsOf = (stage: string) => visits.filter((visit) => visit.stage === stage);
+  const open = summary === null ? null : COLUMNS[summary];
+  const openRows = open ? rowsOf(open[0]) : [];
   return (
     <>
       <DashboardTitle
         flat
         title="Alur pelayanan"
-        subtitle="Pantau perpindahan pasien dari kedatangan hingga layanan selesai."
+        subtitle="Pantau antrean, konfirmasi dokter, penunjang, dan obat hingga diserahkan."
         aside={<Notice>Data contoh · {props.now}</Notice>}
       />
       <div className="dashboard-filters flat flow-filters">
@@ -89,41 +97,39 @@ export function ServiceFlow({
         />
       </div>
       <div className="flow-board">
-        {COLUMNS.map(([stage, title]) => {
-          const rows = visits.filter((visit) => visit.stage === stage);
-          const expanded = open.includes(stage);
+        {COLUMNS.map(([stage, title, target, action], index) => {
+          const rows = rowsOf(stage);
           return (
             <section className="flow-column" key={stage} aria-label={title}>
+              <span className="flow-step" aria-hidden="true">
+                {String(index + 1).padStart(2, '0')}
+              </span>
+              <p className="flow-count">{rows.length} pasien</p>
+              <button
+                type="button"
+                className="flow-open"
+                aria-label={`Ringkasan tahap ${title}`}
+                onClick={() => setSummary(index)}
+              >
+                →
+              </button>
               <h3>{title}</h3>
-              <p>{rows.length} pasien</p>
               <ul>
-                {(expanded ? rows : rows.slice(0, 2)).map((visit) => (
+                {rows.slice(0, 2).map((visit) => (
                   <li key={visit.id} className={visit.late ? 'late' : ''}>
-                    <strong>{visit.number}</strong>
-                    <span>{visit.name}</span>
-                    <small>{visit.note}</small>
-                    {stage === 'support' && (
-                      <button
-                        className="text-button"
-                        disabled={busy}
-                        onClick={() => post(`/petugas/antrean/${visit.id}/selesai-laboratorium`)}
-                      >
-                        Selesai, lanjut ke farmasi
-                      </button>
-                    )}
+                    <button type="button" onClick={() => setSummary(index)}>
+                      <strong>{visit.number}</strong>
+                      <span>{visit.name}</span>
+                      <small>{visit.note}</small>
+                      <i aria-hidden="true">↗</i>
+                    </button>
                   </li>
                 ))}
               </ul>
               {!rows.length && <p className="flow-empty">Tidak ada pasien.</p>}
-              {rows.length > 2 && (
-                <button
-                  className="text-button"
-                  aria-expanded={expanded}
-                  onClick={() => toggle(stage)}
-                >
-                  {expanded ? 'Tampilkan lebih sedikit ↑' : 'Lihat semua pasien →'}
-                </button>
-              )}
+              <button type="button" className="flow-action" onClick={() => onSection(target)}>
+                {action}
+              </button>
             </section>
           );
         })}
@@ -136,10 +142,7 @@ export function ServiceFlow({
               Periksa waktu tunggu dan koordinasikan dengan unit terkait sebelum memindahkan pasien.
             </p>
           </div>
-          <button
-            className="button white"
-            onClick={() => setOpen((items) => [...new Set([...items, 'clinic'])])}
-          >
+          <button className="button white" onClick={() => setSummary(1)}>
             Lihat pasien
           </button>
         </section>
@@ -148,48 +151,84 @@ export function ServiceFlow({
         {flash.status ??
           'Status diperbarui oleh masing-masing unit. Setiap perpindahan tercatat di riwayat aktivitas.'}
       </p>
+      {open && summary !== null && (
+        <Dialog
+          className="flow-summary"
+          eyebrow={`TAHAP ${String(summary + 1).padStart(2, '0')} / 04`}
+          title={open[1]}
+          onClose={() => setSummary(null)}
+        >
+          <p className="cl-muted">
+            {openRows.length} pasien · {openRows.length} pasien ditampilkan
+          </p>
+          <ul className="flow-summary-list">
+            {openRows.map((visit) => (
+              <li key={visit.id}>
+                <strong>{visit.number}</strong>
+                <span>{visit.name}</span>
+                <small>{visit.note}</small>
+              </li>
+            ))}
+          </ul>
+          {!openRows.length && <p className="cl-empty">Tidak ada pasien di tahap ini.</p>}
+          <p className="cl-muted small">Status diperbarui oleh masing-masing unit.</p>
+          <div className="cl-dialog-actions">
+            <button type="button" className="cl-button mint" onClick={() => setSummary(null)}>
+              Kembali ke alur
+            </button>
+            <button
+              type="button"
+              className="cl-button primary"
+              onClick={() => {
+                setSummary(null);
+                onSection(open[2]);
+              }}
+            >
+              Buka layanan →
+            </button>
+          </div>
+        </Dialog>
+      )}
     </>
   );
 }
 
-// ── Farmasi (Figma 43:2 frame 22) ─────────────────────────────────────────────
+// ── Farmasi (Figma 47:2 frame 22) ─────────────────────────────────────────────
 
 export interface PharmacyProps {
-  pharmacy: {
-    id: number;
-    pickup: string;
-    number: string;
-    name: string;
-    clinic: string;
-    record: string | null;
-    receivedAt: string | null;
-    status: 'received' | 'preparing' | 'checking' | 'ready';
-    statusLabel: string;
-    next: string | null;
-    handledBy: string | null;
-  }[];
+  pharmacy: OrderRow[];
   pharmacyStats: { done: number; average: number | null };
 }
 /** The short status names of frame 22. */
-const SHORT = {
-  received: 'Verifikasi',
-  preparing: 'Disiapkan',
-  checking: 'Pemeriksaan akhir',
+const SHORT: Record<OrderRow['status'], string> = {
+  received: 'Belum diproses',
+  preparing: 'Diproses',
   ready: 'Siap diambil',
+  completed: 'Diserahkan',
+  returned: 'Dikembalikan',
+};
+/** Row action and the side panel's button per status. */
+const ACTION: Record<OrderRow['status'], [string, string]> = {
+  received: ['Mulai proses', 'Verifikasi & mulai proses'],
+  preparing: ['Detail', 'Konfirmasi obat siap diambil'],
+  ready: ['Panggil', 'Konfirmasi obat diserahkan'],
+  completed: ['Detail', 'Lihat detail resep'],
+  returned: ['Detail', 'Lihat detail resep'],
 };
 
 export function PharmacyDesk({
   pharmacy,
   pharmacyStats,
-  busy,
-  post,
-}: PharmacyProps & { busy: boolean; post: Post }) {
+  onOpen,
+}: PharmacyProps & { onOpen: (id: number) => void }) {
   const { flash, props } = usePage();
   const [status, setStatus] = useState('');
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [picked, setPicked] = useState<number | null>(null);
-  const rows = pharmacy.filter(
+  // Handed-over prescriptions leave the working list; the "Diserahkan" filter shows them.
+  const active = pharmacy.filter((order) => order.status !== 'completed');
+  const rows = (status ? pharmacy : active).filter(
     (order) =>
       (!status || order.status === status) &&
       `${order.pickup} ${order.number} ${order.name}`.toLowerCase().includes(query.toLowerCase()),
@@ -240,8 +279,8 @@ export function PharmacyDesk({
       <div className="stat-grid three flat">
         <Stat
           label="Antrean resep"
-          value={String(pharmacy.length)}
-          detail={`${count('received')} verifikasi · ${count('preparing', 'checking')} disiapkan · ${count('ready')} siap`}
+          value={String(active.length)}
+          detail={`${count('received')} belum diproses · ${count('preparing')} diproses · ${count('ready')} siap`}
         />
         <Stat
           label="Sudah diserahkan"
@@ -258,7 +297,7 @@ export function PharmacyDesk({
         <section className="card flat-card">
           <div className="table-header">
             <h3>Daftar resep</h3>
-            <span>{pharmacy.length} resep aktif</span>
+            <span>{active.length} resep aktif</span>
           </div>
           <div className="table-scroll">
             <table className="grid-table pharmacy-table">
@@ -273,7 +312,11 @@ export function PharmacyDesk({
               </thead>
               <tbody>
                 {shown.rows.map((item) => (
-                  <tr key={item.id} className={item.id === order?.id ? 'next-row' : ''}>
+                  <tr
+                    key={item.id}
+                    className={item.id === order?.id ? 'next-row' : ''}
+                    onClick={() => setPicked(item.id)}
+                  >
                     <td>
                       <strong>{item.pickup}</strong>
                     </td>
@@ -283,14 +326,12 @@ export function PharmacyDesk({
                     <td>
                       <button
                         className="text-button"
-                        aria-pressed={item.id === order?.id}
-                        onClick={() => setPicked(item.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpen(item.id);
+                        }}
                       >
-                        {item.status === 'received'
-                          ? 'Verifikasi'
-                          : item.status === 'ready'
-                            ? 'Panggil'
-                            : 'Detail'}
+                        {ACTION[item.status][0]}
                       </button>
                     </td>
                   </tr>
@@ -308,7 +349,7 @@ export function PharmacyDesk({
           <div className="table-footer plain">
             <span>
               {rows.length
-                ? `Menampilkan ${shown.from}–${Math.min(shown.to, rows.length)} dari ${rows.length} resep aktif`
+                ? `Menampilkan ${shown.from}–${Math.min(shown.to, rows.length)} dari ${rows.length} resep${status ? '' : ' aktif'}`
                 : 'Menampilkan 0 resep'}
             </span>
             <Pager page={shown.current} pages={shown.pages} onPage={setPage} />
@@ -318,7 +359,13 @@ export function PharmacyDesk({
           <section className="card flat-card prescription">
             {order ? (
               <>
-                <p className="eyebrow">RESEP DIPILIH · {SHORT[order.status].toUpperCase()}</p>
+                <p className="eyebrow">
+                  RESEP DIPILIH ·{' '}
+                  {(order.status === 'preparing'
+                    ? 'Sedang diproses'
+                    : SHORT[order.status]
+                  ).toUpperCase()}
+                </p>
                 <h2>{order.pickup}</h2>
                 <h3>{order.name}</h3>
                 <p className="muted">
@@ -332,24 +379,28 @@ export function PharmacyDesk({
                 <div className="handover-check">
                   <strong>
                     {order.status === 'received'
-                      ? 'Resep menunggu verifikasi'
-                      : 'Resep sudah diverifikasi'}
+                      ? `${order.itemCount} item obat · belum diproses`
+                      : order.status === 'returned'
+                        ? `${order.itemCount} item obat · dikembalikan ke dokter`
+                        : `${order.itemCount} item obat · diproses oleh ${order.handledBy ?? 'farmasi'}`}
                   </strong>
-                  <small>Pastikan obat, label, dan identitas sesuai.</small>
+                  <small>
+                    {order.status === 'received'
+                      ? 'Verifikasi resep dokter sebelum memproses.'
+                      : order.status === 'returned'
+                        ? (order.returnReason ?? 'Menunggu dokter meninjau resep.')
+                        : 'Resep dokter sudah diverifikasi.'}
+                  </small>
                 </div>
-                <button
-                  className="button solid"
-                  disabled={!order.next || busy}
-                  onClick={() => post(`/petugas/farmasi/${order.id}/lanjut`)}
-                >
-                  Tandai {order.next?.toLowerCase()}
+                <button className="button solid" onClick={() => onOpen(order.id)}>
+                  {ACTION[order.status][1]}
                 </button>
               </>
             ) : (
               <>
                 <p className="eyebrow">RESEP DIPILIH</p>
                 <h3>Belum ada resep aktif</h3>
-                <p className="muted">Resep baru muncul setelah pasien selesai di laboratorium.</p>
+                <p className="muted">Resep baru muncul setelah dokter mengonfirmasi pemeriksaan.</p>
               </>
             )}
           </section>

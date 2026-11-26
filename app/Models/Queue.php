@@ -65,6 +65,22 @@ class Queue extends Model
         return $this->hasOne(PharmacyOrder::class, 'queue_id', 'queue_id')->latestOfMany('pharmacy_order_id');
     }
 
+    public function examination(): HasOne
+    {
+        return $this->hasOne(Examination::class, 'queue_id', 'queue_id');
+    }
+
+    public function supportRequests(): HasMany
+    {
+        return $this->hasMany(SupportRequest::class, 'queue_id', 'queue_id');
+    }
+
+    /** The referral in progress or the latest one. */
+    public function supportRequest(): HasOne
+    {
+        return $this->hasOne(SupportRequest::class, 'queue_id', 'queue_id')->latestOfMany('support_request_id');
+    }
+
     public function companionShares(): HasMany
     {
         return $this->hasMany(CompanionShare::class, 'queue_id', 'queue_id');

@@ -99,7 +99,7 @@ class PolyclinicCrudTest extends TestCase
         $clinic = Polyclinic::factory()->create();
         $patient = Patient::factory()->create();
 
-        $this->post('/petugas/poliklinik', ['name' => 'Kulit'])->assertRedirect('/masuk');
+        $this->post('/petugas/poliklinik', ['name' => 'Kulit'])->assertRedirect('/masuk/internal');
         $this->actingAs($patient->user)->post('/petugas/poliklinik', ['name' => 'Kulit'])->assertForbidden();
         $this->actingAs($patient->user)->delete("/petugas/poliklinik/{$clinic->polyclinic_id}")->assertForbidden();
         $manager = User::factory()->create(['role' => UserRole::Manager]);

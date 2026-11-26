@@ -4,6 +4,7 @@
 @import './patient-data.css';
 @import './companion.css';
 @import './scanner.css';
+@import './clinical.css';
 :root {
   /* Figma "Perubahan lagi" (31:2): Inter, mint atmosphere, softer cream. */
   --bg: #f6f8f4;

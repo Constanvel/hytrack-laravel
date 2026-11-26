@@ -6,16 +6,20 @@ use App\Enums\JourneyStage;
 use App\Enums\PrescriptionStatus;
 use App\Enums\QueueStatus;
 use App\Enums\StageStatus;
+use App\Enums\SupportStatus;
 use App\Exceptions\QueueRuleException;
 use App\Models\Doctor;
+use App\Models\Examination;
 use App\Models\Patient;
 use App\Models\PatientJourney;
 use App\Models\PharmacyOrder;
 use App\Models\Polyclinic;
 use App\Models\Queue;
 use App\Models\Staff;
+use App\Models\SupportRequest;
 use App\Services\QueueService;
 use App\Support\CheckInTicket;
+use App\Support\ClinicalBoard;
 use App\Support\HospitalTime;
 use Carbon\CarbonInterface;
 use Illuminate\Http\JsonResponse;
@@ -39,18 +43,22 @@ class StaffController extends Controller
 
     public function __construct(private readonly QueueService $queues) {}
 
-    public function index(Request $request): Response
+    public function index(Request $request): Response|JsonResponse
     {
         $today = HospitalTime::today();
+        $me = $this->staff($request);
+        $board = new ClinicalBoard($me, $today);
         // An archived polyclinic stays on the live dashboard while it still has ongoing queues.
         $clinics = Polyclinic::withTrashed()
             ->where(fn ($query) => $query->whereNull('archived_at')->orWhereHas('queues', fn ($queues) => $queues->ongoing()))
             ->with('doctors')->orderBy('polyclinic_id')->get();
-        $clinic = $clinics->firstWhere('polyclinic_id', $request->integer('poli')) ?? $clinics->first();
-        $doctor = $clinic?->doctors->firstWhere('doctor_id', $request->integer('dokter')) ?? $clinic?->doctors->first();
+        // A doctor's account opens on that doctor's own line.
+        $own = $me->doctor_id && ! $request->filled('poli') ? $me->doctor : null;
+        $clinic = $clinics->firstWhere('polyclinic_id', $own?->polyclinic_id ?? $request->integer('poli')) ?? $clinics->first();
+        $doctor = $clinic?->doctors->firstWhere('doctor_id', $own?->doctor_id ?? $request->integer('dokter')) ?? $clinic?->doctors->first();
 
         $line = $doctor
-            ? Queue::forDoctorOn($doctor->doctor_id, $today)->with(['patient', 'journeys'])
+            ? Queue::forDoctorOn($doctor->doctor_id, $today)->with(['patient', 'journeys', 'examination'])
                 ->orderBy('checkin_at')->orderBy('queue_id')->get()
             : collect();
         $current = $line->firstWhere('queue_status', QueueStatus::Serving);
@@ -61,7 +69,13 @@ class StaffController extends Controller
             'checkIn' => HospitalTime::clock($queue->checkin_at),
         ];
 
-        return Inertia::render('Staff', [
+        $props = [
+            'me' => [
+                'name' => $me->full_name,
+                'unit' => $me->work_unit,
+                'room' => $me->room(),
+                'doctorId' => $me->doctor_id,
+            ],
             'clinics' => $clinics->map(fn (Polyclinic $item) => [
                 'id' => $item->polyclinic_id,
                 'name' => $item->polyclinic_name.($item->trashed() ? ' (dihapus)' : ''),
@@ -85,9 +99,13 @@ class StaffController extends Controller
                 'startedAt' => HospitalTime::clock($started = $current->journey(JourneyStage::Consultation)?->started_at),
                 'minutes' => $started ? (int) $started->diffInMinutes(now()) : null,
                 'calledCount' => $current->called_count,
+                'confirmed' => $current->examination?->confirmed_at !== null,
             ] : null,
             'flow' => $this->flow($today),
-            ...$this->pharmacy($today),
+            'examinations' => $board->examinations(),
+            'support' => $board->support(),
+            'supportUnits' => config('hytrack.support_units'),
+            ...$this->pharmacy($today, $board),
             'history' => $this->history($today),
             'checkInDesk' => config('hytrack.rooms.check_in'),
             // Master data (CRUD "Data poliklinik"), with how much still depends on each one.
@@ -100,7 +118,9 @@ class StaffController extends Controller
                     'queues' => $item->queues_count,
                 ]),
             ...$this->bookings($request, $today),
-        ]);
+        ];
+
+        return $request->is('api/*') ? response()->json($props) : Inertia::render('Staff', $props);
     }
 
     /**
@@ -142,7 +162,7 @@ class StaffController extends Controller
         )['code'];
     }
 
-    public function callNext(Request $request, Doctor $doctor): RedirectResponse
+    public function callNext(Request $request, Doctor $doctor): RedirectResponse|JsonResponse
     {
         $called = $this->queues->callNext($doctor, HospitalTime::today(), $this->staff($request));
 
@@ -150,14 +170,14 @@ class StaffController extends Controller
     }
 
     /** Call one checked-in patient from the booking detail. */
-    public function call(Request $request, Queue $queue): RedirectResponse
+    public function call(Request $request, Queue $queue): RedirectResponse|JsonResponse
     {
         $called = $this->queues->callWaiting($queue, $this->staff($request));
 
         return $this->done("{$called->queue_number} dipanggil.");
     }
 
-    public function recall(Request $request, Queue $queue): RedirectResponse
+    public function recall(Request $request, Queue $queue): RedirectResponse|JsonResponse
     {
         $this->staff($request);
         $this->queues->recall($queue);
@@ -165,36 +185,68 @@ class StaffController extends Controller
         return $this->done("{$queue->queue_number} dipanggil ulang.");
     }
 
-    public function noShow(Request $request, Queue $queue): RedirectResponse
+    public function noShow(Request $request, Queue $queue): RedirectResponse|JsonResponse
     {
         $this->queues->markNoShow($queue, $this->staff($request));
 
         return $this->done("{$queue->queue_number} ditandai tidak hadir.");
     }
 
-    public function examined(Request $request, Queue $queue): RedirectResponse
+    /**
+     * Pharmacy steps (Figma 47:2 frames 34–37). Only pharmacy staff act, and only once every
+     * item of the current checklist is ticked.
+     */
+    public function advancePharmacy(Request $request, PharmacyOrder $order): RedirectResponse|JsonResponse
     {
-        $this->queues->completeConsultation($queue, $this->staff($request));
+        $staff = $this->staff($request, Staff::PHARMACY);
+        $missing = array_diff(ClinicalBoard::requiredChecks($order), $this->checks($request));
 
-        return $this->done("{$queue->queue_number} selesai diperiksa, lanjut ke laboratorium.");
+        if ($missing) {
+            throw new QueueRuleException('Centang semua pemeriksaan sebelum melanjutkan.');
+        }
+        $order = $this->queues->advancePharmacy($order, $staff);
+
+        return $this->done("{$order->pickupNumber()}: ".mb_strtolower($order->prescription_status->staffLabel()).'.');
     }
 
-    public function laboratoryDone(Request $request, Queue $queue): RedirectResponse
+    /** "Simpan proses": keep the ticked checklist items. */
+    public function savePharmacyChecks(Request $request, PharmacyOrder $order): RedirectResponse|JsonResponse
     {
-        $this->queues->completeLaboratory($queue, $this->staff($request));
+        $order = $this->queues->savePharmacyChecks($order, $this->staff($request, Staff::PHARMACY),
+            array_values(array_intersect($this->checks($request), ClinicalBoard::requiredChecks($order))));
 
-        return $this->done("{$queue->queue_number} lanjut ke farmasi.");
+        return $this->done("Proses {$order->pickupNumber()} tersimpan.");
     }
 
-    public function advancePharmacy(Request $request, PharmacyOrder $order): RedirectResponse
+    public function callPickup(Request $request, PharmacyOrder $order): RedirectResponse|JsonResponse
     {
-        $order = $this->queues->advancePharmacy($order, $this->staff($request));
+        $order = $this->queues->callPickup($order, $this->staff($request, Staff::PHARMACY));
 
-        return $this->done("{$order->pickupNumber()}: {$order->prescription_status->label()}.");
+        return $this->done("Pasien {$order->pickupNumber()} dipanggil ke ".config('hytrack.pharmacy_counter').'.');
+    }
+
+    public function returnPrescription(Request $request, PharmacyOrder $order): RedirectResponse|JsonResponse
+    {
+        $reason = $request->validate(
+            ['reason' => ['required', 'string', 'min:3', 'max:255']],
+            ['reason.required' => 'Tuliskan alasan resep dikembalikan.', 'reason.min' => 'Alasan minimal 3 karakter.'],
+        )['reason'];
+        $order = $this->queues->returnPrescription($order, $this->staff($request, Staff::PHARMACY), $reason);
+
+        return $this->done("Resep {$order->pickupNumber()} dikembalikan ke dokter.");
+    }
+
+    /** @return list<string> */
+    private function checks(Request $request): array
+    {
+        return array_values($request->validate([
+            'checks' => ['nullable', 'array', 'max:10'],
+            'checks.*' => ['string', 'max:20'],
+        ])['checks'] ?? []);
     }
 
     /** Delete in the CRUD sense: the booking is cancelled, never removed, with a reason. */
-    public function cancel(Request $request, Queue $queue): RedirectResponse
+    public function cancel(Request $request, Queue $queue): RedirectResponse|JsonResponse
     {
         $reason = $request->validate(
             ['reason' => ['required', 'string', 'min:3', 'max:255']],
@@ -211,7 +263,7 @@ class StaffController extends Controller
     }
 
     /** Create: a registered patient who came to the desk, booked under the patient app's rules. */
-    public function book(Request $request): RedirectResponse
+    public function book(Request $request): RedirectResponse|JsonResponse
     {
         $data = $request->validate([
             'phone' => ['required', 'string', 'max:30'],
@@ -292,19 +344,6 @@ class StaffController extends Controller
 
         return strlen($digits) < 9 ? null
             : Patient::whereNotNull('user_id')->wherePhone($digits)->first();
-    }
-
-    /** Every recorded action names a staff member; an account without a staff profile may not act. */
-    private function staff(Request $request): Staff
-    {
-        return $request->user()->staff ?? abort(403, 'Akun ini tidak terdaftar sebagai petugas.');
-    }
-
-    private function done(string $message): RedirectResponse
-    {
-        Inertia::flash('status', $message);
-
-        return back();
     }
 
     /**
@@ -428,7 +467,9 @@ class StaffController extends Controller
     }
 
     /**
-     * Alur pelayanan (Figma 43:2 frame 21): every visit still open today, by the stage it is in.
+     * Alur pelayanan (Figma 47:2 frame 21): every visit still open today, by the stage it is
+     * in. A visit waiting for its doctor again (support result back, prescription returned)
+     * sits with the doctor.
      *
      * @return array<string, mixed>
      */
@@ -436,7 +477,7 @@ class StaffController extends Controller
     {
         $target = config('hytrack.wait_target_minutes');
         $visits = Queue::where('service_date', $today)
-            ->with(['patient', 'polyclinic', 'pharmacyOrder'])
+            ->with(['patient', 'polyclinic', 'pharmacyOrder', 'examination', 'supportRequest'])
             ->orderByRaw('checkin_at is null')->orderBy('checkin_at')->orderBy('queue_id')->get();
 
         return [
@@ -444,24 +485,34 @@ class StaffController extends Controller
                 ->map(function (Queue $queue) use ($target) {
                     $status = $queue->queue_status;
                     $waited = $queue->checkin_at ? (int) $queue->checkin_at->diffInMinutes(now()) : 0;
+                    $support = $queue->supportRequest;
+                    $order = $queue->pharmacyOrder;
+                    $backToDoctor = ($status === QueueStatus::Laboratory && $support?->status === SupportStatus::Done)
+                        || $order?->prescription_status === PrescriptionStatus::Returned;
 
                     return [
                         'id' => $queue->queue_id,
                         'number' => $queue->queue_number,
                         'name' => $queue->patient->full_name,
                         'clinicId' => $queue->polyclinic_id,
-                        'stage' => match ($status) {
-                            QueueStatus::Booked => 'arrival',
-                            QueueStatus::Waiting, QueueStatus::Serving => 'clinic',
-                            QueueStatus::Laboratory => 'support',
+                        'stage' => match (true) {
+                            $status === QueueStatus::Booked => 'arrival',
+                            $backToDoctor, in_array($status, [QueueStatus::Waiting, QueueStatus::Serving], true) => 'clinic',
+                            $status === QueueStatus::Laboratory => 'support',
                             default => 'pharmacy',
                         },
-                        'note' => match ($status) {
-                            QueueStatus::Booked => 'Belum check-in'.($queue->checkin_deadline ? ' · batas '.HospitalTime::clock($queue->checkin_deadline) : ''),
-                            QueueStatus::Serving => 'Sedang dilayani · '.($queue->polyclinic->room_location ?? $queue->polyclinic->polyclinic_name),
-                            QueueStatus::Waiting => "Menunggu · {$queue->polyclinic->polyclinic_name} · {$waited} mnt",
-                            QueueStatus::Laboratory => 'Laboratorium · menunggu hasil',
-                            default => $queue->pharmacyOrder?->prescription_status->label() ?? 'Farmasi',
+                        'note' => match (true) {
+                            $status === QueueStatus::Booked => 'Belum check-in'.($queue->checkin_deadline ? ' · batas '.HospitalTime::clock($queue->checkin_deadline) : ''),
+                            $order?->prescription_status === PrescriptionStatus::Returned => 'Resep dikembalikan · menunggu dokter',
+                            $backToDoctor => 'Hasil penunjang · menunggu dokter',
+                            $status === QueueStatus::Serving => 'Diperiksa · belum dikonfirmasi',
+                            $status === QueueStatus::Waiting => "Menunggu · {$queue->polyclinic->polyclinic_name}",
+                            $status === QueueStatus::Laboratory => ($support ? $support->unitLabel() : 'Laboratorium').' · '
+                                .($support?->status === SupportStatus::Processing ? 'dalam pemeriksaan' : 'menunggu hasil'),
+                            $order?->prescription_status === PrescriptionStatus::Received => 'Resep diterima · belum diproses',
+                            $order?->prescription_status === PrescriptionStatus::Ready => 'Obat siap diambil',
+                            $order !== null => 'Obat sedang diproses',
+                            default => 'Farmasi',
                         },
                         'late' => $status === QueueStatus::Waiting && $waited > $target,
                     ];
@@ -471,19 +522,21 @@ class StaffController extends Controller
     }
 
     /**
-     * Farmasi (Figma 43:2 frame 22): open prescriptions plus today's totals.
+     * Farmasi (Figma 47:2 frames 22, 34–37): today's prescriptions with the doctor's items for
+     * pharmacy staff, plus today's totals. Handed-over ones stay so the last screen can show them.
      *
      * @return array<string, mixed>
      */
-    private function pharmacy(string $today): array
+    private function pharmacy(string $today, ClinicalBoard $board): array
     {
         $orders = PharmacyOrder::whereHas('queue', fn ($queue) => $queue->where('service_date', $today))
-            ->with(['queue.patient', 'queue.polyclinic', 'updatedBy'])->orderBy('pharmacy_order_id')->get();
+            ->with(['queue.patient', 'queue.polyclinic', 'queue.doctor', 'queue.examination.items', 'updatedBy'])
+            ->orderBy('pharmacy_order_id')->get();
         $prepared = $orders->filter(fn (PharmacyOrder $order) => $order->received_at && $order->ready_at)
             ->map(fn (PharmacyOrder $order) => $order->received_at->diffInSeconds($order->ready_at) / 60);
 
         return [
-            'pharmacy' => $orders->filter(fn (PharmacyOrder $order) => $order->queue->queue_status === QueueStatus::Pharmacy)
+            'pharmacy' => $orders->filter(fn (PharmacyOrder $order) => in_array($order->queue->queue_status, [QueueStatus::Pharmacy, QueueStatus::Completed], true))
                 ->map(fn (PharmacyOrder $order) => [
                     'id' => $order->pharmacy_order_id,
                     'pickup' => $order->pickupNumber(),
@@ -491,12 +544,14 @@ class StaffController extends Controller
                     'name' => $order->queue->patient->full_name,
                     'clinic' => $order->queue->polyclinic->polyclinic_name,
                     'record' => $order->queue->patient->medical_record_number
-                        ? '•••• '.substr($order->queue->patient->medical_record_number, -4) : null,
+                        ? '•••• '.substr(preg_replace('/\D/', '', $order->queue->patient->medical_record_number), -4) : null,
                     'receivedAt' => HospitalTime::clock($order->received_at),
-                    'status' => $order->prescription_status->value,
-                    'statusLabel' => $order->prescription_status->label(),
-                    'next' => $order->prescription_status->next()?->label(),
-                    'handledBy' => $order->updatedBy?->full_name,
+                    // "checking" rows from before Figma 47:2 are simply being processed.
+                    'status' => $order->prescription_status === PrescriptionStatus::Checking ? 'preparing' : $order->prescription_status->value,
+                    'statusLabel' => $order->prescription_status->staffLabel(),
+                    // A received order was last touched by the doctor who sent it, not by pharmacy.
+                    'handledBy' => $order->prescription_status === PrescriptionStatus::Received ? null : $order->updatedBy?->full_name,
+                    ...$board->prescription($order),
                 ])->values(),
             'pharmacyStats' => [
                 'done' => $orders->where('prescription_status', PrescriptionStatus::Completed)->count(),
@@ -543,25 +598,43 @@ class StaffController extends Controller
                         JourneyStage::CheckIn => ['Check-in dikonfirmasi', 'Berhasil'],
                         JourneyStage::Consultation => $done ? ['Pemeriksaan dokter selesai', 'Selesai'] : ['Pemeriksaan dimulai', 'Dilayani'],
                         JourneyStage::Laboratory => $done ? ['Laboratorium selesai', 'Selesai'] : ['Laboratorium dimulai', 'Diperiksa'],
-                        JourneyStage::Pharmacy => $done ? ['Obat diserahkan', 'Diserahkan'] : ['Resep diterima', 'Verifikasi'],
+                        JourneyStage::Pharmacy => $done ? ['Obat diserahkan', 'Diserahkan'] : ['Resep diterima farmasi', 'Belum diproses'],
                     };
 
                 return $row($stage->completed_at ?? $stage->started_at, sprintf('j%08d', $stage->journey_id), $stage->queue, $activity, $stage->updatedBy, $unit, $result);
             });
 
         $pharmacy = PharmacyOrder::whereNotNull('updated_by_staff_id')
-            ->whereIn('prescription_status', [PrescriptionStatus::Checking, PrescriptionStatus::Ready])
+            ->whereIn('prescription_status', [PrescriptionStatus::Preparing, PrescriptionStatus::Checking, PrescriptionStatus::Ready, PrescriptionStatus::Returned])
             ->whereHas('queue', fn ($queue) => $queue->where('service_date', $today))
             ->with(['queue.patient', 'updatedBy'])->get()
-            ->map(fn (PharmacyOrder $order) => $order->prescription_status === PrescriptionStatus::Ready
-                ? $row($order->ready_at, sprintf('p%08d', $order->pharmacy_order_id), $order->queue, 'Resep siap diambil', $order->updatedBy, 'Farmasi', 'Siap diambil')
-                : $row($order->prepared_at, sprintf('p%08d', $order->pharmacy_order_id), $order->queue, 'Resep selesai disiapkan', $order->updatedBy, 'Farmasi', 'Pemeriksaan akhir'));
+            ->map(fn (PharmacyOrder $order) => match ($order->prescription_status) {
+                PrescriptionStatus::Ready => $row($order->called_at ?? $order->ready_at, sprintf('p%08d', $order->pharmacy_order_id), $order->queue,
+                    $order->called_at ? 'Pasien dipanggil ke loket' : 'Obat siap diambil', $order->updatedBy, 'Farmasi', 'Siap diambil'),
+                PrescriptionStatus::Returned => $row($order->returned_at, sprintf('p%08d', $order->pharmacy_order_id), $order->queue, 'Resep dikembalikan ke dokter', $order->updatedBy, 'Farmasi', 'Dikembalikan'),
+                default => $row($order->verified_at ?? $order->prepared_at, sprintf('p%08d', $order->pharmacy_order_id), $order->queue, 'Resep diverifikasi, obat diproses', $order->updatedBy, 'Farmasi', 'Diproses'),
+            });
+
+        $doctors = Examination::whereNotNull('confirmed_by_staff_id')
+            ->whereHas('queue', fn ($queue) => $queue->where('service_date', $today))
+            ->with(['queue.patient', 'queue.polyclinic', 'confirmedBy'])->get()
+            ->map(fn (Examination $exam) => $row($exam->confirmed_at, sprintf('e%08d', $exam->examination_id), $exam->queue,
+                'Pemeriksaan dikonfirmasi dokter', $exam->confirmedBy, $exam->queue->polyclinic->polyclinic_name, 'Sudah diperiksa'));
+
+        $support = SupportRequest::whereHas('queue', fn ($queue) => $queue->where('service_date', $today))
+            ->with(['queue.patient', 'requestedBy', 'updatedBy'])->get()
+            ->flatMap(fn (SupportRequest $request) => array_filter([
+                $row($request->requested_at, sprintf('r%08d', $request->support_request_id), $request->queue,
+                    "Dirujuk ke {$request->unitLabel()}", $request->requestedBy, $request->unitLabel(), 'Dirujuk'),
+                $request->completed_at ? $row($request->completed_at, sprintf('s%08d', $request->support_request_id), $request->queue,
+                    'Hasil penunjang dikirim ke dokter', $request->updatedBy, $request->unitLabel(), 'Selesai') : null,
+            ]));
 
         $noShows = Queue::where('service_date', $today)->whereNotNull('no_show_by_staff_id')
             ->with(['patient', 'polyclinic', 'noShowBy'])->get()
             ->map(fn (Queue $queue) => $row($queue->no_show_at, sprintf('n%08d', $queue->queue_id), $queue, 'Ditandai tidak hadir', $queue->noShowBy, $queue->polyclinic->polyclinic_name, 'Tidak hadir'));
 
-        return $stages->concat($pharmacy)->concat($noShows)
+        return $stages->concat($pharmacy)->concat($doctors)->concat($support)->concat($noShows)
             ->filter(fn (array $event) => $event['at'] !== null)
             ->sortBy([['at', 'desc'], ['key', 'desc']])
             ->map(fn (array $event) => collect($event)->except('at')->all())

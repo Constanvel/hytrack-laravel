@@ -6,10 +6,42 @@ import { CLINICS } from './clinic-admin';
 import { syncLabel, useLive } from '@/lib/live';
 
 export const SCAN = 'Scan QR kedatangan';
+export const EXAM = 'Pemeriksaan dokter';
+export const SUPPORT = 'Pelayanan penunjang';
 
-/** Breadcrumb under "Pelayanan" (Figma 43:2 frames 11, 18, 21–23). */
-const crumb = (section: string) =>
-  section === SCAN ? 'Check-in kedatangan' : section === 'Antrean poli' ? 'Rawat jalan' : section;
+export type Room = 'desk' | 'doctor' | 'support' | 'pharmacy';
+
+/** Breadcrumb under "Pelayanan" (Figma 43:2 frames 11, 18, 21–23; 47:2 frames 31–37). */
+const CRUMBS: Record<string, string> = {
+  [SCAN]: 'Check-in kedatangan',
+  'Antrean poli': 'Rawat jalan',
+  [EXAM]: 'Dokter',
+  [SUPPORT]: 'Penunjang',
+};
+const crumb = (section: string) => CRUMBS[section] ?? section;
+
+const ROOM_LABEL: Record<Room, string> = {
+  desk: 'RUANG PETUGAS',
+  doctor: 'RUANG DOKTER',
+  support: 'RUANG PENUNJANG',
+  pharmacy: 'RUANG FARMASI',
+};
+
+/**
+ * Figma 47:2 frame 11/22: the desk keeps check-in, bookings and clinic data around the
+ * clinical sections; frames 31–32 show a doctor's room with the clinical sections only.
+ */
+export function staffSections(room: Room) {
+  const clinical = [
+    'Antrean poli',
+    EXAM,
+    SUPPORT,
+    'Alur pelayanan',
+    'Farmasi',
+    'Riwayat aktivitas',
+  ];
+  return room === 'desk' ? [SCAN, ...clinical, BOOKINGS, CLINICS] : clinical;
+}
 
 /** "Rabu, 4 November 2026" → "4 Nov 2026" (Figma 43:2 filters). */
 export const shortDate = (today?: string) => {
@@ -22,9 +54,11 @@ export function DashboardShell({
   section,
   onSection,
   status,
+  room = 'desk',
   children,
 }: {
   management?: boolean;
+  room?: Room;
   section: string;
   onSection: (section: string) => void;
   /** Replaces the connection line (management: "Pembaruan terakhir …"). */
@@ -38,14 +72,14 @@ export function DashboardShell({
   // data are existing PRD features without a frame, so they follow those five.
   const items = management
     ? ['Ringkasan layanan', 'Waktu tunggu', 'Kinerja poliklinik', 'Laporan']
-    : [SCAN, 'Antrean poli', 'Alur pelayanan', 'Farmasi', 'Riwayat aktivitas', BOOKINGS, CLINICS];
+    : staffSections(room);
   return (
     <div className="dashboard">
       <aside className="dashboard-sidebar">
         <Link className="brand" href="/">
           HyTrack
         </Link>
-        <p className="sidebar-label">{management ? 'MANAJEMEN LAYANAN' : 'RUANG PETUGAS'}</p>
+        <p className="sidebar-label">{management ? 'MANAJEMEN LAYANAN' : ROOM_LABEL[room]}</p>
         <nav aria-label={management ? 'Navigasi manajemen' : 'Navigasi petugas'}>
           {items.map((item) => (
             <button
@@ -57,6 +91,12 @@ export function DashboardShell({
             </button>
           ))}
         </nav>
+        {/* "Mulai alur pasien →": every visit starts with the arrival check-in. */}
+        {!management && room === 'desk' && (
+          <button className="sidebar-start" onClick={() => onSection(SCAN)}>
+            Mulai alur pasien →
+          </button>
+        )}
         <div className="sidebar-footer">
           <Avatar />
           <div className="sidebar-account">

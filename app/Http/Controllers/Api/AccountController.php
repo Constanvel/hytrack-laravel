@@ -35,6 +35,13 @@ class AccountController extends Controller
         if (! $user || ! Hash::check($data['password'], $user->password_hash)) {
             throw ValidationException::withMessages(['username' => 'Nomor ponsel atau kata sandi salah.']);
         }
+        // Internal sign-in (Figma 47:2): the chosen role must be the account's own.
+        $as = $request->validate(['as' => ['nullable', 'in:staff,manager']])['as'] ?? null;
+        if ($as && $user->role->value !== $as) {
+            throw ValidationException::withMessages(['as' => $user->role === UserRole::Patient
+                ? 'Akun pasien masuk melalui halaman masuk pasien.'
+                : 'Peran yang dipilih tidak sesuai dengan akun ini.']);
+        }
 
         return $this->issue($user);
     }
@@ -135,6 +142,7 @@ class AccountController extends Controller
             'name' => $profile?->full_name ?? $user->username,
             'phone' => $user->role === UserRole::Patient ? $profile?->maskedPhone() : null,
             'unit' => $user->role === UserRole::Patient ? null : $profile?->work_unit,
+            'room' => $user->role === UserRole::Staff ? $profile?->room() : null,
         ];
     }
 }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ClinicalController;
 use App\Http\Controllers\CompanionController;
 use App\Http\Controllers\HyaController;
 use App\Http\Controllers\ManagementController;
@@ -18,6 +19,8 @@ use Inertia\Inertia;
 Route::middleware('guest')->group(function () {
     Route::get('/masuk', [AuthController::class, 'create'])->name('login');
     Route::post('/masuk', [AuthController::class, 'store'])->middleware('throttle:6,1');
+    Route::get('/masuk/internal', [AuthController::class, 'createInternal']);
+    Route::post('/masuk/internal', [AuthController::class, 'storeInternal'])->middleware('throttle:6,1');
     Route::get('/daftar', [AuthController::class, 'createAccount']);
     Route::post('/daftar', [AuthController::class, 'storeAccount'])->middleware('throttle:6,1');
     Route::get('/daftar/verifikasi', [AuthController::class, 'verification']);
@@ -97,9 +100,19 @@ Route::middleware('auth')->group(function () {
         Route::post('/antrean/{queue}/panggil', [StaffController::class, 'call']);
         Route::post('/antrean/{queue}/panggil-ulang', [StaffController::class, 'recall']);
         Route::post('/antrean/{queue}/tidak-hadir', [StaffController::class, 'noShow']);
-        Route::post('/antrean/{queue}/selesai-periksa', [StaffController::class, 'examined']);
-        Route::post('/antrean/{queue}/selesai-laboratorium', [StaffController::class, 'laboratoryDone']);
+        // Doctor (Figma 47:2 frames 31–32): draft, confirmation, referral to support services.
+        Route::post('/pemeriksaan/{queue}', [ClinicalController::class, 'save']);
+        Route::post('/pemeriksaan/{queue}/konfirmasi', [ClinicalController::class, 'confirm']);
+        Route::post('/pemeriksaan/{queue}/penunjang', [ClinicalController::class, 'refer']);
+        // Support services (frame 33): status, result file, send back to the doctor.
+        Route::post('/penunjang/{support}', [ClinicalController::class, 'updateSupport']);
+        Route::post('/penunjang/{support}/selesai', [ClinicalController::class, 'completeSupport']);
+        Route::get('/penunjang/{support}/hasil', [ClinicalController::class, 'result']);
+        // Pharmacy (frames 22, 34–37).
         Route::post('/farmasi/{order}/lanjut', [StaffController::class, 'advancePharmacy']);
+        Route::post('/farmasi/{order}/cek', [StaffController::class, 'savePharmacyChecks']);
+        Route::post('/farmasi/{order}/panggil', [StaffController::class, 'callPickup']);
+        Route::post('/farmasi/{order}/kembalikan', [StaffController::class, 'returnPrescription']);
         // Master data: polyclinics (create, update, delete; the list is part of the dashboard).
         Route::post('/poliklinik', [PolyclinicController::class, 'store']);
         Route::put('/poliklinik/{polyclinic}', [PolyclinicController::class, 'update'])->whereNumber('polyclinic');

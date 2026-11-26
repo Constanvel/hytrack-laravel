@@ -7,8 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Preparation progress of one prescription; it holds no medicine details.
- * prepared_at = preparation finished, verified_at = pharmacist's final check passed.
+ * Preparation progress of one prescription. The medicines are the doctor's prescription
+ * items (Examination). verified_at = pharmacist verified the prescription and started,
+ * prepared_at = preparation finished (ready), called_at = patient called to the counter.
  */
 class PharmacyOrder extends Model
 {
@@ -27,6 +28,9 @@ class PharmacyOrder extends Model
             'prepared_at' => 'datetime',
             'ready_at' => 'datetime',
             'completed_at' => 'datetime',
+            'called_at' => 'datetime',
+            'returned_at' => 'datetime',
+            'checks' => 'array',
         ];
     }
 
