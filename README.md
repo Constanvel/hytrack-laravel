@@ -46,22 +46,27 @@ Data demo dibuat relatif terhadap **hari ini** (WIB). Jalankan `php artisan migr
 
 ### Akun demo
 
-| Peran     | Nama pengguna | Halaman awal |
-| --------- | ------------- | ------------ |
-| Pasien    | `siti`        | `/`          |
-| Petugas   | `dina`        | `/petugas`   |
-| Manajemen | `manajer`     | `/manajemen` |
+| Peran                  | Nama pengguna | Masuk lewat       | Halaman awal          |
+| ---------------------- | ------------- | ----------------- | --------------------- |
+| Pasien                 | `siti`        | `/masuk`          | `/`                   |
+| Petugas meja poli      | `dina`        | `/masuk/internal` | Antrean poli          |
+| Dokter (dr. Rina)      | `rina`        | `/masuk/internal` | Pemeriksaan dokter    |
+| Petugas laboratorium   | `rani`        | `/masuk/internal` | Pelayanan penunjang   |
+| Apoteker (Apt. Dinda)  | `dinda`       | `/masuk/internal` | Farmasi               |
+| Manajemen              | `manajer`     | `/masuk/internal` | `/manajemen`          |
 
-Kata sandi: `hytrack-demo` (`HYTRACK_DEMO_PASSWORD`). Daftar akun hanya tampil di halaman masuk saat `HYTRACK_DEMO_CONTROLS=true`.
+Kata sandi: `hytrack-demo` (`HYTRACK_DEMO_PASSWORD`). Daftar akun hanya tampil di halaman masuk saat `HYTRACK_DEMO_CONTROLS=true`. Di `/masuk/internal` peran yang dipilih (Petugas/Manajemen) harus sesuai akun; akun pasien diarahkan ke `/masuk`. Tidak ada reset kata sandi mandiri: akun internal dibuat dan diatur ulang oleh administrator.
 
 ### Mencoba alur
 
 1. Masuk sebagai `siti` → **Ambil antrean** → **Penyakit Dalam** → dr. Rina → tiket **A-027** (3 pasien di depan, perkiraan 15–25 menit).
 2. Buka **Tampilkan QR check-in**. Di jendela lain (mode samaran) masuk sebagai `dina`, ketik nomor check-in `HT-…` di **Konfirmasi kedatangan**. Layar pasien ikut berubah (maks. 15 detik, atau muat ulang).
-3. Petugas memanggil, menandai tidak hadir (hanya setelah panggilan ulang), menyelesaikan pemeriksaan, laboratorium, dan farmasi. Pasien melihat setiap tahap.
-4. **Bagikan ke pendamping** membuat tautan sekali tampil untuk keluarga tanpa akun; dapat dicabut.
-5. Dengan kontrol demo aktif, pasien juga dapat mensimulasikan tindakan petugas dari layar kunjungan.
-6. Masuk sebagai `manajer` untuk ringkasan per tanggal/poliklinik dan ekspor CSV agregat.
+3. Petugas meja memanggil dan menandai tidak hadir (hanya setelah panggilan ulang). Masuk sebagai `rina`: isi catatan, resep, pilih **Sudah diperiksa**, lalu **Konfirmasi & kirim resep** (resep masuk farmasi) atau **Buat permintaan penunjang** (ke laboratorium/radiologi). Hanya dokter yang menangani yang dapat mengonfirmasi.
+4. Masuk sebagai `rani`: ubah status penunjang, lampirkan hasil (PDF/JPG/PNG, maks. 5 MB), **Konfirmasi selesai & kirim hasil**. Hasil kembali ke dokter untuk ditinjau dan dikonfirmasi.
+5. Masuk sebagai `dinda`: buka resep → centang verifikasi → **Verifikasi & mulai proses** → **Konfirmasi obat siap diambil** → **Panggil pasien** → **Konfirmasi obat diserahkan**. Resep yang tidak sesuai dapat **Dikembalikan ke dokter** dengan alasan. Pasien melihat setiap tahap.
+6. **Bagikan ke pendamping** membuat tautan sekali tampil untuk keluarga tanpa akun; dapat dicabut.
+7. Dengan kontrol demo aktif, pasien juga dapat mensimulasikan tindakan petugas dari layar kunjungan.
+8. Masuk sebagai `manajer` untuk ringkasan per tanggal/poliklinik dan ekspor CSV agregat.
 
 ## Pengaturan
 
@@ -76,6 +81,7 @@ Kata sandi: `hytrack-demo` (`HYTRACK_DEMO_PASSWORD`). Daftar akun hanya tampil d
 | `HYTRACK_SIGNUP_STORE`   | `CACHE_STORE`      | Penyimpanan pendaftaran yang menunggu kode OTP     |
 | `WANGSAF_API_KEY`        | (kosong)           | Kunci perangkat Wangsaf untuk kirim OTP WhatsApp   |
 | `HYTRACK_POLL_SECONDS`   | `15`               | Interval pembaruan halaman antrean                 |
+| `HYTRACK_SUPPORT_RESULT_DISK` | `local`       | Disk privat untuk file hasil penunjang             |
 
 Aturan lain (jendela booking 3 hari, check-in 15 menit sebelum praktik, target tunggu 30 menit, lokasi ruangan) ada di `config/hytrack.php`.
 
@@ -84,17 +90,17 @@ Aturan lain (jendela booking 3 hari, check-in 15 menit sebelum praktik, target t
 ## Tes
 
 ```sh
-vendor/bin/phpunit          # 34 tes fitur: aturan antrean, akses peran, privasi, alur pasien/petugas/manajemen
+vendor/bin/phpunit          # 91 tes fitur: aturan antrean, akses peran, privasi, alur pasien/dokter/penunjang/farmasi/manajemen
 vendor/bin/pint --test      # gaya kode PHP
 npm run lint
 npm run typecheck
 npm run format:check
 npm test                    # Vitest: geometri asset
 npx playwright install chromium
-npm run test:e2e            # 24 tes browser: alur, responsif 320–1440px, axe, panduan, posisi Hya, CLS
+npm run test:e2e            # 30 tes browser: alur, login internal, responsif 320–1440px, axe, panduan, posisi Hya, CLS
 ```
 
-`npm run test:e2e` membutuhkan `npm run build` lebih dulu. Playwright menyiapkan database terpisah `database/e2e.sqlite` dengan kontrol demo aktif, lalu memulihkannya sebelum setiap tes. Server PHP bawaan memproses satu permintaan sekaligus, jadi tes berjalan berurutan (±5 menit).
+`npm run test:e2e` membutuhkan `npm run build` lebih dulu. Playwright menyiapkan database terpisah `database/e2e.sqlite` dengan kontrol demo aktif, lalu memulihkannya sebelum setiap tes. Server PHP bawaan memproses satu permintaan sekaligus, jadi tes berjalan berurutan (±7 menit).
 
 ## Status fitur
 
@@ -108,7 +114,11 @@ npm run test:e2e            # 24 tes browser: alur, responsif 320–1440px, axe,
 | QR Check-in            | Sebagian        | Petugas mengonfirmasi dengan nomor check-in `HT-xxxxxx`. Gambar QR masih contoh dan belum bisa dipindai. |
 | Pharmacy Tracker       | Berfungsi       | Petugas memajukan status resep; pasien melihat nomor ambil `F-xxx`.                                      |
 | Family Companion       | Berfungsi       | Tautan acak, hanya hash SHA-256 yang disimpan; berakhir 23.59 hari layanan, saat dicabut, atau selesai.  |
-| Live Control Dashboard | Berfungsi       | Check-in, panggil, panggil ulang, tidak hadir, lanjut laboratorium/farmasi, riwayat aktivitas.           |
+| Live Control Dashboard | Berfungsi       | Check-in, panggil, panggil ulang, tidak hadir, alur pelayanan 4 tahap dengan ringkasan, riwayat aktivitas. |
+| Pemeriksaan dokter     | Berfungsi       | Catatan, resep (`prescription_items`), rujukan penunjang, konfirmasi dokter. Petugas lain hanya melihat status, bukan catatan/resep. |
+| Pelayanan penunjang    | Berfungsi       | Status menunggu/diproses/selesai, unggah hasil ke disk privat, unduh hanya untuk dokter pengirim dan petugas penunjang. |
+| Farmasi bertahap       | Berfungsi       | Diterima → diproses → siap → diserahkan dengan checklist wajib per tahap; kembalikan ke dokter dengan alasan. |
+| Login internal         | Berfungsi       | `/masuk/internal` dan `POST /api/masuk` (`as`) memeriksa peran Petugas/Manajemen.                         |
 | Service Insights       | Berfungsi       | Agregat per tanggal/poliklinik, grafik per jam, ekspor CSV tanpa identitas pasien.                       |
 | Hya (chat bubble)      | Berfungsi       | Chatbot Gemini dari fakta antrean (tanpa identitas); tanpa saran medis; aturan tetap bila AI mati.       |
 | Panduan interaktif     | Berfungsi       | Disimpan di localStorage tanpa data pasien.                                                              |
@@ -116,6 +126,10 @@ npm run test:e2e            # 24 tes browser: alur, responsif 320–1440px, axe,
 | Petunjuk ruangan       | Teks statis     | Tanpa denah atau navigasi peta.                                                                          |
 | Pendaftaran + OTP      | Berfungsi       | Akun dibuat setelah kode 6 digit benar (5 menit, 5 percobaan). Kode dikirim lewat WhatsApp (Wangsaf) bila `WANGSAF_API_KEY` diisi, maks. 5 kode per nomor per jam; tanpa kunci: mode demo menampilkan kode, selain itu kode hanya masuk log. |
 | Kontrol demo           | Demo            | Hanya bila `HYTRACK_DEMO_CONTROLS=true`.                                                                 |
+
+**Catatan penyimpanan:** di Vercel, sistem file fungsi bersifat sementara, sehingga file hasil penunjang di disk `local` dapat hilang setelah deploy/instans berganti. Untuk produksi arahkan `HYTRACK_SUPPORT_RESULT_DISK` ke disk privat persisten (mis. S3 dengan `visibility=private`); belum dikonfigurasi di repositori ini.
+
+**Mode prototipe** (`/prototipe`) memutar ulang data rekaman (`npm run prototype:record`) untuk akun pasien, `dina`, dan `manajer`; layar dokter, penunjang, dan farmasi hanya tersedia di aplikasi asli.
 
 **Belum ada:** notifikasi lewat SMS/WhatsApp, reset kata sandi, integrasi SIMRS/BPJS, pemindai QR, notifikasi luar aplikasi, push realtime, audit log lengkap (riwayat petugas hanya menampilkan pembaruan terakhir tiap tahap).
 
