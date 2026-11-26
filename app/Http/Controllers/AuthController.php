@@ -47,6 +47,45 @@ class AuthController extends Controller
         return $this->signedIn($request, $as === 'companion');
     }
 
+    /** Figma 47:2 "Login · Petugas dan Manajemen": internal accounts choose their role first. */
+    public function createInternal(): Response
+    {
+        return Inertia::render('InternalLogin', [
+            'demoAccounts' => config('hytrack.demo_controls')
+                ? 'Akun demo — petugas: dina · dokter: rina · laboratorium: rani · farmasi: dinda · manajemen: manajer · kata sandi: '.config('hytrack.demo_password')
+                : null,
+        ]);
+    }
+
+    public function storeInternal(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'as' => ['required', 'in:staff,manager'],
+            'username' => ['required', 'string', 'max:50'],
+            'password' => ['required', 'string', 'max:255'],
+        ], [
+            'as.required' => 'Pilih peran Anda.',
+            'username.required' => 'ID pengguna wajib diisi.',
+            'password.required' => 'Kata sandi wajib diisi.',
+        ]);
+
+        if (! Auth::attempt(['username' => $data['username'], 'password' => $data['password'], 'is_active' => true])) {
+            throw ValidationException::withMessages(['username' => 'ID pengguna atau kata sandi salah.']);
+        }
+        // The chosen role must be the account's own; a patient account never enters here.
+        if ($request->user()->role->value !== $data['as']) {
+            $role = $request->user()->role;
+            Auth::logout();
+            throw ValidationException::withMessages(['as' => match ($role) {
+                UserRole::Patient => 'Akun pasien masuk melalui halaman masuk pasien.',
+                UserRole::Staff => 'Akun ini terdaftar sebagai Petugas. Pilih peran Petugas.',
+                UserRole::Manager => 'Akun ini terdaftar sebagai Manajemen. Pilih peran Manajemen.',
+            }]);
+        }
+
+        return $this->signedIn($request);
+    }
+
     public function createAccount(): Response
     {
         return Inertia::render('Register');
@@ -107,11 +146,12 @@ class AuthController extends Controller
 
     public function destroy(Request $request): RedirectResponse
     {
+        $internal = $request->user()?->role !== UserRole::Patient;
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect('/masuk');
+        return redirect($internal ? '/masuk/internal' : '/masuk');
     }
 
     /** Patients sign in with their phone number; staff and managers keep their username. */

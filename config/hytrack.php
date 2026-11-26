@@ -40,5 +40,19 @@ return [
         'check_in' => 'Meja check-in · Gedung A, lantai 2',
         'laboratory' => 'Laboratorium A-108 · Gedung A, lantai 1',
         'pharmacy' => 'Farmasi Loket F2 · Gedung A, lantai 1',
+        'radiology' => 'Radiologi A-112 · Gedung A, lantai 1',
     ],
+
+    // Counter where medicine is handed over (staff pharmacy screens, Figma 47:2 frames 36–37).
+    'pharmacy_counter' => 'Loket F2',
+
+    // Support services a doctor can refer to (Figma 47:2 frame 33), key => work unit name.
+    'support_units' => [
+        'laboratorium' => 'Laboratorium',
+        'radiologi' => 'Radiologi',
+    ],
+
+    // Examination results uploaded by support staff: private disk, never a public URL.
+    'support_result_disk' => env('HYTRACK_SUPPORT_RESULT_DISK', 'local'),
+    'support_result_max_kb' => 5120,
 ];

@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Polyclinic;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Inertia\Inertia;
 
 /**
  * Master data CRUD for polyclinics, on the staff dashboard ("Data poliklinik").
@@ -14,14 +14,14 @@ use Inertia\Inertia;
  */
 class PolyclinicController extends Controller
 {
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse|JsonResponse
     {
         $clinic = Polyclinic::create($this->validated($request));
 
         return $this->done("Poliklinik {$clinic->polyclinic_name} ditambahkan.");
     }
 
-    public function update(Request $request, Polyclinic $polyclinic): RedirectResponse
+    public function update(Request $request, Polyclinic $polyclinic): RedirectResponse|JsonResponse
     {
         $polyclinic->update($this->validated($request, $polyclinic));
 
@@ -33,7 +33,7 @@ class PolyclinicController extends Controller
      * doctors and queues keep it, so no visit history is lost. Ongoing queues stay on the
      * live dashboard until staff finish them.
      */
-    public function destroy(Polyclinic $polyclinic): RedirectResponse
+    public function destroy(Polyclinic $polyclinic): RedirectResponse|JsonResponse
     {
         $ongoing = $polyclinic->queues()->ongoing()->count();
         $polyclinic->delete();
@@ -59,12 +59,5 @@ class PolyclinicController extends Controller
         ], [], ['name' => 'nama poliklinik', 'room' => 'lokasi ruangan']);
 
         return ['polyclinic_name' => $data['name'], 'room_location' => $data['room']];
-    }
-
-    private function done(string $message): RedirectResponse
-    {
-        Inertia::flash('status', $message);
-
-        return back();
     }
 }

@@ -133,7 +133,8 @@ class QueueServiceTest extends TestCase
         $this->queues->completeLaboratory($queue, $staff);
 
         $order = $queue->pharmacyOrder()->firstOrFail();
-        foreach (range(1, 4) as $step) {
+        // Belum diproses → diproses → siap diambil → diserahkan.
+        foreach (range(1, 3) as $step) {
             $this->queues->advancePharmacy($order, $staff);
         }
 

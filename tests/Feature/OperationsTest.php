@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Enums\JourneyStage;
 use App\Models\Doctor;
 use App\Models\Patient;
 use App\Models\Queue;
@@ -79,37 +78,51 @@ class OperationsTest extends TestCase
 
         $this->post($call);
         $this->travel(6)->minutes();
-        $this->post("/petugas/antrean/{$rudi->queue_id}/selesai-periksa");
-        $this->get('/petugas')->assertInertia(fn (AssertableInertia $page) => $page
+
+        // Only the doctor of the visit confirms the examination and prescription.
+        $exam = ['notes' => 'Demam tiga hari.', 'examined' => '1', 'items' => [
+            ['name' => 'Parasetamol', 'form' => 'Tablet 500 mg', 'quantity' => '10 tablet', 'dosage' => '3 × 1 tablet', 'timing' => 'Sesudah makan'],
+        ]];
+        $this->post("/petugas/pemeriksaan/{$rudi->queue_id}/konfirmasi", $exam)->assertForbidden();
+        $doctor = Staff::factory()->create(['full_name' => 'dr. Rina', 'doctor_id' => $this->doctor->doctor_id]);
+        $this->actingAs($doctor->user)->post("/petugas/pemeriksaan/{$rudi->queue_id}/konfirmasi", $exam)->assertRedirect('/petugas');
+        $order = $rudi->pharmacyOrder()->firstOrFail();
+
+        // The desk sees the prescription's status, never its contents.
+        $this->actingAs($this->staff->user)->get('/petugas')->assertInertia(fn (AssertableInertia $page) => $page
             ->where('stats.examined', 1)
             ->where('flow.visits.0.number', 'A-002')
-            ->where('flow.visits.0.stage', 'support')
-            ->where('history.0', [
-                'key' => sprintf('j%08d', $rudi->journey(JourneyStage::Laboratory)->journey_id), 'time' => '08.39',
-                'activity' => 'Laboratorium dimulai', 'patient' => 'Rudi · A-002', 'staff' => 'Dina',
-                'unit' => 'Laboratorium', 'result' => 'Diperiksa',
-            ])
-            ->where('history.1.activity', 'Pemeriksaan dokter selesai')
-            ->where('history.1.unit', 'Penyakit Dalam')
-            ->where('history.2.activity', 'Ditandai tidak hadir')
-            ->where('history.2.patient', 'Agus · A-001'));
-
-        $this->post("/petugas/antrean/{$rudi->queue_id}/selesai-laboratorium");
-        $order = $rudi->pharmacyOrder()->firstOrFail();
-        $this->get('/petugas')->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('flow.visits.0.note', 'Resep diterima · belum diproses')
             ->where('pharmacy.0.pickup', 'F-001')
-            ->where('pharmacy.0.status', 'received')
-            ->where('pharmacy.0.statusLabel', 'Resep diterima')
-            ->where('pharmacy.0.next', 'Obat disiapkan'));
+            ->where('pharmacy.0.statusLabel', 'Belum diproses')
+            ->where('pharmacy.0.itemCount', 1)
+            ->where('pharmacy.0.items', [])
+            ->where('pharmacy.0.canAct', false)
+            ->where('history', fn ($rows) => collect($rows)->contains('activity', 'Pemeriksaan dikonfirmasi dokter')));
+        $this->post("/petugas/farmasi/{$order->pharmacy_order_id}/lanjut")->assertForbidden();
 
-        foreach (range(1, 4) as $step) {
-            $this->post("/petugas/farmasi/{$order->pharmacy_order_id}/lanjut");
+        // Pharmacy staff tick each step's checklist before moving the prescription on.
+        $pharmacist = Staff::factory()->create(['full_name' => 'Apt. Dinda', 'work_unit' => 'Farmasi']);
+        $this->actingAs($pharmacist->user)->from('/petugas');
+        $this->post("/petugas/farmasi/{$order->pharmacy_order_id}/lanjut", ['checks' => ['identity']]);
+        $this->get('/petugas')->assertInertia(fn (AssertableInertia $page) => $page
+            ->hasFlash('error', 'Centang semua pemeriksaan sebelum melanjutkan.')
+            ->where('pharmacy.0.items.0.name', 'Parasetamol')
+            ->where('pharmacy.0.allergy', 'tidak dilaporkan'));
+        foreach ([['identity', 'legible', 'dosage'], ['items', 'label', 'etiket']] as $checks) {
+            $this->post("/petugas/farmasi/{$order->pharmacy_order_id}/lanjut", ['checks' => $checks]);
         }
+        $this->assertSame('ready', $order->refresh()->prescription_status->value);
+        $this->post("/petugas/farmasi/{$order->pharmacy_order_id}/panggil");
+        $this->assertNotNull($order->refresh()->called_at);
+        $this->post("/petugas/farmasi/{$order->pharmacy_order_id}/lanjut", ['checks' => ['identity', 'medicine', 'explain']]);
+
         $this->assertSame('completed', $rudi->refresh()->queue_status->value);
         $this->get('/petugas')->assertInertia(fn (AssertableInertia $page) => $page
-            ->has('pharmacy', 0)
+            ->where('pharmacy.0.status', 'completed')
             ->where('pharmacyStats.done', 1)
-            ->where('history.0.activity', 'Obat diserahkan'));
+            ->where('history.0.activity', 'Obat diserahkan')
+            ->where('history.0.staff', 'Apt. Dinda'));
     }
 
     public function test_unknown_check_in_numbers_are_reported(): void
@@ -196,6 +209,6 @@ class OperationsTest extends TestCase
                 ->where('stats', ['waiting' => 4, 'examined' => 19, 'notCheckedIn' => 0, 'registered' => 27])
                 ->where('current.name', 'Hendra Wijaya')
                 ->where('flow.visits', fn ($visits) => collect($visits)->where('stage', 'support')->count() === 3)
-                ->has('pharmacy', 4));
+                ->where('pharmacy', fn ($orders) => collect($orders)->where('status', '!=', 'completed')->count() === 4));
     }
 }
