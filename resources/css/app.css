@@ -183,10 +183,18 @@ summary:focus-visible {
   height: 170px;
   background: url('/assets/wave-mint.svg') center bottom / 100% 170px no-repeat;
 }
+/*
+  Figma 43:2 frame 01, on its 412px width: 192x272 flush right, ending 73px under the nav's top
+  edge, layer opacity 12% x image 80%. Narrower screens scale it down.
+*/
 .decor-corner::before {
-  height: 354px;
-  background: url('/assets/decor-corner.png') right -32px bottom -12px / 250px 354px no-repeat;
-  opacity: 0.8;
+  left: auto;
+  right: 0;
+  width: min(192px, 46.6%);
+  aspect-ratio: 192 / 272;
+  bottom: calc(80px + env(safe-area-inset-bottom) - min(73px, 17.72vw));
+  background: url('/assets/decor-corner.png') center / 100% 100% no-repeat;
+  opacity: 0.096;
 }
 .demo-banner {
   font-size: 10px;
