@@ -662,6 +662,8 @@ hr {
 }
 .ticket-card {
   padding: 22px;
+  /* Keeps the pulse line (z-index: -1) between the card and its words. */
+  isolation: isolate;
 }
 /* Kunjungan telah selesai (Figma 43:2 frame 10). */
 .done-hero {
@@ -777,7 +779,16 @@ hr {
   top: 218.5px;
   right: 16.5px;
   margin: 0;
+  z-index: -1;
   pointer-events: none;
+}
+/* The badge, pulse and dots are placed for the 412px frame; narrower, the words need the room. */
+@media (max-width: 379px) {
+  .ticket-badge,
+  .ticket-pulse,
+  .ticket-metrics::after {
+    display: none;
+  }
 }
 .qr-card {
   display: flex;
@@ -1573,9 +1584,6 @@ details p {
   }
   .hya-help:not(.with-avatar, .large) {
     margin-right: 74px;
-  }
-  .ticket-metrics::after {
-    right: -15px;
   }
   .heading h1 {
     font-size: 21px;
