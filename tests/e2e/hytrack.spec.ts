@@ -489,6 +489,23 @@ for (const width of [375, 768, 1440]) {
     await bookDoctor(page, /dr. Rina/);
     await page.getByRole('link', { name: 'Tampilkan QR check-in' }).click();
     await expect(page.locator('.qr-card')).toBeVisible();
+    // Wherever the page is scrolled, the bubble never sits on the QR the desk has to scan.
+    const onQr = () =>
+      page.evaluate(() => {
+        const bubble = document.querySelector('.hya-fab')!;
+        const fab = bubble.getBoundingClientRect();
+        const qr = document.querySelector('.ticket-qr')!.getBoundingClientRect();
+        const apart =
+          qr.right <= fab.left ||
+          qr.left >= fab.right ||
+          qr.bottom <= fab.top ||
+          qr.top >= fab.bottom;
+        return !apart && !bubble.classList.contains('is-tucked');
+      });
+    for (const offset of [0, 100, 200, 300]) {
+      await page.evaluate((y) => window.scrollTo(0, y), offset);
+      await expect.poll(onQr).toBe(false);
+    }
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     // No room is reserved for the bubble: at the page end it tucks away over a control instead.
     const covered = () =>
