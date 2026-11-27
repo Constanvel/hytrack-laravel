@@ -418,14 +418,19 @@ for (const [width, height] of [
     for (const route of ['/', '/poliklinik', '/bantuan']) {
       await page.goto(route);
       await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-      // Pages with the Hya card show Hya there instead of the bubble (Figma 43:2 frame 04).
-      if (await page.locator('.hya-help').count()) {
+      // A Hya card with its own portrait takes the bubble's place.
+      if (await page.locator('.hya-help:is(.with-avatar, .large)').count()) {
         await expect(page.locator('.hya-fab')).toBeHidden();
         continue;
       }
       const fab = await page.locator('.hya-fab').boundingBox();
       const nav = await page.locator('.bottom-nav').boundingBox();
       expect(fab && nav).toBeTruthy();
+      // The plain card stops short of the bubble floating beside it (Figma 43:2 frame 04).
+      if (await page.locator('.hya-help').count()) {
+        const card = await page.locator('.hya-help').boundingBox();
+        expect(card!.x + card!.width).toBeLessThanOrEqual(fab!.x);
+      }
       expect(width - (fab!.x + fab!.width)).toBeLessThanOrEqual(20);
       expect(fab!.y + fab!.height).toBeLessThanOrEqual(nav!.y);
       expect(fab!.x).toBeGreaterThanOrEqual(0);
@@ -523,9 +528,11 @@ test('the last section ends right above the bottom nav, with no band for the Hya
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   // Only the page's own 28px bottom padding is left above the nav.
   expect(await gap()).toBeLessThanOrEqual(29);
-  // Home ends with the Hya card, so the bubble stays hidden there (Figma 43:2 frame 04).
-  await expect(fab).toBeHidden();
-  await expect(page.locator('.hya-help')).toBeVisible();
+  // Home ends with the Hya card; the bubble floats beside it (Figma 43:2 frame 04).
+  await expect(fab).toBeVisible();
+  const card = await page.locator('.hya-help').boundingBox();
+  const bubble = await fab.boundingBox();
+  expect(card!.x + card!.width).toBeLessThanOrEqual(bubble!.x);
 });
 
 test('first paint and refresh stay stable (CLS ≤ 0.1) with the guide shown', async ({ page }) => {

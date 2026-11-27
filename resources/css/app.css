@@ -900,22 +900,29 @@ hr {
 .hya-help.with-avatar > span:not(.avatar) {
   flex: 1;
 }
-/* "Ada yang bisa Hya bantu?" (Figma 43:2 frame 04): arrow, then Hya's 65px portrait
-   flush with the card's height and 13px past its right edge. */
-.hya-help:not(.with-avatar) {
+/* "Ada yang bisa Hya bantu?" (Figma 43:2 frame 04): title, "Tanya Hya" and an arrow. Hya
+   herself is the floating bubble; the card ends 66px early (65px bubble + 16px margin - 24px
+   gutter, plus air) so the two never overlap. */
+.hya-help:not(.with-avatar, .large) {
+  margin-right: 66px;
+  padding: 12px 16px 12px 20px;
+}
+.hya-help:not(.with-avatar, .large) strong {
+  display: block;
+  line-height: 1.4;
+  text-wrap: balance;
+}
+/* 16px under a closing card puts it level with the bubble at the end of the page. */
+.page-content:has(> .hya-help:not(.with-avatar, .large):last-child) {
+  padding-bottom: 16px;
+}
+.hya-help.large {
   justify-content: flex-start;
   gap: 0;
-  padding: 0 0 0 21px;
 }
-.hya-help:not(.with-avatar) > span:not(.avatar, .icon) {
+.hya-help.large > span:not(.avatar) {
   flex: 1;
   min-width: 0;
-}
-.hya-help:not(.with-avatar) > .icon {
-  margin-right: 58px;
-}
-.hya-help:not(.with-avatar) > .avatar-large {
-  margin: 0 -13px 0 0;
 }
 .guide-hint {
   background: #fff;
@@ -985,8 +992,8 @@ hr {
 .hya-fab .avatar-large {
   margin: 0;
 }
-/* A page with the Hya card already shows Hya there (Figma 43:2 frame 04). */
-.page-content:has(.hya-help) ~ .hya-fab {
+/* A card with its own portrait (Akun, "Masih bingung?") takes the bubble's place. */
+.page-content:has(.hya-help.with-avatar, .hya-help.large) ~ .hya-fab {
   display: none;
 }
 .hya-help strong {
@@ -1516,6 +1523,10 @@ details p {
   .page-content {
     padding-inline: 56px;
   }
+  /* The bubble sits in the margin beside the column here. */
+  .hya-help:not(.with-avatar, .large) {
+    margin-right: 0;
+  }
   .page-header,
   .demo-banner {
     padding-inline: 56px;
@@ -1559,6 +1570,9 @@ details p {
   }
   .hya-help small {
     font-size: 12px;
+  }
+  .hya-help:not(.with-avatar, .large) {
+    margin-right: 74px;
   }
   .ticket-metrics::after {
     right: -15px;
