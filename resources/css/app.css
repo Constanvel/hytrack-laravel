@@ -507,6 +507,10 @@ hr {
   color: var(--primary);
   min-height: 44px;
 }
+/* Under a section ending in a 44px text button, the 20px page gap reads as twice that. */
+.page-content > section + .inline-link {
+  margin-top: -12px;
+}
 .row-link {
   display: flex;
   align-items: center;
