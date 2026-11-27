@@ -418,14 +418,19 @@ for (const [width, height] of [
     for (const route of ['/', '/poliklinik', '/bantuan']) {
       await page.goto(route);
       await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-      // Pages with the Hya card show Hya there instead of the bubble (Figma 43:2 frame 04).
-      if (await page.locator('.hya-help').count()) {
+      // A Hya card with its own portrait takes the bubble's place.
+      if (await page.locator('.hya-help:is(.with-avatar, .large)').count()) {
         await expect(page.locator('.hya-fab')).toBeHidden();
         continue;
       }
       const fab = await page.locator('.hya-fab').boundingBox();
       const nav = await page.locator('.bottom-nav').boundingBox();
       expect(fab && nav).toBeTruthy();
+      // The plain card stops short of the bubble floating beside it (Figma 43:2 frame 04).
+      if (await page.locator('.hya-help').count()) {
+        const card = await page.locator('.hya-help').boundingBox();
+        expect(card!.x + card!.width).toBeLessThanOrEqual(fab!.x);
+      }
       expect(width - (fab!.x + fab!.width)).toBeLessThanOrEqual(20);
       expect(fab!.y + fab!.height).toBeLessThanOrEqual(nav!.y);
       expect(fab!.x).toBeGreaterThanOrEqual(0);
@@ -484,6 +489,23 @@ for (const width of [375, 768, 1440]) {
     await bookDoctor(page, /dr. Rina/);
     await page.getByRole('link', { name: 'Tampilkan QR check-in' }).click();
     await expect(page.locator('.qr-card')).toBeVisible();
+    // Wherever the page is scrolled, the bubble never sits on the QR the desk has to scan.
+    const onQr = () =>
+      page.evaluate(() => {
+        const bubble = document.querySelector('.hya-fab')!;
+        const fab = bubble.getBoundingClientRect();
+        const qr = document.querySelector('.ticket-qr')!.getBoundingClientRect();
+        const apart =
+          qr.right <= fab.left ||
+          qr.left >= fab.right ||
+          qr.bottom <= fab.top ||
+          qr.top >= fab.bottom;
+        return !apart && !bubble.classList.contains('is-tucked');
+      });
+    for (const offset of [0, 100, 200, 300]) {
+      await page.evaluate((y) => window.scrollTo(0, y), offset);
+      await expect.poll(onQr).toBe(false);
+    }
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     // No room is reserved for the bubble: at the page end it tucks away over a control instead.
     const covered = () =>
@@ -523,9 +545,11 @@ test('the last section ends right above the bottom nav, with no band for the Hya
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   // Only the page's own 28px bottom padding is left above the nav.
   expect(await gap()).toBeLessThanOrEqual(29);
-  // Home ends with the Hya card, so the bubble stays hidden there (Figma 43:2 frame 04).
-  await expect(fab).toBeHidden();
-  await expect(page.locator('.hya-help')).toBeVisible();
+  // Home ends with the Hya card; the bubble floats beside it (Figma 43:2 frame 04).
+  await expect(fab).toBeVisible();
+  const card = await page.locator('.hya-help').boundingBox();
+  const bubble = await fab.boundingBox();
+  expect(card!.x + card!.width).toBeLessThanOrEqual(bubble!.x);
 });
 
 test('first paint and refresh stay stable (CLS ≤ 0.1) with the guide shown', async ({ page }) => {

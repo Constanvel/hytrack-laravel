@@ -136,7 +136,8 @@ export function Shell({
 }
 /**
  * The page reserves no room for the Hya bubble, so its last section sits right above the nav.
- * Once scrolled to the end, the bubble steps aside wherever it would cover a control or text.
+ * The bubble steps aside from the check-in QR wherever it is, so the code stays scannable,
+ * and, once scrolled to the end, from any control or text it would hide for good.
  */
 function useTuckedFab(url: string) {
   useEffect(() => {
@@ -147,16 +148,16 @@ function useTuckedFab(url: string) {
       frame = 0;
       const atEnd = innerHeight + scrollY >= document.documentElement.scrollHeight - 2;
       const box = fab.getBoundingClientRect();
+      const under = (selector: string) =>
+        [...document.querySelectorAll(selector)].some((element) => {
+          const b = element.getBoundingClientRect();
+          return (
+            b.right > box.left && b.left < box.right && b.bottom > box.top && b.top < box.bottom
+          );
+        });
       const covers =
-        atEnd &&
-        [...document.querySelectorAll('main :is(a, button, input, select, p, li, h2, h3)')].some(
-          (control) => {
-            const b = control.getBoundingClientRect();
-            return (
-              b.right > box.left && b.left < box.right && b.bottom > box.top && b.top < box.bottom
-            );
-          },
-        );
+        under('main .ticket-qr') ||
+        (atEnd && under('main :is(a, button, input, select, p, li, h2, h3)'));
       fab.classList.toggle('is-tucked', covers);
     };
     const queue = () => {
@@ -198,8 +199,6 @@ export function HyaHelp({ title = 'Ada yang bisa Hya bantu?', avatar = false, la
         <small>Tanya Hya</small>
       </span>
       <Icon name="arrow" />
-      {/* Figma 43:2 frame 04: Hya sits on the card's right end, past its edge. */}
-      {!avatar && <Avatar large />}
     </Link>
   );
 }

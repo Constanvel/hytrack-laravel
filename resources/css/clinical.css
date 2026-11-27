@@ -1275,6 +1275,19 @@
   .internal-identity h2 {
     font-size: 30px;
   }
+  /* Four flow columns leave a few letters per line: two, then one on phones. */
+  .flow-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+}
+@media (max-width: 479px) {
+  .flow-board {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .flow-column {
+    min-height: 0;
+  }
 }
 /* Frame 31: no steps bar between the title and the patient card. */
 .cl-title + .cl-patient {

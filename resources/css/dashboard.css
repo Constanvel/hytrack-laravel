@@ -2025,8 +2025,30 @@ table.activity-table {
     gap: 8px;
     font-size: 10px;
   }
+  /* Their desktop widths leave the crumb a few letters per line. */
   .dashboard-topbar strong {
+    width: auto;
     font-size: 10px;
+  }
+  .dashboard-topbar > span:last-child {
+    width: auto;
+    margin-left: auto;
+  }
+  .pharmacy-filters > :nth-child(n),
+  .activity-filters > :nth-child(n) {
+    flex: 1 1 100%;
+  }
+  .pharmacy-table th,
+  .pharmacy-table td {
+    padding-right: 12px;
+  }
+  .chart-head {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+  .chart-head small {
+    width: auto;
+    padding-top: 0;
   }
   .dashboard-main {
     padding: 22px 16px;
@@ -2085,6 +2107,21 @@ table.activity-table {
   }
   .dashboard-title h1 {
     overflow-wrap: anywhere;
+  }
+}
+/* Beside its pill or button the title breaks mid-word on a phone, so they stack. */
+@media (max-width: 479px) {
+  .dashboard-title {
+    flex-direction: column;
+  }
+  .dashboard-topbar > span:first-child {
+    flex-basis: 100%;
+  }
+  /* The 180px button pushed the card past the screen. */
+  .follow-up {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
   }
 }
 
