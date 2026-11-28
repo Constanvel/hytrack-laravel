@@ -1,5 +1,6 @@
 import { usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
+import { DeleteDialog } from '@/components/delete-dialog';
 import { Shell, HyaHelp } from '@/components/shell';
 import { ActionLink, Notice, RowLink, Steps, TicketQr } from '@/components/ui';
 import { splitRoom, useAction, useLive } from '@/lib/live';
@@ -35,12 +36,35 @@ function Simulate({
 }
 
 export function Visit() {
+  // Held above the screens, so the dialog survives the visit changing under it.
+  const [cancelling, setCancelling] = useState<VisitData | null>(null);
+  return (
+    <>
+      <VisitScreen onCancel={setCancelling} />
+      {cancelling && (
+        <DeleteDialog
+          url="/kunjungan"
+          title="Batalkan kunjungan?"
+          description="Antrean berikut akan dibatalkan dan tidak dapat dipulihkan."
+          name={`${cancelling.ticket} · ${cancelling.clinic}`}
+          details={[cancelling.doctor, `${cancelling.dateLabel} · ${cancelling.time}`]}
+          note="Kuota akan dilepas. Untuk berkunjung lagi, ambil antrean baru."
+          confirmLabel="Batalkan antrean"
+          busyLabel="Membatalkan…"
+          cancelLabel="Kembali"
+          onClose={() => setCancelling(null)}
+        />
+      )}
+    </>
+  );
+}
+
+function VisitScreen({ onCancel }: { onCancel: (visit: VisitData) => void }) {
   const {
     props: { visit },
     flash,
   } = usePage();
   const live = useLive();
-  const { busy, destroy } = useAction();
   if (!visit)
     return (
       <Shell title="Kunjungan" subtitle="RAWAT JALAN">
@@ -161,14 +185,7 @@ export function Visit() {
       <RowLink href="/pendamping">Bagikan ke pendamping</RowLink>
       <HyaHelp />
       <RowLink href="/riwayat">Riwayat kunjungan</RowLink>
-      <button
-        className="text-button"
-        disabled={busy}
-        onClick={() => {
-          if (window.confirm(`Batalkan antrean ${visit.ticket}? Kuota akan dilepas.`))
-            destroy('/kunjungan');
-        }}
-      >
+      <button className="text-button" onClick={() => onCancel(visit)}>
         Batalkan kunjungan
       </button>
     </Shell>

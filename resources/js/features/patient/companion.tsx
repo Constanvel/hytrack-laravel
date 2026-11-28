@@ -1,5 +1,6 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { useState, type ReactNode } from 'react';
+import { DeleteDialog } from '@/components/delete-dialog';
 import { Shell } from '@/components/shell';
 import { ActionLink, Icon, Notice, RowLink } from '@/components/ui';
 import { isActive, useAction, useLive } from '@/lib/live';
@@ -283,6 +284,7 @@ export function CompanionDashboard({
 }) {
   const live = useLive();
   const [refreshing, setRefreshing] = useState(false);
+  const [stopping, setStopping] = useState(false);
   if (!visit)
     return (
       <CompanionPage>
@@ -367,20 +369,22 @@ export function CompanionDashboard({
       <p className="companion-updated" role="status">
         {live.online ? `Diperbarui pukul ${clock}` : `Koneksi terputus · data pukul ${clock}`}
       </p>
-      <button
-        type="button"
-        className="companion-stop"
-        onClick={() => {
-          if (
-            window.confirm(
-              'Berhenti memantau kunjungan ini? Anda perlu undangan baru untuk kembali.',
-            )
-          )
-            router.delete(`/pendampingan/${shareId}`);
-        }}
-      >
+      <button type="button" className="companion-stop" onClick={() => setStopping(true)}>
         Berhenti memantau
       </button>
+      {stopping && (
+        <DeleteDialog
+          url={`/pendampingan/${shareId}`}
+          title="Berhenti memantau?"
+          description="Kunjungan berikut akan dihapus dari pantauan Anda."
+          name={visit.patientName}
+          details={[`${visit.ticket} · Poli ${visit.clinic}`, `${visit.day} · ${visit.schedule}`]}
+          note="Anda perlu undangan baru untuk kembali. Kunjungan pasien tidak berubah."
+          confirmLabel="Berhenti memantau"
+          busyLabel="Menghentikan…"
+          onClose={() => setStopping(false)}
+        />
+      )}
     </CompanionPage>
   );
 }
