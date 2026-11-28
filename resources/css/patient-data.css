@@ -418,7 +418,7 @@
   }
 }
 
-/* Hapus data pasien: the trigger under a family record, then the confirmation (Figma 31:273). */
+/* Hapus data pasien: the trigger under a family record; the confirmation is delete-dialog.css. */
 /* Figma 43:2 frame 13: a pale red button under "Ubah data pasien". */
 .patient-card .text-button.danger {
   min-height: 52px;
@@ -433,114 +433,4 @@
 }
 .patient-card .text-button.danger:hover {
   background: #fde7e3;
-}
-.delete-dialog {
-  width: min(364px, calc(100% - 48px));
-  max-height: calc(100dvh - 32px);
-  margin: auto;
-  padding: 24px;
-  border: 0;
-  border-radius: 22px;
-  background: #fff;
-  color: #173d3b;
-  text-align: center;
-  font-family: 'Inter', sans-serif;
-  box-shadow: 0 18px 48px rgba(10, 31, 28, 0.18);
-}
-.delete-dialog[open] {
-  display: flex;
-  flex-direction: column;
-  animation: enter 0.18s ease-out;
-}
-.delete-dialog::backdrop {
-  background: rgba(10, 31, 28, 0.48);
-}
-.delete-mark {
-  align-self: center;
-  display: grid;
-  place-items: center;
-  width: 56px;
-  height: 56px;
-  border-radius: 18px;
-  background: #fcebe9;
-}
-.delete-mark img {
-  width: 28px;
-  height: 28px;
-}
-.delete-dialog h2 {
-  margin-top: 16px;
-  font-size: 22px;
-  font-weight: 700;
-  line-height: 31px;
-  letter-spacing: 0;
-}
-.delete-dialog #delete-detail {
-  margin-top: 12px;
-  color: #5c706c;
-  font-size: 14px;
-  line-height: 20px;
-}
-.delete-target {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  margin-top: 36px;
-  padding: 9px 15px;
-  border: 1px solid #dce8e1;
-  border-radius: 12px;
-  background: #f6f8f4;
-  text-align: left;
-}
-.delete-target strong {
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 21px;
-}
-.delete-target span {
-  color: #5c706c;
-  font-size: 12px;
-  line-height: 18px;
-}
-.delete-note {
-  margin-top: 18px;
-  color: #5c706c;
-  font-size: 12px;
-  line-height: 18px;
-}
-.delete-dialog .field-error {
-  margin-top: 12px;
-}
-.delete-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 32px;
-}
-.inter-shell .delete-actions .button {
-  min-height: 52px;
-  padding: 14px 8px;
-  border-radius: 12px;
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 22px;
-}
-.inter-shell .delete-actions .button.outline {
-  border-color: #086f65;
-}
-.inter-shell .delete-actions .button.danger {
-  background: #b63832;
-  color: #fff;
-}
-.inter-shell .delete-actions .button.danger:hover:not(:disabled) {
-  background: #9c2e29;
-}
-.delete-actions .button:disabled {
-  opacity: 0.7;
-}
-@media (max-width: 359px) {
-  .delete-dialog {
-    width: calc(100% - 32px);
-    padding: 20px 16px;
-  }
 }
