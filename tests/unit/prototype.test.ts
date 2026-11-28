@@ -16,6 +16,15 @@ const stage = (page: { props: Record<string, unknown> }) =>
   (page.props.visit as { stage: string } | null)?.stage ?? null;
 
 describe('prototype mode', () => {
+  it('answers a polyclinic deletion without touching the sample visit', () => {
+    const visit = session();
+    visit('POST', '/masuk/internal', { username: 'petugas' });
+    const page = visit('DELETE', '/petugas/poliklinik/1');
+    expect(page.flash.error).toBeUndefined();
+    expect(page.flash.status).toContain('tidak disimpan');
+    expect(page.step).toBe(0);
+  });
+
   it('sends guests to the sign-in screen with the prototype toggle on', () => {
     const page = session()('GET', '/kunjungan');
     expect(page.component).toBe('Login');

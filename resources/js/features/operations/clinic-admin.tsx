@@ -1,5 +1,6 @@
 import { usePage } from '@inertiajs/react';
 import { useState, type FormEvent } from 'react';
+import { DeleteDialog } from '@/components/delete-dialog';
 import { Notice } from '@/components/ui';
 import { useAction } from '@/lib/live';
 
@@ -15,7 +16,10 @@ export interface ClinicRow {
 
 /** CRUD for the polyclinics master table. Every change is validated and saved by the server. */
 export function ClinicAdmin({ clinics }: { clinics: ClinicRow[] }) {
-  const [editing, setEditing] = useState<ClinicRow | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  // Looked up each time, so the form closes once its clinic is deleted.
+  const editing = clinics.find((clinic) => clinic.id === editingId);
+  const [removing, setRemoving] = useState<ClinicRow | null>(null);
   const { flash } = usePage();
   return (
     <div className="booking-layout">
@@ -42,7 +46,8 @@ export function ClinicAdmin({ clinics }: { clinics: ClinicRow[] }) {
                   key={clinic.id}
                   clinic={clinic}
                   selected={editing?.id === clinic.id}
-                  onEdit={() => setEditing(editing?.id === clinic.id ? null : clinic)}
+                  onEdit={() => setEditingId(editingId === clinic.id ? null : clinic.id)}
+                  onRemove={() => setRemoving(clinic)}
                 />
               ))}
             </tbody>
@@ -62,11 +67,29 @@ export function ClinicAdmin({ clinics }: { clinics: ClinicRow[] }) {
       </section>
       <div className="stack">
         {editing ? (
-          <ClinicForm key={editing.id} clinic={editing} onDone={() => setEditing(null)} />
+          <ClinicForm key={editing.id} clinic={editing} onDone={() => setEditingId(null)} />
         ) : (
           <ClinicForm key="new" />
         )}
       </div>
+      {removing && (
+        <DeleteDialog
+          url={`/petugas/poliklinik/${removing.id}`}
+          title="Hapus poliklinik?"
+          description="Poliklinik berikut akan dihapus dari daftar."
+          name={removing.name}
+          details={[
+            removing.room ?? 'Lokasi ruangan belum diatur',
+            `${removing.doctors} dokter · ${removing.queues} antrean terkait`,
+          ]}
+          note={[
+            'Poliklinik tidak lagi muncul di daftar dan pilihan booking.',
+            'Data dokter dan riwayat antrean terkait tetap tersimpan.',
+            'Antrean yang masih berjalan tetap dapat diselesaikan.',
+          ]}
+          onClose={() => setRemoving(null)}
+        />
+      )}
     </div>
   );
 }
@@ -75,25 +98,13 @@ function ClinicRowView({
   clinic,
   selected,
   onEdit,
+  onRemove,
 }: {
   clinic: ClinicRow;
   selected: boolean;
   onEdit: () => void;
+  onRemove: () => void;
 }) {
-  const { busy, destroy } = useAction();
-  function remove() {
-    const used =
-      clinic.doctors + clinic.queues > 0
-        ? ` ${clinic.doctors} dokter dan ${clinic.queues} antrean tetap tersimpan sebagai riwayat; antrean yang masih berjalan tetap bisa diselesaikan.`
-        : '';
-    if (
-      !window.confirm(
-        `Hapus poliklinik ${clinic.name}? Poliklinik tidak lagi muncul di daftar dan tidak bisa dipilih untuk booking.${used}`,
-      )
-    )
-      return;
-    destroy(`/petugas/poliklinik/${clinic.id}`);
-  }
   return (
     <tr className={selected ? 'next-row' : ''}>
       <td>
@@ -106,7 +117,7 @@ function ClinicRowView({
         <button className="text-button" aria-pressed={selected} onClick={onEdit}>
           Ubah
         </button>
-        <button className="text-button danger" disabled={busy} onClick={remove}>
+        <button className="text-button danger" onClick={onRemove}>
           Hapus
         </button>
       </td>

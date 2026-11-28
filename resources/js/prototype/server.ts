@@ -240,6 +240,8 @@ export function respond(
     return go('/pendampingan', { status: 'Anda berhenti memantau kunjungan ini.' });
   }
   if (route.startsWith('/data-pasien')) return go('/data-pasien', { status: SAVED });
+  // Master data is not part of the sample visit, so saving it must not move the visit on.
+  if (route.startsWith('/petugas/poliklinik')) return back({ status: SAVED });
   if (route === '/petugas/scan')
     return back(
       s.step > 0 && s.step < CHECKED_IN

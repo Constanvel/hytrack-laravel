@@ -2305,7 +2305,3 @@ table.activity-table {
   gap: 12px;
   white-space: nowrap;
 }
-.row-actions .text-button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
