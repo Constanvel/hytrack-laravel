@@ -9,11 +9,16 @@ const HTTP_ERRORS: Record<number, string> = {
 };
 
 /**
- * The confirmation for every delete (Figma 31:273). A native modal <dialog>, so focus stays
- * inside and Esc cancels. It sends the DELETE itself and stays open until the server accepts.
+ * The confirmation for every delete (Figma 31:273), and for the other actions that ask first.
+ * A native modal <dialog>, so focus stays inside and Esc cancels. It sends the request itself
+ * and stays open until the server accepts.
  */
 export function DeleteDialog({
   url,
+  method = 'delete',
+  data,
+  tone = 'danger',
+  icon = '/assets/trash.svg',
   title,
   description,
   name,
@@ -25,9 +30,14 @@ export function DeleteDialog({
   onClose,
 }: {
   url: string;
+  method?: 'delete' | 'post';
+  data?: Record<string, string>;
+  /** primary: an action that removes nothing, in the brand colour. */
+  tone?: 'danger' | 'primary';
+  icon?: string;
   title: string;
   description: string;
-  /** The record about to go, and the lines under it on its card. */
+  /** The record being acted on, and the lines under it on its card. */
   name: string;
   details: string[];
   /** What happens next; a list when there is more than one effect. */
@@ -71,7 +81,7 @@ export function DeleteDialog({
   function dismiss() {
     if (!locked.current) void close();
   }
-  function remove() {
+  function submit() {
     if (locked.current) return;
     locked.current = true;
     let done = false;
@@ -79,14 +89,17 @@ export function DeleteDialog({
       setError(message);
       return false;
     };
-    router.delete(url, {
+    router.visit(url, {
+      method,
+      data,
       preserveScroll: true,
+      preserveState: true,
       onStart: () => {
         setBusy(true);
         setError('');
       },
       onSuccess: (page) => {
-        // A broken business rule redirects back with flash.error: nothing was deleted.
+        // A broken business rule redirects back with flash.error: nothing changed.
         if (page.flash.error) return void fail(String(page.flash.error));
         done = true;
         void close();
@@ -95,7 +108,7 @@ export function DeleteDialog({
       // Returning false keeps this page, instead of swapping in an error screen.
       onHttpException: (response) => fail(HTTP_ERRORS[response.status] ?? FAILED),
       onNetworkError: () =>
-        fail('Koneksi ke server terputus. Penghapusan belum terkonfirmasi; coba lagi.'),
+        fail('Koneksi ke server terputus. Perubahan belum terkonfirmasi; coba lagi.'),
       onFinish: () => {
         if (done) return;
         locked.current = false;
@@ -108,7 +121,7 @@ export function DeleteDialog({
   return createPortal(
     <dialog
       ref={dialog}
-      className="delete-dialog"
+      className={`delete-dialog ${tone}`}
       aria-labelledby="delete-title"
       aria-describedby="delete-detail delete-note"
       onKeyDown={(event) => {
@@ -124,7 +137,7 @@ export function DeleteDialog({
       onClose={onClose}
     >
       <span className="delete-mark" aria-hidden="true">
-        <img src="/assets/trash.svg" alt="" width={28} height={28} />
+        <img src={icon} alt="" width={28} height={28} />
       </span>
       <h2 id="delete-title">{title}</h2>
       <p id="delete-detail">{description}</p>
@@ -155,7 +168,7 @@ export function DeleteDialog({
         >
           {cancelLabel}
         </button>
-        <button type="button" className="delete-confirm" aria-disabled={busy} onClick={remove}>
+        <button type="button" className="delete-confirm" aria-disabled={busy} onClick={submit}>
           {busy ? busyLabel : confirmLabel}
         </button>
       </div>

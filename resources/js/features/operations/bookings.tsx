@@ -1,5 +1,6 @@
 import { router, usePage } from '@inertiajs/react';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type ComponentProps, type FormEvent } from 'react';
+import { DeleteDialog } from '@/components/delete-dialog';
 import { Notice } from '@/components/ui';
 import { useAction } from '@/lib/live';
 
@@ -34,6 +35,7 @@ interface Booking {
   cancelReason: string | null;
   stages: { name: string; status: string; at: string | null; by: string | null }[];
 }
+type Question = Omit<ComponentProps<typeof DeleteDialog>, 'onClose'>;
 export interface BookingProps {
   clinics: { id: number; name: string }[];
   bookingFilters: { date: string; clinic: number | null; status: string; search: string };
@@ -81,6 +83,8 @@ export function Bookings({
 }: BookingProps) {
   const [selected, setSelected] = useState<number | null>(null);
   const [search, setSearch] = useState(filters.search);
+  // Held here, not in BookingDetail: the new status can filter the booking out of the list.
+  const [question, setQuestion] = useState<Question | null>(null);
   const booking = bookings.find((item) => item.id === selected) ?? null;
   const apply = (params: Record<string, string | number | null>, then?: () => void) =>
     visitDashboard(params, then);
@@ -203,7 +207,12 @@ export function Bookings({
       </section>
       <div className="stack">
         {booking ? (
-          <BookingDetail key={booking.id} booking={booking} onClose={() => setSelected(null)} />
+          <BookingDetail
+            key={booking.id}
+            booking={booking}
+            onAsk={setQuestion}
+            onClose={() => setSelected(null)}
+          />
         ) : (
           <section className="card stack">
             <h3>Booking terbaru</h3>
@@ -234,6 +243,7 @@ export function Bookings({
         )}
         <WalkInForm range={bookingDates} />
       </div>
+      {question && <DeleteDialog {...question} onClose={() => setQuestion(null)} />}
     </div>
   );
 }
@@ -242,17 +252,58 @@ function StatusPill({ status, label }: { status: string; label: string }) {
   return <span className={`status-pill ${status}`}>{label}</span>;
 }
 
-function BookingDetail({ booking, onClose }: { booking: Booking; onClose: () => void }) {
+function BookingDetail({
+  booking,
+  onAsk,
+  onClose,
+}: {
+  booking: Booking;
+  onAsk: (question: Question) => void;
+  onClose: () => void;
+}) {
   const { flash } = usePage();
   const { busy, error, send } = useAction();
   // Keyed by booking id (see Bookings), so the cancel form starts closed for each booking.
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState('');
-  const act = (url: string, question?: string, data: Record<string, string> = {}) => {
-    if (question && !window.confirm(question)) return;
-    send('post', url, data);
-  };
   const base = `/petugas/antrean/${booking.id}`;
+  const act = (url: string) => send('post', url, {});
+  const card = {
+    method: 'post' as const,
+    name: booking.name,
+    details: [
+      `Nomor ${booking.number} · ${booking.clinic}`,
+      booking.doctor,
+      booking.phone ?? 'Tanpa nomor ponsel',
+    ],
+    busyLabel: 'Menyimpan…',
+  };
+  const askCheckIn = () =>
+    onAsk({
+      ...card,
+      url: '/petugas/check-in',
+      data: { code: booking.code },
+      tone: 'primary',
+      icon: '/assets/check.svg',
+      title: 'Konfirmasi hadir?',
+      description: 'Cocokkan identitas pasien terlebih dahulu.',
+      note: 'Pasien tercatat check-in sekarang, masuk antrean dokter, dan menerima notifikasi.',
+      confirmLabel: 'Konfirmasi hadir',
+    });
+  const askNoShow = (description: string) =>
+    onAsk({
+      ...card,
+      url: `${base}/tidak-hadir`,
+      icon: '/assets/no-show.svg',
+      title: 'Tandai tidak hadir?',
+      description,
+      note: [
+        'Status menjadi Tidak hadir dan tidak dapat diubah lagi.',
+        'Akses pendamping untuk antrean ini berakhir.',
+        'Pasien menerima notifikasi untuk menghubungi meja check-in.',
+      ],
+      confirmLabel: 'Tandai tidak hadir',
+    });
   const cancellable =
     (booking.status === 'booked' || booking.status === 'waiting') &&
     (booking.isToday || !booking.checkInClosed);
@@ -315,17 +366,7 @@ function BookingDetail({ booking, onClose }: { booking: Booking; onClose: () => 
       )}
       <div className="detail-actions">
         {booking.status === 'booked' && booking.isToday && (
-          <button
-            className="button"
-            disabled={busy}
-            onClick={() =>
-              act(
-                '/petugas/check-in',
-                `Konfirmasi ${booking.name} (${booking.number}) hadir? Cocokkan identitas pasien terlebih dahulu.`,
-                { code: booking.code },
-              )
-            }
-          >
+          <button className="button" disabled={busy} onClick={askCheckIn}>
             Konfirmasi hadir
           </button>
         )}
@@ -338,12 +379,7 @@ function BookingDetail({ booking, onClose }: { booking: Booking; onClose: () => 
                 ? undefined
                 : `Tersedia setelah batas check-in ${booking.deadline}`
             }
-            onClick={() =>
-              act(
-                `${base}/tidak-hadir`,
-                `Tandai ${booking.number} tidak hadir? Tidak dapat diulang.`,
-              )
-            }
+            onClick={() => askNoShow('Pasien belum check-in hingga batas waktunya.')}
           >
             Tandai tidak hadir
           </button>
@@ -366,10 +402,7 @@ function BookingDetail({ booking, onClose }: { booking: Booking; onClose: () => 
               className="button secondary"
               disabled={busy || booking.calledCount < 2}
               onClick={() =>
-                act(
-                  `${base}/tidak-hadir`,
-                  `Tandai ${booking.number} tidak hadir setelah dipanggil?`,
-                )
+                askNoShow(`Pasien tidak hadir setelah dipanggil ${booking.calledCount}×.`)
               }
             >
               Tidak hadir

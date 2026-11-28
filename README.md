@@ -46,14 +46,14 @@ Data demo dibuat relatif terhadap **hari ini** (WIB). Jalankan `php artisan migr
 
 ### Akun demo
 
-| Peran                  | Nama pengguna | Masuk lewat       | Halaman awal          |
-| ---------------------- | ------------- | ----------------- | --------------------- |
-| Pasien                 | `siti`        | `/masuk`          | `/`                   |
-| Petugas meja poli      | `dina`        | `/masuk/internal` | Antrean poli          |
-| Dokter (dr. Rina)      | `rina`        | `/masuk/internal` | Pemeriksaan dokter    |
-| Petugas laboratorium   | `rani`        | `/masuk/internal` | Pelayanan penunjang   |
-| Apoteker (Apt. Dinda)  | `dinda`       | `/masuk/internal` | Farmasi               |
-| Manajemen              | `manajer`     | `/masuk/internal` | `/manajemen`          |
+| Peran                 | Nama pengguna | Masuk lewat       | Halaman awal        |
+| --------------------- | ------------- | ----------------- | ------------------- |
+| Pasien                | `siti`        | `/masuk`          | `/`                 |
+| Petugas meja poli     | `dina`        | `/masuk/internal` | Antrean poli        |
+| Dokter (dr. Rina)     | `rina`        | `/masuk/internal` | Pemeriksaan dokter  |
+| Petugas laboratorium  | `rani`        | `/masuk/internal` | Pelayanan penunjang |
+| Apoteker (Apt. Dinda) | `dinda`       | `/masuk/internal` | Farmasi             |
+| Manajemen             | `manajer`     | `/masuk/internal` | `/manajemen`        |
 
 Kata sandi: `hytrack-demo` (`HYTRACK_DEMO_PASSWORD`). Daftar akun hanya tampil di halaman masuk saat `HYTRACK_DEMO_CONTROLS=true`. Di `/masuk/internal` peran yang dipilih (Petugas/Manajemen) harus sesuai akun; akun pasien diarahkan ke `/masuk`, dan `/masuk` menolak akun petugas/manajemen. Tidak ada reset kata sandi mandiri: akun internal dibuat dan diatur ulang oleh administrator, mis. `php artisan hytrack:setup --staff=<id>` atau `--manager=<id>` (kata sandi diketik operator atau dari `HYTRACK_STAFF_PASSWORD` untuk shell itu saja).
 
@@ -70,18 +70,18 @@ Kata sandi: `hytrack-demo` (`HYTRACK_DEMO_PASSWORD`). Daftar akun hanya tampil d
 
 ## Pengaturan
 
-| Variabel                 | Bawaan             | Fungsi                                             |
-| ------------------------ | ------------------ | -------------------------------------------------- |
-| `HYTRACK_DEMO_CONTROLS`  | `false`            | Tombol simulasi pasien + daftar akun demo di login |
-| `HYTRACK_DEMO_PASSWORD`  | `hytrack-demo`     | Kata sandi akun yang dibuat seeder                 |
-| `HYTRACK_HOSPITAL`       | `RS Harapan Sehat` | Nama rumah sakit                                   |
-| `HYTRACK_TIMEZONE`       | `Asia/Jakarta`     | Zona waktu layanan (database menyimpan UTC)        |
-| `HYTRACK_DAILY_QUOTA`    | `30`               | Kuota tiket per dokter per hari                    |
-| `HYTRACK_TRAVEL_MINUTES` | `25`               | Perkiraan perjalanan untuk "Berangkat sebelum"     |
-| `HYTRACK_SIGNUP_STORE`   | `CACHE_STORE`      | Penyimpanan pendaftaran yang menunggu kode OTP     |
-| `WANGSAF_API_KEY`        | (kosong)           | Kunci perangkat Wangsaf untuk kirim OTP WhatsApp   |
-| `HYTRACK_POLL_SECONDS`   | `15`               | Interval pembaruan halaman antrean                 |
-| `HYTRACK_SUPPORT_RESULT_DISK` | `local`       | Disk privat untuk file hasil penunjang             |
+| Variabel                      | Bawaan             | Fungsi                                             |
+| ----------------------------- | ------------------ | -------------------------------------------------- |
+| `HYTRACK_DEMO_CONTROLS`       | `false`            | Tombol simulasi pasien + daftar akun demo di login |
+| `HYTRACK_DEMO_PASSWORD`       | `hytrack-demo`     | Kata sandi akun yang dibuat seeder                 |
+| `HYTRACK_HOSPITAL`            | `RS Harapan Sehat` | Nama rumah sakit                                   |
+| `HYTRACK_TIMEZONE`            | `Asia/Jakarta`     | Zona waktu layanan (database menyimpan UTC)        |
+| `HYTRACK_DAILY_QUOTA`         | `30`               | Kuota tiket per dokter per hari                    |
+| `HYTRACK_TRAVEL_MINUTES`      | `25`               | Perkiraan perjalanan untuk "Berangkat sebelum"     |
+| `HYTRACK_SIGNUP_STORE`        | `CACHE_STORE`      | Penyimpanan pendaftaran yang menunggu kode OTP     |
+| `WANGSAF_API_KEY`             | (kosong)           | Kunci perangkat Wangsaf untuk kirim OTP WhatsApp   |
+| `HYTRACK_POLL_SECONDS`        | `15`               | Interval pembaruan halaman antrean                 |
+| `HYTRACK_SUPPORT_RESULT_DISK` | `local`            | Disk privat untuk file hasil penunjang             |
 
 Aturan lain (jendela booking 3 hari, check-in 15 menit sebelum praktik, target tunggu 30 menit, lokasi ruangan) ada di `config/hytrack.php`.
 
@@ -97,35 +97,35 @@ npm run typecheck
 npm run format:check
 npm test                    # Vitest: geometri asset
 npx playwright install chromium
-npm run test:e2e            # 32 tes browser: alur, konfirmasi hapus, login internal, responsif 320–1440px, axe, panduan, posisi Hya, CLS
+npm run test:e2e            # 33 tes browser: alur, konfirmasi hapus, login internal, responsif 320–1440px, axe, panduan, posisi Hya, CLS
 ```
 
 `npm run test:e2e` membutuhkan `npm run build` lebih dulu. Playwright menyiapkan database terpisah `database/e2e.sqlite` dengan kontrol demo aktif, lalu memulihkannya sebelum setiap tes. Server PHP bawaan memproses satu permintaan sekaligus, jadi tes berjalan berurutan (±7 menit).
 
 ## Status fitur
 
-| Fitur                  | Status          | Keterangan                                                                                               |
-| ---------------------- | --------------- | -------------------------------------------------------------------------------------------------------- |
-| Live Queue Tracking    | Berfungsi       | Data dari database, diperbarui dengan **polling** tiap 15 detik. Bukan WebSocket/push.                   |
-| Smart Wait Time        | Berfungsi       | Rata-rata durasi pemeriksaan dokter hari itu × posisi + keterlambatan dokter (bawaan 5 menit/pasien).    |
-| Time to Go             | Sebagian        | Batas check-in dari jadwal dokter; waktu berangkat memakai perkiraan perjalanan tetap, tanpa lokasi.     |
-| Patient Journey        | Berfungsi       | Empat tahap (check-in, dokter, laboratorium, farmasi) di `patient_journeys`.                             |
-| Smart Notification     | Sebagian        | Notifikasi di aplikasi (lonceng + daftar). Tanpa SMS, WhatsApp, email, atau push.                        |
-| QR Check-in            | Sebagian        | Petugas mengonfirmasi dengan nomor check-in `HT-xxxxxx`. Gambar QR masih contoh dan belum bisa dipindai. |
-| Pharmacy Tracker       | Berfungsi       | Petugas memajukan status resep; pasien melihat nomor ambil `F-xxx`.                                      |
-| Family Companion       | Berfungsi       | Tautan acak, hanya hash SHA-256 yang disimpan; berakhir 23.59 hari layanan, saat dicabut, atau selesai.  |
-| Live Control Dashboard | Berfungsi       | Check-in, panggil, panggil ulang, tidak hadir, alur pelayanan 4 tahap dengan ringkasan, riwayat aktivitas. |
-| Pemeriksaan dokter     | Berfungsi       | Catatan, resep (`prescription_items`), rujukan penunjang, konfirmasi dokter. Petugas lain hanya melihat status, bukan catatan/resep. |
-| Pelayanan penunjang    | Berfungsi       | Status menunggu/diproses/selesai, unggah hasil ke disk privat, unduh hanya untuk dokter pengirim dan petugas penunjang. |
-| Farmasi bertahap       | Berfungsi       | Diterima → diproses → siap → diserahkan dengan checklist wajib per tahap; kembalikan ke dokter dengan alasan. |
-| Login internal         | Berfungsi       | `/masuk/internal` dan `POST /api/masuk` (`as`) memeriksa peran Petugas/Manajemen.                         |
-| Service Insights       | Berfungsi       | Agregat per tanggal/poliklinik, grafik per jam, ekspor CSV tanpa identitas pasien.                       |
-| Hya (chat bubble)      | Berfungsi       | Chatbot Gemini dari fakta antrean (tanpa identitas); tanpa saran medis; aturan tetap bila AI mati.       |
-| Panduan interaktif     | Berfungsi       | Disimpan di localStorage tanpa data pasien.                                                              |
-| Indikator koneksi      | Berfungsi       | Status online/offline browser dan waktu sinkron terakhir dari server.                                    |
-| Petunjuk ruangan       | Teks statis     | Tanpa denah atau navigasi peta.                                                                          |
-| Pendaftaran + OTP      | Berfungsi       | Akun dibuat setelah kode 6 digit benar (5 menit, 5 percobaan). Kode dikirim lewat WhatsApp (Wangsaf) bila `WANGSAF_API_KEY` diisi, maks. 5 kode per nomor per jam; tanpa kunci: mode demo menampilkan kode, selain itu kode hanya masuk log. |
-| Kontrol demo           | Demo            | Hanya bila `HYTRACK_DEMO_CONTROLS=true`.                                                                 |
+| Fitur                  | Status      | Keterangan                                                                                                                                                                                                                                   |
+| ---------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Live Queue Tracking    | Berfungsi   | Data dari database, diperbarui dengan **polling** tiap 15 detik. Bukan WebSocket/push.                                                                                                                                                       |
+| Smart Wait Time        | Berfungsi   | Rata-rata durasi pemeriksaan dokter hari itu × posisi + keterlambatan dokter (bawaan 5 menit/pasien).                                                                                                                                        |
+| Time to Go             | Sebagian    | Batas check-in dari jadwal dokter; waktu berangkat memakai perkiraan perjalanan tetap, tanpa lokasi.                                                                                                                                         |
+| Patient Journey        | Berfungsi   | Empat tahap (check-in, dokter, laboratorium, farmasi) di `patient_journeys`.                                                                                                                                                                 |
+| Smart Notification     | Sebagian    | Notifikasi di aplikasi (lonceng + daftar). Tanpa SMS, WhatsApp, email, atau push.                                                                                                                                                            |
+| QR Check-in            | Sebagian    | Petugas mengonfirmasi dengan nomor check-in `HT-xxxxxx`. Gambar QR masih contoh dan belum bisa dipindai.                                                                                                                                     |
+| Pharmacy Tracker       | Berfungsi   | Petugas memajukan status resep; pasien melihat nomor ambil `F-xxx`.                                                                                                                                                                          |
+| Family Companion       | Berfungsi   | Tautan acak, hanya hash SHA-256 yang disimpan; berakhir 23.59 hari layanan, saat dicabut, atau selesai.                                                                                                                                      |
+| Live Control Dashboard | Berfungsi   | Check-in, panggil, panggil ulang, tidak hadir, alur pelayanan 4 tahap dengan ringkasan, riwayat aktivitas.                                                                                                                                   |
+| Pemeriksaan dokter     | Berfungsi   | Catatan, resep (`prescription_items`), rujukan penunjang, konfirmasi dokter. Petugas lain hanya melihat status, bukan catatan/resep.                                                                                                         |
+| Pelayanan penunjang    | Berfungsi   | Status menunggu/diproses/selesai, unggah hasil ke disk privat, unduh hanya untuk dokter pengirim dan petugas penunjang.                                                                                                                      |
+| Farmasi bertahap       | Berfungsi   | Diterima → diproses → siap → diserahkan dengan checklist wajib per tahap; kembalikan ke dokter dengan alasan.                                                                                                                                |
+| Login internal         | Berfungsi   | `/masuk/internal` dan `POST /api/masuk` (`as`) memeriksa peran Petugas/Manajemen.                                                                                                                                                            |
+| Service Insights       | Berfungsi   | Agregat per tanggal/poliklinik, grafik per jam, ekspor CSV tanpa identitas pasien.                                                                                                                                                           |
+| Hya (chat bubble)      | Berfungsi   | Chatbot Gemini dari fakta antrean (tanpa identitas); tanpa saran medis; aturan tetap bila AI mati.                                                                                                                                           |
+| Panduan interaktif     | Berfungsi   | Disimpan di localStorage tanpa data pasien.                                                                                                                                                                                                  |
+| Indikator koneksi      | Berfungsi   | Status online/offline browser dan waktu sinkron terakhir dari server.                                                                                                                                                                        |
+| Petunjuk ruangan       | Teks statis | Tanpa denah atau navigasi peta.                                                                                                                                                                                                              |
+| Pendaftaran + OTP      | Berfungsi   | Akun dibuat setelah kode 6 digit benar (5 menit, 5 percobaan). Kode dikirim lewat WhatsApp (Wangsaf) bila `WANGSAF_API_KEY` diisi, maks. 5 kode per nomor per jam; tanpa kunci: mode demo menampilkan kode, selain itu kode hanya masuk log. |
+| Kontrol demo           | Demo        | Hanya bila `HYTRACK_DEMO_CONTROLS=true`.                                                                                                                                                                                                     |
 
 **Migrasi di Vercel:** Vercel tidak menjalankan migrasi saat deploy, jadi `api/index.php` menyalakan `HYTRACK_AUTO_MIGRATE`. Permintaan pertama di setiap instans baru menjalankan `php artisan hytrack:upgrade`: migrasi yang belum jalan, lalu akun `rina`, `rani`, dan `dinda` bila database demo (ada akun `dina`) belum memilikinya. Data yang ada tidak diubah, dan database non-demo tidak mendapat akun bersandi demo. Perintah yang sama bisa dijalankan manual.
 
