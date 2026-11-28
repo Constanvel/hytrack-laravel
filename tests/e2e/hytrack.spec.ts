@@ -2,6 +2,7 @@ import { test, expect, type Browser, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { copyFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 
 // Ported from the Next.js app's tests/e2e/frontend.spec.ts. Data now comes from the
 // seeded Laravel database (demo controls on) instead of the browser-side demo store.
@@ -781,4 +782,118 @@ test('patient data, a visit and companion access are removed through the same di
   await expect(visit.getByRole('alert')).toBeVisible(ROUND_TRIP);
   await visit.getByRole('button', { name: 'Kembali' }).click();
   await expect(page.locator('.delete-dialog')).toHaveCount(0);
+});
+
+/** Changes the seeded data behind the app's back. */
+function sql(statement: string, ...values: string[]) {
+  const database = new DatabaseSync(resolve('database/e2e.sqlite'));
+  database.exec('PRAGMA busy_timeout = 5000');
+  database.prepare(statement).run(...values);
+  database.close();
+}
+
+test('check-in and no-show in the booking list are confirmed in the HyTrack dialog', async ({
+  page,
+}) => {
+  test.slow();
+  noNativeDialogs(page);
+  const sent: string[] = [];
+  page.on('request', (request) => {
+    const path = new URL(request.url()).pathname;
+    if (request.method() === 'POST' && /check-in|tidak-hadir/.test(path)) sent.push(path);
+  });
+  await login(page, 'dina');
+  await page.getByRole('button', { name: 'Daftar booking' }).click();
+  const filters = page.getByRole('form', { name: 'Filter booking' });
+  // The selects follow the server's answer, and the next filter builds on its URL.
+  const filter = async (clinic: string, status: string) => {
+    const select = filters.getByLabel('Poliklinik');
+    await select.selectOption({ label: clinic });
+    await expect(select.locator('option:checked')).toHaveText(clinic, ROUND_TRIP);
+    await filters.getByLabel('Status').selectOption(status);
+  };
+  await filter('Anak', 'booked');
+  const rows = page.locator('.booking-list tbody tr');
+  await expect(rows).toHaveCount(4, ROUND_TRIP);
+  const [first, second, third] = await rows.locator('td:first-child').allTextContents();
+  const open = (number: string) =>
+    rows.filter({ hasText: number }).getByRole('button', { name: 'Detail' }).click();
+  const detail = page.locator('.booking-detail');
+  const any = page.locator('.delete-dialog');
+
+  // Check-in: the card identifies the patient; Batal and Esc send nothing.
+  await open(first);
+  const arrive = detail.getByRole('button', { name: 'Konfirmasi hadir' });
+  await arrive.click();
+  const checkIn = page.getByRole('dialog', { name: 'Konfirmasi hadir?' });
+  await expect(checkIn.locator('.delete-target')).toContainText(`Nomor ${first} · Anak`);
+  await expect(checkIn.locator('.delete-target')).toContainText('dr. Andi Wirawan');
+  await expect(checkIn.getByRole('button', { name: 'Batal' })).toBeFocused();
+  await page.waitForTimeout(300); // let the opening animation finish before measuring
+  expect((await new AxeBuilder({ page }).include('.delete-dialog').analyze()).violations).toEqual(
+    [],
+  );
+  await page.screenshot({ path: 'test-results/confirm-check-in.png' });
+  await page.keyboard.press('Escape');
+  await expect(any).toHaveCount(0);
+  await expect(arrive).toBeFocused();
+  expect(sent).toEqual([]);
+
+  // A lost connection keeps the dialog; the retry is sent once, even when clicked twice.
+  await arrive.click();
+  await page.route('**/petugas/check-in', (request) => request.abort());
+  await checkIn.locator('.delete-confirm').click();
+  await expect(checkIn.getByRole('alert')).toContainText('Koneksi ke server terputus');
+  await page.unroute('**/petugas/check-in');
+  sent.length = 0;
+  await checkIn.locator('.delete-confirm').dblclick();
+  // The booking leaves the "Belum check-in" list, and the dialog still closes cleanly.
+  await expect(any).toHaveCount(0, ROUND_TRIP);
+  await expect(rows).toHaveCount(3);
+  expect(sent).toEqual(['/petugas/check-in']);
+
+  // No-show after the check-in deadline.
+  sql('UPDATE queues SET checkin_deadline = ? WHERE queue_number = ?', '2000-01-01', second);
+  await page.reload();
+  await page.getByRole('button', { name: 'Daftar booking' }).click();
+  await open(second);
+  await detail.getByRole('button', { name: 'Tandai tidak hadir' }).click();
+  const noShow = page.getByRole('dialog', { name: 'Tandai tidak hadir?' });
+  await expect(noShow).toContainText('belum check-in hingga batas waktunya');
+  await expect(noShow.locator('.delete-note li')).toHaveCount(3);
+  await page.waitForTimeout(300);
+  expect((await new AxeBuilder({ page }).include('.delete-dialog').analyze()).violations).toEqual(
+    [],
+  );
+  await page.screenshot({ path: 'test-results/confirm-no-show.png' });
+  await noShow.getByRole('button', { name: 'Batal' }).click();
+  await expect(any).toHaveCount(0);
+  await expect(rows).toHaveCount(3);
+  await detail.getByRole('button', { name: 'Tandai tidak hadir' }).click();
+  await noShow.locator('.delete-confirm').click();
+  await expect(any).toHaveCount(0, ROUND_TRIP);
+  await expect(rows).toHaveCount(2);
+
+  // A queue rule refuses a check-in that someone else already recorded.
+  await open(third);
+  await detail.getByRole('button', { name: 'Konfirmasi hadir' }).click();
+  sql("UPDATE queues SET queue_status = 'waiting' WHERE queue_number = ?", third);
+  await checkIn.locator('.delete-confirm').click();
+  await expect(checkIn.getByRole('alert')).toBeVisible(ROUND_TRIP);
+  await checkIn.getByRole('button', { name: 'Batal' }).click();
+  await expect(any).toHaveCount(0);
+
+  // No-show after a repeat call.
+  await filter('Jantung', 'serving');
+  await expect(rows).toHaveCount(1, ROUND_TRIP);
+  await rows.getByRole('button', { name: 'Detail' }).click();
+  const absent = detail.getByRole('button', { name: 'Tidak hadir', exact: true });
+  await expect(absent).toBeDisabled();
+  await detail.getByRole('button', { name: 'Panggil ulang' }).click();
+  await expect(absent).toBeEnabled(ROUND_TRIP);
+  await absent.click();
+  await expect(noShow).toContainText('setelah dipanggil 2×');
+  await noShow.locator('.delete-confirm').click();
+  await expect(any).toHaveCount(0, ROUND_TRIP);
+  await expect(rows).toHaveCount(0);
 });
