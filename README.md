@@ -97,7 +97,7 @@ npm run typecheck
 npm run format:check
 npm test                    # Vitest: geometri asset
 npx playwright install chromium
-npm run test:e2e            # 30 tes browser: alur, login internal, responsif 320–1440px, axe, panduan, posisi Hya, CLS
+npm run test:e2e            # 32 tes browser: alur, konfirmasi hapus, login internal, responsif 320–1440px, axe, panduan, posisi Hya, CLS
 ```
 
 `npm run test:e2e` membutuhkan `npm run build` lebih dulu. Playwright menyiapkan database terpisah `database/e2e.sqlite` dengan kontrol demo aktif, lalu memulihkannya sebelum setiap tes. Server PHP bawaan memproses satu permintaan sekaligus, jadi tes berjalan berurutan (±7 menit).

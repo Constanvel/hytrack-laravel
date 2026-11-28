@@ -575,3 +575,210 @@ test('first paint and refresh stay stable (CLS ≤ 0.1) with the guide shown', a
   await page.waitForTimeout(1000);
   expect(await cls()).toBeLessThanOrEqual(0.1);
 });
+
+// A delete is two requests, queued behind live polling on PHP's one-request-at-a-time server.
+const ROUND_TRIP = { timeout: 20_000 };
+
+/** Fails the test if any screen falls back to the browser's own confirm or alert. */
+function noNativeDialogs(page: Page) {
+  page.on('dialog', (dialog) => {
+    void dialog.dismiss();
+    throw new Error(`Native ${dialog.type()} dialog: ${dialog.message()}`);
+  });
+}
+
+test('deleting a polyclinic is confirmed, survives errors and is sent once', async ({
+  page,
+  browser,
+}) => {
+  test.slow();
+  noNativeDialogs(page);
+  let sent = 0;
+  page.on('request', (request) => {
+    if (request.method() === 'DELETE') sent++;
+  });
+  await login(page, 'dina');
+  await page.getByRole('button', { name: 'Data poliklinik' }).click();
+  const row = page.locator('tr', { hasText: 'Ruang B-105' });
+  const trigger = row.getByRole('button', { name: 'Hapus' });
+  const dialog = page.getByRole('dialog', { name: 'Hapus poliklinik?' });
+  const confirm = dialog.locator('.delete-confirm');
+  const cancel = dialog.getByRole('button', { name: 'Batal' });
+
+  // Editing the clinic that is about to go: its form must close with it.
+  await row.getByRole('button', { name: 'Ubah' }).click();
+  await trigger.click();
+  await expect(dialog.locator('.delete-target')).toContainText('Anak');
+  await expect(dialog.locator('.delete-target')).toContainText('Ruang B-105 · Gedung B, lantai 1');
+  await expect(dialog.locator('.delete-target')).toContainText(/1 dokter · \d+ antrean terkait/);
+  await expect(dialog.locator('.delete-note li')).toHaveCount(3);
+  await expect(cancel).toBeFocused();
+  await page.waitForTimeout(300); // let the opening animation finish before measuring
+  const scan = await new AxeBuilder({ page }).include('.delete-dialog').analyze();
+  expect(scan.violations).toEqual([]);
+
+  for (const width of [320, 375, 768, 1440]) {
+    const height = width < 400 ? 560 : 900;
+    await page.setViewportSize({ width, height });
+    const box = (await dialog.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(width);
+    expect(box.y + box.height).toBeLessThanOrEqual(height);
+    expect(await dialog.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
+    await page.screenshot({ path: `test-results/delete-polyclinic-${width}.png` });
+  }
+
+  // Tab stays inside; Esc and Batal change nothing and hand focus back.
+  await page.keyboard.press('Tab');
+  await expect(confirm).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(cancel).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.delete-dialog')).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  await trigger.click();
+  await cancel.click();
+  await expect(page.locator('.delete-dialog')).toHaveCount(0);
+  await expect(row).toBeVisible();
+  expect(sent).toBe(0);
+
+  // A lost connection and a server error keep the dialog and the record.
+  const route = '**/petugas/poliklinik/*';
+  await trigger.click();
+  await page.route(route, (request) => request.abort());
+  await confirm.click();
+  await expect(dialog.getByRole('alert')).toContainText('Koneksi ke server terputus');
+  await expect(confirm).toBeEnabled();
+  await page.unroute(route);
+  await page.route(route, (request) =>
+    request.fulfill({ status: 500, contentType: 'text/html', body: '<h1>boom</h1>' }),
+  );
+  await confirm.click();
+  await expect(dialog.getByRole('alert')).toContainText('gagal diproses server');
+  await expect(page.locator('dialog')).toHaveCount(1);
+  await page.unroute(route);
+
+  // While the request runs, nothing can send it again or close the dialog.
+  let release!: () => void;
+  const held = new Promise<void>((done) => (release = done));
+  await page.route(route, async (request) => {
+    await held;
+    await request.continue();
+  });
+  sent = 0;
+  await confirm.dblclick();
+  await expect(confirm).toHaveText('Menghapus…');
+  await expect(confirm).toBeDisabled();
+  await expect(cancel).toBeDisabled();
+  await page.screenshot({ path: 'test-results/delete-polyclinic-busy.png' });
+  await confirm.click({ force: true });
+  await cancel.click({ force: true });
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeVisible();
+  release();
+  await expect(page.locator('.delete-dialog')).toHaveCount(0, ROUND_TRIP);
+  expect(sent).toBe(1);
+  await expect(page.getByRole('status').filter({ hasText: 'Anak dihapus' })).toBeVisible();
+  await expect(row).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Tambah poliklinik' })).toBeVisible();
+  await expect(page.locator('main')).toBeFocused();
+  await page.unroute(route);
+
+  // Deleted by a colleague in the meantime: said so in the dialog, no error screen.
+  const heart = page.locator('tr', { hasText: 'Ruang A-210' });
+  await heart.getByRole('button', { name: 'Hapus' }).click();
+  const colleague = await asStaff(browser, 'dina');
+  await colleague.getByRole('button', { name: 'Data poliklinik' }).click();
+  const theirs = colleague.locator('tr', { hasText: 'Ruang A-210' });
+  await theirs.getByRole('button', { name: 'Hapus' }).click();
+  await colleague.locator('.delete-confirm').click();
+  await expect(colleague.getByText(/Poliklinik Jantung dihapus/)).toBeVisible(ROUND_TRIP);
+  await colleague.context().close();
+  await confirm.click();
+  await expect(dialog.getByRole('alert')).toContainText('mungkin sudah dihapus', ROUND_TRIP);
+  await cancel.click();
+  await expect(page.getByRole('heading', { name: 'Data poliklinik' })).toBeVisible();
+});
+
+test('patient data, a visit and companion access are removed through the same dialog', async ({
+  page,
+  browser,
+}) => {
+  test.slow();
+  noNativeDialogs(page);
+  await login(page);
+
+  await page.goto('/data-pasien/tambah');
+  await page.getByLabel('Nama lengkap *').fill('Rafi Pratama');
+  await page.getByLabel('Tanggal lahir *').fill('2015-04-02');
+  await page.getByLabel('Jenis kelamin *').selectOption('male');
+  await page.getByLabel('Nomor ponsel *').fill('0812 3456 7890');
+  await page.getByLabel('Alamat lengkap *').fill('Jalan Melati 3');
+  await page.getByLabel('Kota / kabupaten *').fill('Bandung');
+  await page.getByRole('button', { name: 'Simpan data pasien' }).click();
+  const record = page.locator('.patient-card', { hasText: 'Rafi Pratama' });
+  await record.getByRole('button', { name: 'Hapus data pasien' }).click();
+  const patient = page.getByRole('dialog', { name: 'Hapus data pasien?' });
+  await expect(patient.locator('.delete-target')).toContainText('Rafi Pratama');
+  await page.setViewportSize({ width: 375, height: 740 });
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: 'test-results/delete-patient-375.png' });
+  await patient.getByRole('button', { name: 'Batal' }).click();
+  await expect(page.locator('.delete-dialog')).toHaveCount(0);
+  await expect(record).toBeVisible();
+  await record.getByRole('button', { name: 'Hapus data pasien' }).click();
+  await patient.getByRole('button', { name: 'Hapus data' }).click();
+  await expect(page.getByText('Data Rafi Pratama dihapus dari daftar Anda.')).toBeVisible(
+    ROUND_TRIP,
+  );
+  await expect(record).toHaveCount(0);
+  await expect(page.locator('.delete-dialog')).toHaveCount(0);
+
+  // Companion: stop following a visit.
+  await bookDoctor(page, /dr. Rina/);
+  await page.getByRole('link', { name: 'Bagikan ke pendamping' }).click();
+  await page.getByRole('button', { name: 'Bagikan tautan aman' }).click();
+  const link = (await page.locator('.share-link').textContent())!;
+  const companion = await (await browser.newContext()).newPage();
+  noNativeDialogs(companion);
+  await companion.goto(link);
+  await login(companion, 'ahmad');
+  await companion.getByRole('button', { name: 'Terima undangan' }).click();
+  await companion.getByRole('button', { name: 'Berhenti memantau' }).click();
+  const stop = companion.getByRole('dialog', { name: 'Berhenti memantau?' });
+  await expect(stop.locator('.delete-target')).toContainText('Siti A.');
+  await companion.waitForTimeout(300);
+  await companion.screenshot({ path: 'test-results/delete-companion.png' });
+  await stop.getByRole('button', { name: 'Batal' }).click();
+  await expect(companion.locator('.delete-dialog')).toHaveCount(0);
+  await expect(companion.locator('.companion-status')).toBeVisible();
+  await companion.getByRole('button', { name: 'Berhenti memantau' }).click();
+  await stop.getByRole('button', { name: 'Berhenti memantau' }).click();
+  await expect(companion).toHaveURL(/\/pendampingan$/, ROUND_TRIP);
+  await expect(companion.getByText('Anda berhenti memantau kunjungan ini.')).toBeVisible();
+  await companion.context().close();
+
+  // The visit itself: a second tab cancels first, so the dialog reports the server's refusal.
+  await page.goto('/kunjungan');
+  const open = page.getByRole('button', { name: 'Batalkan kunjungan' });
+  const visit = page.getByRole('dialog', { name: 'Batalkan kunjungan?' });
+  await open.click();
+  await expect(visit.locator('.delete-target')).toContainText('A-027 · Penyakit Dalam');
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: 'test-results/cancel-visit-375.png' });
+  await visit.getByRole('button', { name: 'Kembali' }).click();
+  await expect(page.locator('.delete-dialog')).toHaveCount(0);
+  await open.click();
+  const other = await page.context().newPage();
+  await other.goto('/kunjungan');
+  await other.getByRole('button', { name: 'Batalkan kunjungan' }).click();
+  await other.getByRole('button', { name: 'Batalkan antrean' }).click();
+  await expect(other.getByText('Kunjungan dibatalkan.')).toBeVisible(ROUND_TRIP);
+  await other.close();
+  await visit.getByRole('button', { name: 'Batalkan antrean' }).click();
+  await expect(visit.getByRole('alert')).toBeVisible(ROUND_TRIP);
+  await visit.getByRole('button', { name: 'Kembali' }).click();
+  await expect(page.locator('.delete-dialog')).toHaveCount(0);
+});
