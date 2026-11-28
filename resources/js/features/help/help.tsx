@@ -88,6 +88,7 @@ export function CheckInGuide() {
         <p>Tunjukkan QR kunjungan Anda kepada petugas ketika tiba di rumah sakit.</p>
       </section>
       <Steps
+        numbered
         items={[
           {
             title: 'Buka tiket kunjungan',
@@ -104,13 +105,13 @@ export function CheckInGuide() {
         ]}
       />
       <section className="warning-card">
-        <strong>QR sulit dipindai?</strong>
+        <h2>QR sulit dipindai?</h2>
         <p className="small">Tunjukkan nomor check-in manual atau minta bantuan petugas.</p>
       </section>
-      <ActionLink href="/kunjungan">
+      <ActionLink href="/kunjungan" className="split">
         Buka kunjungan aktif <Icon name="arrow" />
       </ActionLink>
-      <HyaHelp />
+      <HyaHelp title="Masih bingung?" avatar />
     </Shell>
   );
 }

@@ -1,0 +1,14 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="1208" height="280" viewBox="0 0 1208 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Aksen &#194;&#183; atmosfer dashboard" clip-path="url(#clip0_0_14)">
+<rect width="1208" height="280" fill="url(#paint0_linear_0_14)"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_14" x1="604" y1="0" x2="604" y2="280" gradientUnits="userSpaceOnUse">
+<stop stop-color="#E0EEE5"/>
+<stop offset="1" stop-color="#F3F7F3" stop-opacity="0"/>
+</linearGradient>
+<clipPath id="clip0_0_14">
+<rect width="1208" height="280" fill="white"/>
+</clipPath>
+</defs>
+</svg>

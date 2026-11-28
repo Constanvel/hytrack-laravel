@@ -1,17 +1,29 @@
-import { usePage } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Shell } from '@/components/shell';
-import { Icon, Notice, RowLink } from '@/components/ui';
-import { isActive } from '@/lib/live';
+import { Avatar, Icon, Notice, RowLink } from '@/components/ui';
+import { isActive, splitRoom } from '@/lib/live';
 import type { Visit } from '@/types';
 
 interface Message {
   id: number;
   role: 'user' | 'assistant';
   text: string;
+  /** Written by Gemini from the server's facts (false: fixed rule or error text). */
+  ai?: boolean;
+  /** Connection error shown locally; never sent back as history. */
+  failed?: boolean;
 }
+/** Local clock, e.g. "09.10", for the day stamp above the conversation. */
+const clock = () => new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+interface Reply {
+  reply: string;
+  ai?: boolean;
+}
+/** How many earlier messages go with a question, so follow-ups keep their context. */
+const HISTORY = 6;
 /** Hya's replies come from Laravel so they can use the patient's live queue data. */
-async function askHya(question: string): Promise<string> {
+async function askHya(question: string, history: Message[]): Promise<Reply> {
   const token = decodeURIComponent(document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '');
   const response = await fetch('/hya', {
     method: 'POST',
@@ -20,10 +32,16 @@ async function askHya(question: string): Promise<string> {
       Accept: 'application/json',
       'X-XSRF-TOKEN': token,
     },
-    body: JSON.stringify({ question }),
+    body: JSON.stringify({
+      question,
+      history: history
+        .filter((message) => !message.failed)
+        .slice(-HISTORY)
+        .map(({ role, text }) => ({ role, text })),
+    }),
   });
   if (!response.ok) throw new Error(`Hya ${response.status}`);
-  return (await response.json()).reply;
+  return response.json();
 }
 function summary(visit: Visit) {
   return {
@@ -38,10 +56,11 @@ function summary(visit: Visit) {
   }[visit.stage];
 }
 export function Hya() {
-  const { visit } = usePage().props;
+  const { visit, aiGuide } = usePage<{ aiGuide?: boolean }>().props;
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [pending, setPending] = useState(false);
+  const [startedAt, setStartedAt] = useState('');
   const last = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (messages.length) last.current?.scrollIntoView({ block: 'nearest', behavior: 'instant' });
@@ -49,15 +68,22 @@ export function Hya() {
   async function ask(question: string) {
     const value = question.trim().slice(0, 500);
     if (!value || pending) return;
-    const say = (role: Message['role'], text: string) =>
-      setMessages((current) => [...current, { id: current.length, role, text }]);
-    say('user', value);
+    const say = (message: Omit<Message, 'id'>) =>
+      setMessages((current) => [...current, { ...message, id: current.length }]);
+    const history = messages;
+    if (!history.length) setStartedAt(clock());
+    say({ role: 'user', text: value });
     setInput('');
     setPending(true);
     try {
-      say('assistant', await askHya(value));
+      const { reply, ai } = await askHya(value, history);
+      say({ role: 'assistant', text: reply, ai });
     } catch {
-      say('assistant', 'Hya belum dapat menjawab. Periksa koneksi Anda, lalu coba lagi.');
+      say({
+        role: 'assistant',
+        text: 'Hya belum dapat menjawab. Periksa koneksi Anda, lalu coba lagi.',
+        failed: true,
+      });
     } finally {
       setPending(false);
     }
@@ -117,46 +143,63 @@ export function Hya() {
         </>
       ) : (
         <>
-          <Notice>
-            {isActive(visit) ? `${visit.ticket} · Poli ${visit.clinic}` : 'Panduan layanan'}
-          </Notice>
-          <div className="messages" role="log" aria-live="polite" aria-label="Percakapan Hya">
-            {messages.map((message) => (
-              <div className={`message ${message.role}`} key={message.id}>
-                {message.role === 'assistant' && <strong>Hya</strong>}
-                <p>{message.text}</p>
-              </div>
-            ))}
-            {pending && (
-              <div className="message assistant">
-                <strong>Hya</strong>
-                <p>Menyiapkan jawaban…</p>
-              </div>
+          <div className="chat-context notice">
+            {isActive(visit) ? (
+              <>
+                <span>
+                  {visit.ticket} · Poli {visit.clinic}
+                </span>
+                {visit.syncedAt && <small>Data {visit.syncedAt}</small>}
+              </>
+            ) : (
+              'Panduan layanan'
             )}
           </div>
-          <div ref={last}>
-            <RowLink href="/petunjuk-ruangan">Buka petunjuk ruangan</RowLink>
+          <p className="chat-day">Hari ini · {startedAt}</p>
+          <div className="messages" role="log" aria-live="polite" aria-label="Percakapan Hya">
+            {messages.map((message) => (
+              <Bubble key={message.id} role={message.role} ai={message.ai}>
+                {message.text}
+              </Bubble>
+            ))}
+            {pending && <Bubble role="assistant">Menyiapkan jawaban…</Bubble>}
           </div>
-          <button
-            className="suggestion"
-            disabled={pending}
-            onClick={() => ask('Bagaimana jika saya terlambat?')}
-          >
-            Bagaimana jika saya terlambat?
-          </button>
+          <div className="chat-follow" ref={last}>
+            {isActive(visit) && visit.room ? (
+              <>
+                <Place room={visit.room} />
+                <small className="chat-source">
+                  Sumber: antrean kunjungan{visit.syncedAt && ` · ${visit.syncedAt}`}
+                </small>
+              </>
+            ) : (
+              <RowLink href="/petunjuk-ruangan">Buka petunjuk ruangan</RowLink>
+            )}
+            <button
+              className="chat-chip"
+              disabled={pending}
+              onClick={() => ask('Bagaimana jika saya terlambat?')}
+            >
+              Bagaimana jika saya terlambat?
+            </button>
+          </div>
+        </>
+      )}
+      <div className={messages.length ? 'chat-follow' : 'stack'}>
+        <Notice tone="warning">
+          Untuk keluhan atau pertanyaan medis, silakan hubungi tenaga kesehatan.
+        </Notice>
+        {messages.length > 0 && (
           <button className="text-button" onClick={() => setMessages([])}>
             Mulai percakapan baru
           </button>
-        </>
-      )}
-      <Notice tone="warning">
-        Untuk keluhan atau pertanyaan medis, silakan hubungi tenaga kesehatan.
-      </Notice>
+        )}
+      </div>
       <div className="chat-composer">
         <form onSubmit={submit}>
           <input
             aria-label="Pertanyaan untuk Hya"
-            placeholder="Tulis pertanyaan Anda..."
+            placeholder="Tulis pertanyaan Anda…"
             maxLength={500}
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -165,8 +208,42 @@ export function Hya() {
             <Icon name="send" />
           </button>
         </form>
-        <small>Respons terstruktur, bukan AI. Jangan masukkan data pribadi atau medis.</small>
+        <small>
+          {aiGuide
+            ? 'Hya dijawab AI (Gemini) dari data antrean Anda dan bisa keliru; pastikan ke petugas. Jangan masukkan data pribadi atau medis.'
+            : 'Respons terstruktur, bukan AI. Jangan masukkan data pribadi atau medis.'}
+        </small>
       </div>
     </Shell>
+  );
+}
+
+/** One chat turn (Figma 43:2 frame 21): Hya's avatar and name sit above her bubble. */
+function Bubble({ role, ai, children }: { role: Message['role']; ai?: boolean; children: string }) {
+  if (role === 'user') return <p className="message user">{children}</p>;
+  return (
+    <div className="message assistant">
+      <strong className="message-from">
+        <Avatar />
+        Hya{ai && <span className="muted"> · dijawab AI</span>}
+      </strong>
+      <p>{children}</p>
+    </div>
+  );
+}
+
+/** Where to wait, from the live visit, with the way to get there. */
+function Place({ room }: { room: string }) {
+  const [name, building] = splitRoom(room);
+  return (
+    <Link className="chat-place" href="/petunjuk-ruangan">
+      <small>TEMPAT MENUNGGU</small>
+      <strong>{name}</strong>
+      {building && <span>{building}</span>}
+      <b>
+        Buka petunjuk ruangan
+        <Icon name="arrow" />
+      </b>
+    </Link>
   );
 }

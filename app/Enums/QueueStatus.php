@@ -50,8 +50,10 @@ enum QueueStatus: string
             // Booked → NoShow only once the check-in deadline has passed (QueueService::markNoShow).
             self::Booked => [self::Waiting, self::Cancelled, self::NoShow],
             self::Waiting => [self::Serving],
-            self::Serving => [self::Laboratory, self::NoShow],
-            self::Laboratory => [self::Pharmacy],
+            // Figma 47:2: the doctor refers to support services, sends a prescription, or
+            // finishes the visit; after support services the doctor decides again.
+            self::Serving => [self::Laboratory, self::Pharmacy, self::Completed, self::NoShow],
+            self::Laboratory => [self::Pharmacy, self::Completed],
             self::Pharmacy => [self::Completed],
             default => [],
         }, true);

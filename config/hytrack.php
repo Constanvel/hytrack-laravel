@@ -13,8 +13,15 @@ return [
      */
     'demo_controls' => (bool) env('HYTRACK_DEMO_CONTROLS', false),
 
+    // Run `hytrack:upgrade` (migrations + missing demo room accounts) on each new instance.
+    // On by default in api/index.php, the Vercel entry, which has no deploy-time migration step.
+    'auto_migrate' => (bool) env('HYTRACK_AUTO_MIGRATE', false),
+
     // Password of the accounts created by the demo seeder.
     'demo_password' => env('HYTRACK_DEMO_PASSWORD', 'hytrack-demo'),
+
+    // Cache store holding sign-ups waiting for their SMS code (must persist between requests).
+    'signup_store' => env('HYTRACK_SIGNUP_STORE'),
 
     // Booking rules.
     'daily_quota' => (int) env('HYTRACK_DAILY_QUOTA', 30), // tickets per doctor per service date
@@ -37,5 +44,19 @@ return [
         'check_in' => 'Meja check-in · Gedung A, lantai 2',
         'laboratory' => 'Laboratorium A-108 · Gedung A, lantai 1',
         'pharmacy' => 'Farmasi Loket F2 · Gedung A, lantai 1',
+        'radiology' => 'Radiologi A-112 · Gedung A, lantai 1',
     ],
+
+    // Counter where medicine is handed over (staff pharmacy screens, Figma 47:2 frames 36–37).
+    'pharmacy_counter' => 'Loket F2',
+
+    // Support services a doctor can refer to (Figma 47:2 frame 33), key => work unit name.
+    'support_units' => [
+        'laboratorium' => 'Laboratorium',
+        'radiologi' => 'Radiologi',
+    ],
+
+    // Examination results uploaded by support staff: private disk, never a public URL.
+    'support_result_disk' => env('HYTRACK_SUPPORT_RESULT_DISK', 'local'),
+    'support_result_max_kb' => 5120,
 ];

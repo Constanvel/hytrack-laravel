@@ -1,6 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import { Icon, Avatar, Notice } from './ui';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { GuideHint, useGuide, type GuideStep } from '@/features/guide/guide';
 
 export function Shell({
@@ -11,6 +11,7 @@ export function Shell({
   hya = false,
   queue = false,
   bare = false,
+  nav = false,
   guide,
   decor,
   brand = false,
@@ -25,6 +26,8 @@ export function Shell({
   queue?: boolean;
   /** No navigation, bell or Hya: for the sign-in screen and the public companion link. */
   bare?: boolean;
+  /** Keep the bottom nav on a bare page (Figma 43:2 Riwayat kunjungan). */
+  nav?: boolean;
   guide?: GuideStep;
   /** Background accent from the design: mint waves above the nav, or a corner wave behind Hya. */
   decor?: 'waves' | 'corner';
@@ -38,6 +41,7 @@ export function Shell({
   // Prototype pages live under /prototipe; the nav highlights the same tab either way.
   const path = url.split('?')[0].replace(/^\/prototipe(?=\/|$)/, '') || '/';
   const { visible: guiding } = useGuide(guide);
+  useTuckedFab(url);
   const active =
     path === '/'
       ? 'home'
@@ -106,7 +110,7 @@ export function Shell({
         <div className="action-bar">{action}</div>
       ) : (
         !hya &&
-        !bare && (
+        (!bare || nav) && (
           <nav className="bottom-nav" aria-label="Navigasi utama">
             {[
               { href: '/', icon: 'home', label: 'Beranda' },
@@ -130,13 +134,71 @@ export function Shell({
     </div>
   );
 }
-export function HyaHelp() {
+/**
+ * The page reserves no room for the Hya bubble, so its last section sits right above the nav.
+ * The bubble steps aside from the check-in QR wherever it is, so the code stays scannable,
+ * and, once scrolled to the end, from any control or text it would hide for good.
+ */
+function useTuckedFab(url: string) {
+  useEffect(() => {
+    const fab = document.querySelector<HTMLElement>('.hya-fab');
+    if (!fab) return;
+    let frame = 0;
+    const check = () => {
+      frame = 0;
+      const atEnd = innerHeight + scrollY >= document.documentElement.scrollHeight - 2;
+      const box = fab.getBoundingClientRect();
+      const under = (selector: string) =>
+        [...document.querySelectorAll(selector)].some((element) => {
+          const b = element.getBoundingClientRect();
+          return (
+            b.right > box.left && b.left < box.right && b.bottom > box.top && b.top < box.bottom
+          );
+        });
+      const covers =
+        under('main .ticket-qr') ||
+        (atEnd && under('main :is(a, button, input, select, p, li, h2, h3)'));
+      fab.classList.toggle('is-tucked', covers);
+    };
+    const queue = () => {
+      frame ||= requestAnimationFrame(check);
+    };
+    const resize = new ResizeObserver(queue);
+    resize.observe(document.body);
+    addEventListener('scroll', queue, { passive: true });
+    addEventListener('resize', queue);
+    return () => {
+      cancelAnimationFrame(frame);
+      resize.disconnect();
+      removeEventListener('scroll', queue);
+      removeEventListener('resize', queue);
+    };
+  }, [url]);
+}
+export function HyaHelp({ title = 'Ada yang bisa Hya bantu?', avatar = false, large = false }) {
+  // Akun (Figma 43:2 frame 16): a taller card, title on two lines, Hya's portrait on the right.
+  if (large)
+    return (
+      <Link href="/hya" className="hya-help large">
+        <span>
+          <strong>
+            Ada yang bisa
+            <br />
+            Hya bantu?
+          </strong>
+          <small>Panduan antrean dan arah layanan.</small>
+        </span>
+        <Avatar large />
+      </Link>
+    );
   return (
-    <Link href="/hya" className="hya-help">
+    <Link href="/hya" className={`hya-help ${avatar ? 'with-avatar' : ''}`}>
+      {avatar && <Avatar large />}
       <span>
-        <strong>Ada yang bisa Hya bantu?</strong>
+        <strong>{title}</strong>
         <small>Tanya Hya</small>
       </span>
+      <Icon name="arrow" />
     </Link>
   );
 }

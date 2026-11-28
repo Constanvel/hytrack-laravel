@@ -6,13 +6,16 @@ use App\Enums\JourneyStage;
 use App\Enums\PrescriptionStatus;
 use App\Enums\QueueStatus;
 use App\Enums\StageStatus;
+use App\Enums\SupportStatus;
 use App\Enums\UserRole;
 use App\Models\Doctor;
+use App\Models\Examination;
 use App\Models\Patient;
 use App\Models\PharmacyOrder;
 use App\Models\Polyclinic;
 use App\Models\Queue;
 use App\Models\Staff;
+use App\Models\SupportRequest;
 use App\Models\User;
 use App\Services\WaitEstimator;
 use App\Support\HospitalTime;
@@ -34,6 +37,22 @@ class DatabaseSeeder extends Seeder
 
     private Staff $clerk;
 
+    /** dr. Rina's own account: the doctor who examines, refers and confirms in the demo. */
+    private Staff $doctor;
+
+    private Staff $laboratory;
+
+    private Staff $pharmacist;
+
+    /** Sample prescriptions, rotated over the demo visits. */
+    private const MEDICINES = [
+        ['Amlodipin', 'Tablet 5 mg', '30 tablet', '1 × 1 tablet', 'Pagi hari'],
+        ['Metformin', 'Tablet 500 mg', '60 tablet', '2 × 1 tablet', 'Sesudah makan'],
+        ['Omeprazol', 'Kapsul 20 mg', '14 kapsul', '1 × 1 kapsul', 'Sebelum makan'],
+        ['Parasetamol', 'Tablet 500 mg', '10 tablet', '3 × 1 tablet bila demam', 'Sesudah makan'],
+        ['Simvastatin', 'Tablet 20 mg', '30 tablet', '1 × 1 tablet', 'Malam hari'],
+    ];
+
     /** @var Collection<int, Patient> */
     private Collection $patients;
 
@@ -45,6 +64,7 @@ class DatabaseSeeder extends Seeder
         DB::transaction(function () {
             $this->accounts();
             [$rina, $budi, $maya, $andi] = $this->clinics();
+            [$this->doctor, $this->laboratory, $this->pharmacist] = (new ClinicalStaffSeeder)->accounts($rina);
 
             $today = HospitalTime::today();
             $yesterday = HospitalTime::now()->subDay()->toDateString();
@@ -151,7 +171,7 @@ class DatabaseSeeder extends Seeder
     {
         $now = CarbonImmutable::now();
         $waits = [12, 18, 24, 31, 36, 28, 22];
-        $inPharmacy = [15 => PrescriptionStatus::Ready, 16 => PrescriptionStatus::Checking, 17 => PrescriptionStatus::Preparing, 19 => PrescriptionStatus::Received];
+        $inPharmacy = [15 => PrescriptionStatus::Ready, 16 => PrescriptionStatus::Preparing, 17 => PrescriptionStatus::Preparing, 19 => PrescriptionStatus::Received];
 
         foreach (range(1, 22) as $sequence) {
             $called = $now->subMinutes(8 + (23 - $sequence) * self::CONSULT_MINUTES);
@@ -226,10 +246,14 @@ class DatabaseSeeder extends Seeder
         $deadline = HospitalTime::at($date, $doctor->schedule_start)->subMinutes(config('hytrack.check_in_lead_minutes'));
         $examined = $called?->addMinutes(self::CONSULT_MINUTES);
         $labDone = $examined?->addMinutes(18);
-        $ready = $labDone?->addMinutes(22);
         $pastDoctor = in_array($status, [QueueStatus::Laboratory, QueueStatus::Pharmacy, QueueStatus::Completed], true);
         $pastLab = in_array($status, [QueueStatus::Pharmacy, QueueStatus::Completed], true);
         $done = $status === QueueStatus::Completed;
+        // Only dr. Rina (who has an account) refers patients; the rest skip support services.
+        $referred = $doctor->doctor_id === $this->doctor->doctor_id
+            && ($status === QueueStatus::Laboratory || ($pastLab && $sequence % 4 === 0));
+        $handoff = $referred ? $labDone : $examined;
+        $ready = $handoff?->addMinutes(22);
 
         $queue = Queue::create([
             'patient_id' => $patient->patient_id,
@@ -261,9 +285,30 @@ class DatabaseSeeder extends Seeder
             $stage(JourneyStage::Consultation, $doctor->polyclinic->room_location,
                 $status === QueueStatus::NoShow ? StageStatus::Skipped : $state((bool) $called, $pastDoctor),
                 $called, $pastDoctor ? $examined : null),
-            $stage(JourneyStage::Laboratory, $rooms['laboratory'], $state($pastDoctor, $pastLab), $pastDoctor ? $examined : null, $pastLab ? $labDone : null),
-            $stage(JourneyStage::Pharmacy, $rooms['pharmacy'], $state($pastLab, $done), $pastLab ? $labDone : null, $done ? $ready->addMinutes(5) : null),
+            $referred
+                ? $stage(JourneyStage::Laboratory, $rooms['laboratory'], $state(true, $pastLab), $examined, $pastLab ? $labDone : null)
+                : $stage(JourneyStage::Laboratory, $rooms['laboratory'], $pastLab ? StageStatus::Skipped : StageStatus::Pending, null, null),
+            $stage(JourneyStage::Pharmacy, $rooms['pharmacy'], $state($pastLab, $done), $pastLab ? $handoff : null, $done ? $ready->addMinutes(5) : null),
         ]);
+
+        if ($pastDoctor) {
+            $this->examination($queue, $doctor, $sequence, $pastLab ? $handoff : null);
+        }
+        if ($referred) {
+            // Today's referrals: one waiting, one being processed (no result yet).
+            $started = $pastLab || $sequence % 2 === 0;
+            SupportRequest::create([
+                'queue_id' => $queue->queue_id,
+                'requested_by_staff_id' => $this->doctor->staff_id,
+                'unit' => 'laboratorium',
+                'test_name' => 'Darah lengkap & gula darah puasa',
+                'status' => $pastLab ? SupportStatus::Done : ($started ? SupportStatus::Processing : SupportStatus::Waiting),
+                'requested_at' => $examined,
+                'started_at' => $started ? $examined->addMinutes(4) : null,
+                'completed_at' => $pastLab ? $labDone : null,
+                'updated_by_staff_id' => $started ? $this->laboratory->staff_id : null,
+            ]);
+        }
 
         if ($pastLab) {
             $medicine ??= PrescriptionStatus::Completed;
@@ -271,14 +316,32 @@ class DatabaseSeeder extends Seeder
 
             PharmacyOrder::create([
                 'queue_id' => $queue->queue_id,
-                'updated_by_staff_id' => $this->clerk->staff_id,
+                'updated_by_staff_id' => $this->pharmacist->staff_id,
                 'prescription_status' => $medicine,
-                'received_at' => $labDone,
-                'prepared_at' => $reached(PrescriptionStatus::Checking, PrescriptionStatus::Ready, PrescriptionStatus::Completed) ? $labDone->addMinutes(12) : null,
-                'verified_at' => $reached(PrescriptionStatus::Ready, PrescriptionStatus::Completed) ? $ready : null,
+                'received_at' => $handoff,
+                'verified_at' => $reached(PrescriptionStatus::Preparing, PrescriptionStatus::Ready, PrescriptionStatus::Completed) ? $handoff->addMinutes(4) : null,
+                'prepared_at' => $reached(PrescriptionStatus::Ready, PrescriptionStatus::Completed) ? $handoff->addMinutes(12) : null,
                 'ready_at' => $reached(PrescriptionStatus::Ready, PrescriptionStatus::Completed) ? $ready : null,
                 'completed_at' => $done ? $ready->addMinutes(5) : null,
             ]);
+        }
+    }
+
+    /** The doctor's examination; confirmed (with a prescription) once the visit reached pharmacy. */
+    private function examination(Queue $queue, Doctor $doctor, int $sequence, ?CarbonImmutable $confirmed): void
+    {
+        $exam = Examination::create([
+            'queue_id' => $queue->queue_id,
+            'doctor_id' => $doctor->doctor_id,
+            'notes' => 'Kontrol rutin. Tanda vital dalam batas normal. Lanjutkan terapi.',
+            'allergy_note' => $sequence % 5 === 0 ? 'Penisilin' : null,
+            'confirmed_at' => $confirmed,
+            'confirmed_by_staff_id' => $confirmed && $doctor->doctor_id === $this->doctor->doctor_id ? $this->doctor->staff_id : null,
+        ]);
+        foreach ([0, 1] as $position) {
+            [$name, $form, $quantity, $dosage, $timing] = self::MEDICINES[($sequence + $position * 2) % count(self::MEDICINES)];
+            $exam->items()->create(['position' => $position + 1, 'medicine_name' => $name, 'dosage_form' => $form,
+                'quantity' => $quantity, 'dosage' => $dosage, 'timing' => $timing]);
         }
     }
 }

@@ -51,7 +51,8 @@ class Queue extends Model
 
     public function polyclinic(): BelongsTo
     {
-        return $this->belongsTo(Polyclinic::class, 'polyclinic_id', 'polyclinic_id');
+        // Archived polyclinics included: old tickets and reports still show where the visit was.
+        return $this->belongsTo(Polyclinic::class, 'polyclinic_id', 'polyclinic_id')->withTrashed();
     }
 
     public function journeys(): HasMany
@@ -62,6 +63,22 @@ class Queue extends Model
     public function pharmacyOrder(): HasOne
     {
         return $this->hasOne(PharmacyOrder::class, 'queue_id', 'queue_id')->latestOfMany('pharmacy_order_id');
+    }
+
+    public function examination(): HasOne
+    {
+        return $this->hasOne(Examination::class, 'queue_id', 'queue_id');
+    }
+
+    public function supportRequests(): HasMany
+    {
+        return $this->hasMany(SupportRequest::class, 'queue_id', 'queue_id');
+    }
+
+    /** The referral in progress or the latest one. */
+    public function supportRequest(): HasOne
+    {
+        return $this->hasOne(SupportRequest::class, 'queue_id', 'queue_id')->latestOfMany('support_request_id');
     }
 
     public function companionShares(): HasMany

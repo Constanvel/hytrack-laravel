@@ -25,7 +25,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
         $middleware->web(append: [HandleInertiaRequests::class]);
         $middleware->alias(['role' => EnsureRole::class]);
-        $middleware->redirectGuestsTo('/masuk');
+        // Staff and management pages send a signed-out visitor to the internal sign-in.
+        $middleware->redirectGuestsTo(fn (Request $request) => $request->is('petugas', 'petugas/*', 'manajemen', 'manajemen/*') ? '/masuk/internal' : '/masuk');
         $middleware->redirectUsersTo(fn (Request $request) => $request->user()->role->home());
     })
     ->withExceptions(function (Exceptions $exceptions): void {

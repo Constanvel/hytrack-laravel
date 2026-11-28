@@ -1,0 +1,1335 @@
+/* Figma 47:2 (Manajemen): doctor, support and pharmacy screens (frames 31–37), the revised
+   flow board (21) with its stage summaries, the sidebar start button and the internal
+   sign-in. Sizes follow the 1440×960 frames. */
+
+/* ── Sidebar ───────────────────────────────────────────────────────────────── */
+.sidebar-start {
+  margin-top: auto;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: #086f65;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+}
+.sidebar-start:hover {
+  background: #075c54;
+}
+.sidebar-start + .sidebar-footer {
+  margin-top: 32px;
+}
+/* The desk lists nine sections; on short screens the account stays inside the green panel. */
+.dashboard-sidebar {
+  overflow-y: auto;
+}
+
+/* ── Shared pieces of frames 31–37 ─────────────────────────────────────────── */
+.cl-title .cl-title-aside {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  align-self: flex-start;
+  margin-top: 6px;
+}
+.cl-pill {
+  display: inline-flex;
+  align-items: center;
+  width: 190px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  background: #e0eee5;
+  color: #086f65;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.cl-switch select {
+  height: 36px;
+  max-width: 340px;
+  padding: 0 12px;
+  border: 1px solid var(--pale-border);
+  border-radius: 10px;
+  background: white;
+  color: var(--text);
+  font-size: 13px;
+}
+.cl-title p {
+  margin-top: 20px;
+}
+.cl-steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 7px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border-radius: 12px;
+  background: white;
+}
+.cl-steps li {
+  height: 40px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #5c706c;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cl-steps li[aria-current] {
+  background: #e0eee5;
+  color: #086f65;
+  font-weight: 600;
+}
+.cl-patient {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) 258px;
+  align-items: center;
+  column-gap: 20px;
+  min-height: 88px;
+  padding: 0 20px;
+  border-radius: 16px;
+  background: white;
+  line-height: 1.4;
+}
+.cl-patient > strong {
+  color: #086f65;
+  font-size: 26px;
+  font-weight: 700;
+}
+.cl-patient h2 {
+  color: #173d3b;
+  font-size: 20px;
+  font-weight: 600;
+}
+.cl-patient p {
+  margin-top: 0;
+  color: #5c706c;
+  font-size: 13px;
+}
+.cl-patient.empty-patient {
+  display: flex;
+  color: #5c706c;
+}
+.cl-status {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.cl-status.warm,
+.cl-state.warm {
+  background: #fff1cf;
+  color: #925900;
+}
+.cl-status.mint,
+.cl-state.mint {
+  background: #e0eee5;
+  color: #086f65;
+}
+.cl-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 744fr) minmax(0, 376fr);
+  gap: 24px;
+  align-items: stretch;
+}
+.cl-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.cl-card {
+  min-width: 0;
+  padding: 16px 20px 20px;
+  border-radius: 16px;
+  background: white;
+  line-height: 1.4;
+}
+.cl-card h3 {
+  color: #173d3b;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.cl-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.cl-muted {
+  color: #5c706c;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.cl-muted.small {
+  font-size: 12px;
+}
+.cl-strong {
+  margin-top: 8px;
+  color: #173d3b;
+  font-size: 16px;
+  font-weight: 600;
+}
+.cl-sub {
+  margin-top: 6px;
+  color: #5c706c;
+  font-size: 14px;
+}
+.cl-empty {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 10px;
+  background: #f3f7f3;
+  color: #5c706c;
+  font-size: 13px;
+}
+.cl-banner {
+  margin-top: 16px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: #e0eee5;
+  color: #086f65;
+  font-size: 13px;
+  font-weight: 600;
+}
+.cl-banner.note {
+  font-weight: 400;
+}
+.cl-foot {
+  margin-top: 16px;
+  color: #5c706c;
+  font-size: 12px;
+}
+.cl-foot.strong {
+  font-size: 13px;
+  font-weight: 500;
+}
+.cl-link {
+  color: #086f65;
+  font-weight: 600;
+  text-decoration: underline;
+}
+.cl-link.small {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 12px;
+}
+.cl-right {
+  text-align: right;
+}
+
+/* Buttons of frames 31–37: 44px, mint (secondary) or #086f65 (primary). */
+.cl-button {
+  min-height: 44px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.cl-button.mint {
+  background: #e0eee5;
+  color: #086f65;
+}
+.cl-button.mint:hover:not(:disabled) {
+  background: #d1e6da;
+}
+.cl-button.primary {
+  background: #086f65;
+  color: white;
+}
+.cl-button.primary:hover:not(:disabled) {
+  background: #075c54;
+}
+.cl-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.cl-button.wide {
+  width: 100%;
+}
+.cl-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 230px 324px;
+  align-items: center;
+  gap: 16px;
+}
+.cl-actions.wide {
+  grid-template-columns: minmax(0, 1fr) 188px 366px;
+}
+/* SupportPanel renders its action row inside the columns grid. */
+.cl-columns > .cl-actions,
+.cl-columns > .cl-right {
+  grid-column: 1 / -1;
+}
+.cl-actions > p {
+  color: #5c706c;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* ── Pemeriksaan dokter (frames 31–32) ─────────────────────────────────────── */
+.cl-notes label {
+  display: block;
+  margin-top: 16px;
+  color: #5c706c;
+  font-size: 12px;
+  font-weight: 500;
+}
+.cl-notes textarea,
+.cl-note {
+  display: block;
+  width: 100%;
+  min-height: 67px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: #f3f7f3;
+  color: #173d3b;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  resize: vertical;
+}
+.cl-notes textarea:focus-visible,
+.cl-note:focus-visible {
+  outline: 2px solid #086f65;
+  outline-offset: 1px;
+}
+.cl-recipe .cl-card-head .cl-button {
+  width: 174px;
+}
+.cl-med-head {
+  display: grid;
+  grid-template-columns: 286px 80px minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 14px;
+  color: #5c706c;
+  font-size: 12px;
+  font-weight: 600;
+}
+.cl-meds {
+  display: grid;
+  gap: 10px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.cl-meds li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 278px 86px minmax(0, 1fr);
+  align-items: center;
+  gap: 16px 18px;
+  min-height: 72px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f3f7f3;
+}
+.cl-meds li > span {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.cl-meds strong {
+  color: #173d3b;
+  font-size: 15px;
+  font-weight: 600;
+}
+.cl-meds b,
+.cl-qty {
+  color: #173d3b;
+  font-size: 14px;
+  font-weight: 500;
+}
+.cl-meds small {
+  color: #5c706c;
+  font-size: 12px;
+}
+.cl-med-edit {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  min-height: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: white;
+  color: #086f65;
+  font-size: 12px;
+  font-weight: 600;
+}
+.cl-panel {
+  display: flex;
+  flex-direction: column;
+}
+.cl-radios,
+.cl-segments,
+.cl-checks {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.cl-radios legend,
+.cl-segments legend,
+.cl-checks legend {
+  float: left;
+  width: 100%;
+  margin-top: 18px;
+  color: #173d3b;
+  font-size: 14px;
+  font-weight: 500;
+}
+.cl-radios label {
+  clear: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  margin-top: 8px;
+  padding: 0 14px;
+  border-radius: 10px;
+  background: #f3f7f3;
+  color: #5c706c;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.cl-radios legend + label {
+  margin-top: 12px;
+}
+.cl-radios label:has(input:checked) {
+  height: 44px;
+  background: #e0eee5;
+  color: #086f65;
+  font-weight: 600;
+}
+.cl-radios input,
+.cl-checks input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.cl-radios label:has(input:focus-visible),
+.cl-checks label:has(input:focus-visible),
+.cl-segments label:has(input:focus-visible) {
+  outline: 2px solid #086f65;
+  outline-offset: 2px;
+}
+.cl-label {
+  display: block;
+  margin-top: 20px;
+  color: #5c706c;
+  font-size: 13px;
+  font-weight: 600;
+}
+.cl-select {
+  height: 44px;
+  margin-top: 10px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: #f3f7f3;
+  color: #086f65;
+  font-size: 14px;
+  font-weight: 600;
+}
+.cl-question {
+  margin: 18px 0 10px;
+  color: #173d3b;
+  font-size: 14px;
+  font-weight: 500;
+}
+.cl-panel .cl-muted {
+  margin-top: 20px;
+}
+.cl-signature {
+  margin-top: auto;
+  padding-top: 16px;
+  color: #086f65;
+  font-size: 12px;
+  font-weight: 500;
+}
+.cl-confirmed {
+  background: #e0eee5;
+  padding: 20px;
+}
+.cl-confirmed h3 {
+  color: #086f65;
+  font-size: 22px;
+}
+.cl-confirmed p,
+.handover-check small {
+  margin-top: 12px;
+  color: #5c706c;
+  font-size: 14px;
+}
+.cl-confirmed .cl-strong {
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.cl-sent .cl-muted {
+  margin-top: 8px;
+}
+.cl-sent-list {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.cl-sent-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 68px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #f3f7f3;
+}
+.cl-sent-list strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+.cl-sent-list small {
+  color: #5c706c;
+  font-size: 13px;
+}
+.cl-trail {
+  display: grid;
+  gap: 24px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.cl-trail li {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 14px;
+}
+.cl-trail b {
+  padding-top: 4px;
+  color: #086f65;
+  font-size: 14px;
+}
+.cl-trail span {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cl-trail strong {
+  color: #173d3b;
+  font-size: 14px;
+  font-weight: 600;
+}
+.cl-trail small {
+  color: #5c706c;
+  font-size: 13px;
+}
+.cl-next {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #e0eee5;
+}
+.cl-next strong {
+  color: #086f65;
+  font-size: 14px;
+  font-weight: 600;
+}
+.cl-next small {
+  color: #5c706c;
+  font-size: 12px;
+}
+.cl-checks + .cl-next,
+.cl-timeline + .cl-next {
+  margin-top: 28px;
+}
+
+/* ── Pelayanan penunjang (frame 33) ────────────────────────────────────────── */
+.cl-filters {
+  display: grid;
+  grid-template-columns: 140px 160px minmax(0, 1fr);
+  gap: 8px;
+  margin-top: 14px;
+  padding: 0 4px;
+  border-radius: 10px;
+  background: #f3f7f3;
+}
+.cl-filters select,
+.cl-filters input {
+  width: 100%;
+  height: 38px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: #5c706c;
+  font-size: 13px;
+  font-weight: 500;
+}
+.cl-support-head,
+.cl-support-rows button {
+  display: grid;
+  grid-template-columns: 248px 232px minmax(0, 1fr);
+  gap: 12px;
+}
+.cl-support-head {
+  margin-top: 19px;
+  color: #5c706c;
+  font-size: 12px;
+  font-weight: 600;
+}
+.cl-support-rows {
+  display: grid;
+  gap: 4px;
+  margin: 8px -8px 0;
+  padding: 0;
+  list-style: none;
+}
+.cl-support-rows button {
+  width: 100%;
+  min-height: 37px;
+  padding: 9px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: #f3f7f3;
+  color: #173d3b;
+  font-size: 13px;
+  text-align: left;
+}
+.cl-support-rows button[aria-pressed='true'] {
+  background: #e0eee5;
+}
+.cl-support-rows button[aria-pressed='true'] span:first-child {
+  font-weight: 600;
+}
+.cl-support-rows span:last-child {
+  color: #086f65;
+  font-weight: 500;
+}
+.cl-request .cl-muted {
+  margin-top: 8px;
+}
+.cl-segments {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+.cl-segments legend {
+  margin: 14px 0 12px;
+  color: #5c706c;
+  font-size: 13px;
+}
+.cl-segments label {
+  display: grid;
+  place-items: center;
+  height: 38px;
+  border-radius: 9px;
+  background: #f3f7f3;
+  color: #5c706c;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cl-segments label:has(input:checked) {
+  background: #086f65;
+  color: white;
+}
+.cl-segments:disabled label {
+  cursor: default;
+}
+.cl-file {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 70px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #e0eee5;
+  cursor: pointer;
+}
+.cl-file:has(input:focus-visible) {
+  outline: 2px solid #086f65;
+  outline-offset: 2px;
+}
+.cl-file.locked {
+  cursor: default;
+}
+.cl-file strong {
+  color: #086f65;
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.cl-file small {
+  color: #5c706c;
+  font-size: 12px;
+}
+.cl-note {
+  min-height: 64px;
+  font-size: 13px;
+}
+.cl-destination {
+  margin-top: 8px;
+  color: #086f65;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* ── Detail resep (frames 34–37) ───────────────────────────────────────────── */
+.cl-order .cl-banner {
+  margin-top: 14px;
+}
+.cl-order .cl-med-head {
+  margin-top: 22px;
+}
+.cl-order .cl-meds li {
+  min-height: 76px;
+}
+.cl-state {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.cl-desc {
+  margin-top: 18px;
+  color: #5c706c;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.cl-checks legend {
+  margin: 22px 0 6px;
+  font-weight: 600;
+}
+.cl-checks label {
+  clear: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 35px;
+  color: #5c706c;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.cl-checks label:has(input:checked) {
+  color: #086f65;
+}
+.cl-checks span {
+  width: 14px;
+  text-align: center;
+}
+.cl-timeline {
+  display: grid;
+  gap: 20px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.cl-timeline li {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  color: #173d3b;
+  font-size: 14px;
+}
+.cl-timeline b {
+  color: #086f65;
+}
+
+/* ── Dialogs ───────────────────────────────────────────────────────────────── */
+.cl-dialog {
+  position: relative;
+  width: min(560px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 28px;
+  border: 0;
+  border-radius: 20px;
+  background: white;
+  color: #173d3b;
+  font-family: var(--font);
+  line-height: 1.4;
+  overflow: auto;
+  box-shadow: 0 18px 48px rgba(10, 31, 28, 0.18);
+}
+.cl-dialog::backdrop {
+  background: rgba(10, 31, 28, 0.48);
+}
+.cl-dialog-accent {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 6px;
+  background: #086f65;
+}
+.cl-dialog-eyebrow {
+  margin-bottom: 12px;
+  color: #173d3b;
+  font-size: 12px;
+  font-weight: 700;
+}
+.cl-dialog h2 {
+  padding-right: 48px;
+  color: #086f65;
+  font-size: 25px;
+  font-weight: 700;
+  line-height: 31px;
+}
+.cl-dialog-close {
+  position: absolute;
+  top: 24px;
+  right: 28px;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 10px;
+  background: #f0f5f2;
+  color: #086f65;
+  font-size: 24px;
+  line-height: 1;
+}
+.cl-dialog > .cl-muted {
+  margin-top: 9px;
+  font-size: 14px;
+}
+.cl-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 20px;
+}
+.cl-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #173d3b;
+  font-size: 13px;
+  font-weight: 600;
+}
+.cl-form input,
+.cl-form select,
+.cl-form textarea {
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #d4e3dc;
+  border-radius: 10px;
+  background: white;
+  color: #173d3b;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 400;
+}
+.cl-form textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+.cl-dialog-actions {
+  display: grid;
+  grid-template-columns: 222fr 266fr;
+  gap: 16px;
+  margin-top: 12px;
+}
+.cl-dialog-actions .cl-button {
+  min-height: 40px;
+  font-size: 13px;
+}
+
+/* Stage summaries (47:2267–47:2325). */
+.flow-summary-list {
+  display: grid;
+  gap: 16px;
+  max-height: 320px;
+  margin: 32px 0 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+.flow-summary-list li {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr);
+  column-gap: 15px;
+  row-gap: 9px;
+  min-height: 89px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: #edf5f1;
+}
+.flow-summary-list strong {
+  grid-row: span 2;
+  color: #173d3b;
+  font-size: 19px;
+}
+.flow-summary-list span {
+  color: #086f65;
+  font-size: 16px;
+  font-weight: 600;
+}
+.flow-summary-list small {
+  color: #53665f;
+  font-size: 13px;
+  font-weight: 500;
+}
+.flow-summary .cl-muted.small {
+  margin-top: 28px;
+}
+.flow-summary .cl-dialog-actions {
+  margin-top: 25px;
+}
+
+/* ── Alur pelayanan columns (frame 21, 47:484) ─────────────────────────────── */
+.flow-column {
+  position: relative;
+  min-height: 422px;
+  padding: 15px 11px 12px;
+  border: 1px solid #dce6e1;
+  border-top: 4px solid #086f65;
+  border-radius: 16px;
+  background: #edf5f1;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  grid-template-rows: 30px auto 1fr auto;
+  align-items: center;
+  column-gap: 10px;
+}
+.flow-step {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin-left: 4px;
+  border-radius: 9px;
+  background: #086f65;
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+}
+.flow-column > .flow-count {
+  margin: 0 0 0 4px;
+  padding: 0;
+  color: #086f65;
+  font-size: 13px;
+  font-weight: 600;
+}
+.flow-open {
+  width: 32px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #086f65;
+  font-size: 18px;
+  font-weight: 500;
+}
+.flow-open:hover {
+  background: #dfece6;
+}
+.flow-column > h3 {
+  grid-column: 1 / -1;
+  margin-top: 10px;
+  padding-inline: 4px;
+  font-size: 17px;
+  line-height: 22px;
+}
+.flow-column ul {
+  grid-column: 1 / -1;
+  align-self: start;
+  margin: 14px 0 0;
+  gap: 12px;
+}
+.flow-column li {
+  min-height: 0;
+  padding: 0;
+  background: none;
+}
+.flow-column li button {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 126px;
+  padding: 11px 12px;
+  border: 1px solid #dce6e1;
+  border-radius: 12px;
+  background: white;
+  color: #173d3b;
+  text-align: left;
+}
+.flow-column li.late button {
+  border-color: #e9cf9c;
+}
+.flow-column li button:hover {
+  border-color: #b7cdc4;
+}
+.flow-column li strong {
+  font-size: 20px;
+  line-height: 25px;
+}
+.flow-column li span {
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 19px;
+}
+.flow-column li small {
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  margin-top: auto;
+  padding: 4px 8px;
+  border-radius: 7px;
+  background: #e7f4ef;
+  color: #086f65;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 14px;
+}
+.flow-column li i {
+  position: absolute;
+  top: 11px;
+  right: 12px;
+  width: 32px;
+  height: 26px;
+  border-radius: 8px;
+  background: #edf5f1;
+  color: #086f65;
+  font-size: 18px;
+  font-style: normal;
+  line-height: 26px;
+  text-align: center;
+}
+.flow-column > .flow-empty {
+  grid-column: 1 / -1;
+  align-self: start;
+}
+.flow-action {
+  grid-column: 1 / -1;
+  height: 36px;
+  margin-top: 14px;
+  border: 0;
+  border-radius: 9px;
+  background: #086f65;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+}
+.flow-action:hover {
+  background: #075c54;
+}
+
+/* ── Login · Petugas dan Manajemen (47:2345) ───────────────────────────────── */
+.internal-login {
+  display: grid;
+  grid-template-columns: minmax(0, 624fr) minmax(0, 816fr);
+  min-height: 100dvh;
+  background: #f6f8f4;
+  color: #173d3b;
+  font-family: var(--font);
+}
+.internal-identity {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 56px 56px 60px;
+  background:
+    url('/assets/wave-login.svg') left bottom / 100% 250px no-repeat,
+    linear-gradient(114.7deg, #173d3b 0%, #235c50 71.4%);
+  color: white;
+  line-height: 1.45;
+}
+.internal-lockup {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.internal-lockup > span {
+  display: grid;
+  place-items: center;
+  width: 80px;
+  height: 64px;
+  border-radius: 14px;
+  background: white;
+}
+.internal-lockup .lockup-name {
+  color: white;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+.internal-lockup .lockup-tagline {
+  color: #b8ded1;
+  font-size: 10px;
+  font-weight: 600;
+}
+.internal-eyebrow {
+  margin-top: 138px;
+  color: #b8ded1;
+  font-size: 13px;
+  font-weight: 600;
+}
+.internal-identity h2 {
+  margin-top: 24px;
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+.internal-lead {
+  max-width: 486px;
+  margin-top: 26px;
+  color: #b8ded1;
+  font-size: 17px;
+}
+.internal-benefits {
+  display: grid;
+  gap: 34px;
+  margin: 76px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 16px;
+  font-weight: 500;
+}
+.internal-benefits span {
+  display: inline-block;
+  width: 30px;
+}
+.internal-note {
+  margin-top: auto;
+  padding-top: 40px;
+  color: #b8ded1;
+  font-size: 13px;
+}
+.internal-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 110px 24px 40px;
+}
+.internal-panel {
+  width: min(496px, 100%);
+}
+.internal-badge {
+  display: inline-block;
+  height: 32px;
+  padding: 6px 16px;
+  border-radius: 16px;
+  background: #e1efe7;
+  color: #086f65;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+.internal-panel h1 {
+  margin-top: 24px;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+.internal-intro {
+  margin-top: 10px;
+  color: #5c706c;
+  font-size: 16px;
+  line-height: 1.45;
+}
+.internal-form {
+  margin-top: 23px;
+  gap: 18px;
+}
+.internal-form .auth-input {
+  height: 56px;
+  border-color: #d4e3dc;
+  border-radius: 12px;
+}
+.internal-form .auth-input input {
+  font-size: 15px;
+}
+.internal-form .auth-fields {
+  gap: 26px;
+}
+.internal-form .auth-submit {
+  height: 56px;
+  margin-top: 10px;
+}
+.internal-access {
+  color: #5c706c;
+  font-size: 14px;
+  text-align: center;
+}
+.auth-link.plain {
+  color: #5c706c;
+  font-weight: 400;
+}
+.internal-foot {
+  margin-top: auto;
+  padding-top: 32px;
+  color: #5c706c;
+  font-size: 12px;
+  text-align: center;
+}
+
+/* ── Smaller screens ───────────────────────────────────────────────────────── */
+@media (max-width: 1199px) {
+  /* The title, patient switcher and data pill wrap instead of widening the page. */
+  .cl-title {
+    flex-wrap: wrap;
+  }
+  .cl-title .cl-title-aside {
+    flex-wrap: wrap;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .cl-switch,
+  .cl-switch select {
+    max-width: 100%;
+    min-width: 0;
+  }
+  /* Frame 33's fixed 248/232px columns shrink; the status moves under the patient. */
+  .cl-steps {
+    grid-template-columns: repeat(5, minmax(120px, 1fr));
+    overflow-x: auto;
+  }
+  .cl-patient {
+    grid-template-columns: 110px minmax(0, 1fr);
+    row-gap: 12px;
+    padding: 16px 20px;
+  }
+  .cl-patient .cl-status {
+    grid-column: 1 / -1;
+  }
+  .cl-support-head,
+  .cl-support-rows button {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.1fr) minmax(0, 1fr);
+  }
+  .cl-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cl-actions,
+  .cl-actions.wide {
+    grid-template-columns: 1fr 1fr;
+  }
+  .cl-actions > p {
+    grid-column: 1 / -1;
+  }
+  .internal-login {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .internal-identity {
+    padding: 32px 24px 120px;
+  }
+  .internal-eyebrow {
+    margin-top: 40px;
+  }
+  .internal-benefits {
+    margin-top: 32px;
+    gap: 16px;
+  }
+  .internal-main {
+    padding-top: 40px;
+  }
+}
+@media (max-width: 767px) {
+  .cl-patient {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 8px;
+    padding: 16px;
+  }
+  .cl-med-head {
+    display: none;
+  }
+  .cl-meds li,
+  .cl-support-head,
+  .cl-support-rows button,
+  .cl-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cl-support-head {
+    display: none;
+  }
+  .cl-actions,
+  .cl-actions.wide {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .internal-identity h2 {
+    font-size: 30px;
+  }
+  /* Four flow columns leave a few letters per line: two, then one on phones. */
+  .flow-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+}
+@media (max-width: 479px) {
+  .flow-board {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .flow-column {
+    min-height: 0;
+  }
+}
+/* Frame 31: no steps bar between the title and the patient card. */
+.cl-title + .cl-patient {
+  margin-top: 74px;
+}
+/* 20px between card, columns and actions; columns are 478px tall (frames 31–37). */
+.cl-patient + .cl-columns,
+.cl-columns + .cl-actions {
+  margin-top: 4px;
+}
+@media (min-width: 1200px) {
+  .cl-columns > .cl-stack,
+  .cl-columns > .cl-card {
+    min-height: 478px;
+  }
+}
+.cl-next.warm {
+  background: #fff1cf;
+}
+.cl-next.warm strong,
+.cl-next.warm small {
+  color: #925900;
+}
+/* Frame 33 shows three rows; longer days scroll inside the card. */
+.cl-support-rows {
+  max-height: 131px;
+  overflow-y: auto;
+}
+.cl-support-rows span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* A rendered (non-floated) legend stays out of the segment grid. */
+.cl-segments legend {
+  float: none;
+  padding: 0;
+}
+/* #5c706c on mint is 4.39:1; one step darker keeps small text at WCAG AA. */
+.cl-file small,
+.cl-next small,
+.cl-confirmed p,
+.handover-check small {
+  color: #53665f;
+}

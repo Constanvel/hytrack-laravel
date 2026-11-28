@@ -6,10 +6,12 @@
         <meta name="theme-color" content="#f8f7f1">
         <meta name="robots" content="noindex, nofollow">
         <title>HyTrack — Mode prototype</title>
+        @include('partials.splash', ['part' => 'head'])
         @viteReactRefresh
         @vite('resources/js/prototype.tsx')
     </head>
     <body>
+        @include('partials.splash', ['part' => 'body'])
         {{-- Served without the web middleware: no session, no database. --}}
         <div class="prototype-bar" role="note">
             <strong>Mode prototype</strong> · data contoh, tidak ada yang disimpan

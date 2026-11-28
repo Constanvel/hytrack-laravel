@@ -7,15 +7,21 @@ use App\Enums\JourneyStage;
 use App\Enums\PrescriptionStatus;
 use App\Enums\QueueStatus;
 use App\Enums\StageStatus;
+use App\Enums\SupportStatus;
 use App\Exceptions\QueueRuleException;
 use App\Models\Doctor;
+use App\Models\Examination;
 use App\Models\Patient;
 use App\Models\PharmacyOrder;
 use App\Models\Queue;
 use App\Models\Staff;
+use App\Models\SupportRequest;
 use App\Support\HospitalTime;
 use Closure;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Every change to a visit goes through here, so patients, staff and the demo
@@ -61,6 +67,9 @@ class QueueService
 
             if ($polyclinicId !== null && $doctor->polyclinic_id !== $polyclinicId) {
                 throw new QueueRuleException('Dokter tidak praktik di poliklinik yang dipilih.');
+            }
+            if ($doctor->polyclinic->trashed()) {
+                throw new QueueRuleException('Poliklinik ini sudah tidak menerima antrean.');
             }
             if (! in_array($date, $this->bookingDates(), true)) {
                 throw new QueueRuleException('Tanggal kunjungan tidak tersedia.');
@@ -288,22 +297,25 @@ class QueueService
         });
     }
 
-    /** Move a prescription one step forward; handing over the medicine completes the visit. */
+    /**
+     * Move a prescription one step forward (Figma 47:2 frames 34–37): verify and start,
+     * ready for pickup, handed over. Handing over the medicine completes the visit.
+     */
     public function advancePharmacy(PharmacyOrder $order, ?Staff $by = null): PharmacyOrder
     {
         return DB::transaction(function () use ($order, $by) {
             $order = PharmacyOrder::whereKey($order->pharmacy_order_id)->lockForUpdate()->firstOrFail();
-            $next = $order->prescription_status->next();
 
-            if (! $next) {
-                throw new QueueRuleException('Obat sudah diserahkan.');
+            if ($order->prescription_status === PrescriptionStatus::Returned) {
+                throw new QueueRuleException('Resep sedang ditinjau ulang dokter.');
             }
+            $next = $order->prescription_status->next() ?? throw new QueueRuleException('Obat sudah diserahkan.');
 
-            $order->fill(['prescription_status' => $next, 'updated_by_staff_id' => $by?->staff_id]);
+            $order->fill(['prescription_status' => $next, 'updated_by_staff_id' => $by?->staff_id, 'checks' => null]);
 
             match ($next) {
-                PrescriptionStatus::Checking => $order->prepared_at = now(),
-                PrescriptionStatus::Ready => $order->fill(['verified_at' => now(), 'ready_at' => now()]),
+                PrescriptionStatus::Preparing => $order->verified_at = now(),
+                PrescriptionStatus::Ready => $order->fill(['verified_at' => $order->verified_at ?? now(), 'prepared_at' => now(), 'ready_at' => now()]),
                 PrescriptionStatus::Completed => $order->completed_at = now(),
                 default => null,
             };
@@ -323,6 +335,336 @@ class QueueService
 
             return $order;
         });
+    }
+
+    /** "Simpan proses": the ticked checklist items, kept until the status moves on. */
+    public function savePharmacyChecks(PharmacyOrder $order, Staff $by, array $checks): PharmacyOrder
+    {
+        return DB::transaction(function () use ($order, $by, $checks) {
+            $order = PharmacyOrder::whereKey($order->pharmacy_order_id)->lockForUpdate()->firstOrFail();
+
+            if (in_array($order->prescription_status, [PrescriptionStatus::Completed, PrescriptionStatus::Returned], true)) {
+                throw new QueueRuleException('Resep ini tidak sedang diproses farmasi.');
+            }
+            $order->update(['checks' => array_values($checks), 'updated_by_staff_id' => $by->staff_id]);
+
+            return $order;
+        });
+    }
+
+    /** "Panggil pasien F-018": only once the medicine is ready. */
+    public function callPickup(PharmacyOrder $order, Staff $by): PharmacyOrder
+    {
+        return DB::transaction(function () use ($order, $by) {
+            $order = PharmacyOrder::whereKey($order->pharmacy_order_id)->lockForUpdate()->firstOrFail();
+
+            if ($order->prescription_status !== PrescriptionStatus::Ready) {
+                throw new QueueRuleException('Pasien dipanggil setelah obat siap diambil.');
+            }
+            $order->update(['called_at' => now(), 'updated_by_staff_id' => $by->staff_id]);
+            $this->notify($order->queue, 'medicine_called', "Nomor {$order->pickupNumber()} dipanggil di ".config('hytrack.pharmacy_counter').'.', config('hytrack.rooms.pharmacy'));
+
+            return $order;
+        });
+    }
+
+    /**
+     * "Kembalikan ke dokter" (frame 34): before preparation starts, the pharmacy sends the
+     * prescription back with a reason. The doctor's new confirmation reopens the same order.
+     */
+    public function returnPrescription(PharmacyOrder $order, Staff $by, string $reason): PharmacyOrder
+    {
+        return DB::transaction(function () use ($order, $by, $reason) {
+            $order = PharmacyOrder::whereKey($order->pharmacy_order_id)->lockForUpdate()->firstOrFail();
+
+            if ($order->prescription_status !== PrescriptionStatus::Received) {
+                throw new QueueRuleException('Resep hanya dapat dikembalikan sebelum obat diproses.');
+            }
+            $order->update([
+                'prescription_status' => PrescriptionStatus::Returned,
+                'returned_at' => now(),
+                'return_reason' => trim($reason),
+                'updated_by_staff_id' => $by->staff_id,
+                'checks' => null,
+            ]);
+            $order->queue->examination?->update(['confirmed_at' => null, 'confirmed_by_staff_id' => null]);
+            $this->notify($order->queue, 'prescription_returned', 'Resep Anda sedang ditinjau ulang oleh dokter.', 'Tunggu di area farmasi.');
+
+            return $order;
+        });
+    }
+
+    /**
+     * Whether the doctor may still change the examination: not confirmed yet, or confirmed
+     * and sent back by the pharmacy.
+     */
+    public function examinationOpen(Queue $queue): bool
+    {
+        return match ($queue->queue_status) {
+            QueueStatus::Serving, QueueStatus::Laboratory => ! $queue->examination?->confirmed_at,
+            QueueStatus::Pharmacy => $queue->pharmacyOrder?->prescription_status === PrescriptionStatus::Returned,
+            default => false,
+        };
+    }
+
+    /**
+     * "Simpan draf" (frame 31): notes, allergy and the prescription. Only the visit's own
+     * doctor writes it, and only while the examination is open.
+     *
+     * @param  array{notes?: ?string, allergy?: ?string, pharmacy_note?: ?string, items?: list<array<string, ?string>>}  $data
+     */
+    public function saveExamination(Queue $queue, Staff $doctor, array $data): Examination
+    {
+        return DB::transaction(function () use ($queue, $doctor, $data) {
+            $queue = Queue::whereKey($queue->queue_id)->lockForUpdate()->with(['examination', 'pharmacyOrder'])->firstOrFail();
+            $this->ensureOwnDoctor($queue, $doctor);
+
+            if (! $this->examinationOpen($queue)) {
+                throw new QueueRuleException('Pemeriksaan ini sudah dikonfirmasi dan tidak dapat diubah.');
+            }
+
+            $exam = $queue->examination ?? new Examination(['queue_id' => $queue->queue_id, 'doctor_id' => $queue->doctor_id]);
+            $exam->fill([
+                'notes' => $this->clean($data['notes'] ?? null),
+                'allergy_note' => $this->clean($data['allergy'] ?? null),
+                'pharmacy_note' => $this->clean($data['pharmacy_note'] ?? null),
+            ])->save();
+
+            if (array_key_exists('items', $data)) {
+                $exam->items()->delete();
+                foreach (array_values($data['items']) as $position => $item) {
+                    $exam->items()->create([
+                        'position' => $position + 1,
+                        'medicine_name' => trim($item['name']),
+                        'dosage_form' => $this->clean($item['form'] ?? null),
+                        'quantity' => trim($item['quantity']),
+                        'dosage' => trim($item['dosage']),
+                        'timing' => $this->clean($item['timing'] ?? null),
+                    ]);
+                }
+            }
+
+            return $exam->load('items');
+        });
+    }
+
+    /**
+     * "Buat permintaan penunjang": the doctor refers the patient to laboratory or radiology.
+     * The consultation ends here; the doctor decides again once the result is back.
+     */
+    public function refer(Queue $queue, Staff $doctor, string $unit, string $test): SupportRequest
+    {
+        $request = DB::transaction(function () use ($queue, $doctor, $unit, $test) {
+            $queue = Queue::whereKey($queue->queue_id)->lockForUpdate()->with(['examination', 'supportRequest'])->firstOrFail();
+            $this->ensureOwnDoctor($queue, $doctor);
+            $label = config("hytrack.support_units.{$unit}") ?? throw new QueueRuleException('Pilih unit penunjang.');
+
+            if ($queue->supportRequest && $queue->supportRequest->status !== SupportStatus::Done) {
+                throw new QueueRuleException("Permintaan {$queue->supportRequest->number()} masih diproses.");
+            }
+            if (! in_array($queue->queue_status, [QueueStatus::Serving, QueueStatus::Laboratory], true) || $queue->examination?->confirmed_at) {
+                throw new QueueRuleException('Permintaan penunjang dibuat selama pemeriksaan dokter.');
+            }
+
+            $apply = function (Queue $queue) use ($doctor, $unit, $label) {
+                $this->stage($queue, JourneyStage::Consultation, StageStatus::Done, $doctor);
+                $lab = $queue->journeys()->where('stage_order', JourneyStage::Laboratory->value)->firstOrFail();
+                $lab->update([
+                    'stage_name' => $label,
+                    'room_location' => config('hytrack.rooms.'.($unit === 'radiologi' ? 'radiology' : 'laboratory')),
+                    'stage_status' => StageStatus::Active,
+                    'started_at' => now(),
+                    'completed_at' => null,
+                    'updated_by_staff_id' => $doctor->staff_id,
+                ]);
+                $this->notify($queue, 'referred', "Dokter merujuk Anda ke {$label}.", $lab->room_location);
+            };
+
+            if ($queue->queue_status === QueueStatus::Serving) {
+                $this->transition($queue, QueueStatus::Laboratory, $apply);
+            } else {
+                $apply($queue);
+            }
+
+            return SupportRequest::create([
+                'queue_id' => $queue->queue_id,
+                'requested_by_staff_id' => $doctor->staff_id,
+                'unit' => $unit,
+                'test_name' => trim($test),
+                'status' => SupportStatus::Waiting,
+                'requested_at' => now(),
+            ]);
+        });
+
+        $this->estimator->refresh($request->queue->doctor_id, $request->queue->service_date);
+
+        return $request;
+    }
+
+    /** "Simpan status" (frame 33): Menunggu or Diproses, the staff note and the result file. */
+    public function updateSupport(SupportRequest $request, Staff $by, SupportStatus $status, ?string $note, ?UploadedFile $file): SupportRequest
+    {
+        if ($status === SupportStatus::Done) {
+            return $this->completeSupport($request, $by, $note, $file);
+        }
+
+        return DB::transaction(function () use ($request, $by, $status, $note, $file) {
+            $request = $this->openSupport($request);
+            $request->fill([
+                'status' => $status,
+                'staff_note' => $this->clean($note),
+                'started_at' => $status === SupportStatus::Processing ? ($request->started_at ?? now()) : $request->started_at,
+                'updated_by_staff_id' => $by->staff_id,
+            ]);
+            $this->attachResult($request, $file);
+            $request->save();
+
+            return $request;
+        });
+    }
+
+    /**
+     * "Konfirmasi selesai & kirim hasil": the result goes back to the referring doctor.
+     * A result document is required; it never becomes a prescription by itself.
+     */
+    public function completeSupport(SupportRequest $request, Staff $by, ?string $note, ?UploadedFile $file): SupportRequest
+    {
+        return DB::transaction(function () use ($request, $by, $note, $file) {
+            $request = $this->openSupport($request);
+            $this->attachResult($request, $file);
+
+            if (! $request->result_path) {
+                throw new QueueRuleException('Lampirkan hasil pemeriksaan sebelum mengirim ke dokter.');
+            }
+
+            $request->fill([
+                'status' => SupportStatus::Done,
+                'staff_note' => $this->clean($note) ?? $request->staff_note,
+                'started_at' => $request->started_at ?? now(),
+                'completed_at' => now(),
+                'updated_by_staff_id' => $by->staff_id,
+            ])->save();
+
+            $queue = $request->queue;
+            $this->stage($queue, JourneyStage::Laboratory, StageStatus::Done, $by);
+            $this->notify($queue, 'support_done', "Hasil {$request->unitLabel()} sudah dikirim ke dokter.", 'Tunggu panggilan dokter untuk tindak lanjut.');
+
+            return $request;
+        });
+    }
+
+    /**
+     * "Konfirmasi & kirim resep" (frames 31–32): the doctor confirms the examination. With
+     * prescription items the visit moves to the pharmacy (a returned prescription is reopened);
+     * without, the visit is finished. Support services must have sent their result first.
+     */
+    public function confirmExamination(Queue $queue, Staff $doctor): Queue
+    {
+        $queue = DB::transaction(function () use ($queue, $doctor) {
+            $queue = Queue::whereKey($queue->queue_id)->lockForUpdate()
+                ->with(['examination.items', 'supportRequest', 'pharmacyOrder'])->firstOrFail();
+            $this->ensureOwnDoctor($queue, $doctor);
+            $exam = $queue->examination;
+
+            if (! $this->examinationOpen($queue)) {
+                throw new QueueRuleException('Pemeriksaan ini sudah dikonfirmasi.');
+            }
+            if (! $exam || ! $exam->notes) {
+                throw new QueueRuleException('Tuliskan catatan pemeriksaan sebelum mengonfirmasi.');
+            }
+            if ($queue->queue_status === QueueStatus::Laboratory && $queue->supportRequest?->status !== SupportStatus::Done) {
+                throw new QueueRuleException('Tunggu hasil penunjang sebelum mengonfirmasi pemeriksaan.');
+            }
+
+            $prescribed = $exam->items->isNotEmpty();
+            $order = $queue->pharmacyOrder;
+
+            if ($order?->prescription_status === PrescriptionStatus::Returned) {
+                if (! $prescribed) {
+                    throw new QueueRuleException('Resep yang dikembalikan farmasi harus berisi obat.');
+                }
+                $exam->update(['confirmed_at' => now(), 'confirmed_by_staff_id' => $doctor->staff_id]);
+                $order->update(['prescription_status' => PrescriptionStatus::Received, 'received_at' => now(), 'updated_by_staff_id' => $doctor->staff_id]);
+                $this->notify($queue, 'pharmacy', "Resep diperbarui dokter. Nomor pengambilan {$order->pickupNumber()}.", config('hytrack.rooms.pharmacy'));
+
+                return $queue;
+            }
+
+            $exam->update(['confirmed_at' => now(), 'confirmed_by_staff_id' => $doctor->staff_id]);
+
+            return $this->transition($queue, $prescribed ? QueueStatus::Pharmacy : QueueStatus::Completed, function (Queue $queue) use ($doctor, $prescribed) {
+                if ($queue->queue_status === QueueStatus::Serving) {
+                    $this->stage($queue, JourneyStage::Consultation, StageStatus::Done, $doctor);
+                    $this->stage($queue, JourneyStage::Laboratory, StageStatus::Skipped, $doctor);
+                }
+
+                if ($prescribed) {
+                    $this->stage($queue, JourneyStage::Pharmacy, StageStatus::Active, $doctor);
+                    $order = PharmacyOrder::create([
+                        'queue_id' => $queue->queue_id,
+                        'updated_by_staff_id' => $doctor->staff_id,
+                        'prescription_status' => PrescriptionStatus::Received,
+                        'received_at' => now(),
+                    ]);
+                    $this->notify($queue, 'pharmacy', "Resep dikirim ke farmasi. Nomor pengambilan {$order->pickupNumber()}.", config('hytrack.rooms.pharmacy'));
+                } else {
+                    $this->stage($queue, JourneyStage::Pharmacy, StageStatus::Skipped, $doctor);
+                    $this->endCompanions($queue);
+                    $this->notify($queue, 'completed', 'Pemeriksaan selesai tanpa resep. Semoga lekas sehat.');
+                }
+            });
+        });
+
+        $this->estimator->refresh($queue->doctor_id, $queue->service_date);
+
+        return $queue->refresh();
+    }
+
+    private function ensureOwnDoctor(Queue $queue, Staff $doctor): void
+    {
+        if ($doctor->doctor_id === null || $doctor->doctor_id !== $queue->doctor_id) {
+            throw new AuthorizationException('Hanya dokter pemeriksa yang dapat mengubah pemeriksaan ini.');
+        }
+    }
+
+    private function openSupport(SupportRequest $request): SupportRequest
+    {
+        $request = SupportRequest::whereKey($request->support_request_id)->lockForUpdate()->firstOrFail();
+
+        if ($request->status === SupportStatus::Done) {
+            throw new QueueRuleException("Hasil {$request->number()} sudah dikirim ke dokter.");
+        }
+
+        return $request;
+    }
+
+    /** Stores the result on the private disk; a new file replaces the previous one. */
+    private function attachResult(SupportRequest $request, ?UploadedFile $file): void
+    {
+        if (! $file) {
+            return;
+        }
+        $diskName = config('hytrack.support_result_disk');
+        $path = $file->store('support-results', $diskName);
+
+        if ($path === false) {
+            throw new QueueRuleException('Hasil pemeriksaan gagal disimpan. Coba lagi.');
+        }
+        if ($request->result_path) {
+            Storage::disk($diskName)->delete($request->result_path);
+        }
+        $request->fill([
+            'result_path' => $path,
+            'result_name' => mb_substr($file->getClientOriginalName(), 0, 150),
+            'result_mime' => $file->getMimeType(),
+        ]);
+    }
+
+    private function clean(?string $value): ?string
+    {
+        $value = $value === null ? null : trim($value);
+
+        return $value === '' ? null : $value;
     }
 
     /**

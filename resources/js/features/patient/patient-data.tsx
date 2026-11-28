@@ -1,11 +1,13 @@
 import { Link, useForm } from '@inertiajs/react';
 import {
   cloneElement,
+  useState,
   type FormEvent,
   type InputHTMLAttributes,
   type ReactElement,
   type ReactNode,
 } from 'react';
+import { DeleteDialog } from '@/components/delete-dialog';
 import { Shell } from '@/components/shell';
 
 export interface PatientRecord {
@@ -26,6 +28,7 @@ const genders = { female: 'Perempuan', male: 'Laki-laki' };
 
 /** Data pasien (Figma 27:61): the account's own record, then the family it manages. */
 export function PatientData({ patients }: { patients: PatientRecord[] }) {
+  const [removing, setRemoving] = useState<PatientRecord | null>(null);
   return (
     <Shell
       title="Data pasien"
@@ -73,8 +76,29 @@ export function PatientData({ patients }: { patients: PatientRecord[] }) {
           <Link className="button outline" href={`/data-pasien/${patient.id}/ubah`}>
             Ubah data pasien
           </Link>
+          {/* The account's own record is the account itself; only family records can go. */}
+          {!patient.self && (
+            <button
+              type="button"
+              className="text-button danger"
+              onClick={() => setRemoving(patient)}
+            >
+              Hapus data pasien
+            </button>
+          )}
         </article>
       ))}
+      {removing && (
+        <DeleteDialog
+          url={`/data-pasien/${removing.id}`}
+          title="Hapus data pasien?"
+          description="Data pasien berikut akan dihapus dari daftar Anda. Tindakan ini tidak dapat dibatalkan."
+          name={removing.name}
+          details={[removing.recordNumber ? `No. RM ${removing.recordNumber}` : 'Belum ada No. RM']}
+          note="Pastikan data pasien yang dipilih sudah benar."
+          onClose={() => setRemoving(null)}
+        />
+      )}
       <section className="tip-card">
         <strong>Mengurus kunjungan keluarga?</strong>
         <p>

@@ -326,3 +326,324 @@
 .auth-prototype-roles button:hover {
   background: #e1efe7;
 }
+
+/* Sign-in (Figma 00a · Login, node 31:53): mint atmosphere on top, role choice above the form.
+   Identity → form 24px, form → help 12px; the last line sits 18px above the frame's end, over
+   the waves, as in the design. */
+.auth-login {
+  background:
+    url('/assets/atmos-mint.svg') left top / 100% 220px no-repeat,
+    url('/assets/wave-mint.svg') left 0 bottom -24px / 100% 170px no-repeat,
+    #f6f8f4;
+}
+.auth-login .auth-main {
+  gap: 24px;
+  padding-bottom: 18px;
+}
+.auth-login .auth-help {
+  margin-top: -12px;
+}
+.auth-login .auth-input {
+  border-color: #dce8e1;
+  border-radius: 13px;
+}
+.auth-login .auth-submit {
+  border-radius: 14px;
+  background: linear-gradient(169.2deg, #086b62 0%, #168875 71.43%);
+  box-shadow: 0 5px 12px rgba(23, 106, 89, 0.16);
+}
+.auth-login .auth-submit:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+.auth-login .auth-benefit {
+  padding: 15px;
+  border: 1px solid #cfe4d8;
+  border-radius: 18px;
+}
+.auth-roles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.auth-roles legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.auth-roles > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+/* 176×112 cards; content sits 12px from the outer edge whatever the border width. */
+.auth-role {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 112px;
+  padding: 9px 11px 7px;
+  background: white;
+  border: 1px solid #dce8e1;
+  border-radius: 12px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background-color 0.15s;
+}
+.auth-role:hover {
+  border-color: #b7c7c0;
+}
+.auth-role:has(input:checked) {
+  padding: 8.5px 10.5px 6.5px;
+  background: #e1efe7;
+  border: 1.5px solid #086f65;
+}
+.auth-role:has(input:focus-visible) {
+  outline: 3px solid #bc6748;
+  outline-offset: 3px;
+}
+.auth-role img {
+  width: 28px;
+  height: 28px;
+}
+.auth-role strong {
+  margin-top: 6px;
+  color: #173d3b;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 21px;
+}
+.auth-role:has(input:checked) strong {
+  color: #086f65;
+}
+/* Figma #5c706c is 4.43:1 on the selected mint; one step darker reaches WCAG AA 4.5:1. */
+.auth-role:has(input:checked) small {
+  color: #5b6f6b;
+}
+.auth-role small {
+  margin-top: 3px;
+  color: #5c706c;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: pre-line;
+}
+/* Radio mark at 16px from the top and 14px from the right edge of the card. */
+.auth-radio {
+  position: absolute;
+  top: 15px;
+  right: 13px;
+  width: 16px;
+  height: 16px;
+  border: 1px solid #5c706c;
+  border-radius: 50%;
+  background: white;
+}
+.auth-role:has(input:checked) .auth-radio {
+  top: 14.5px;
+  right: 12.5px;
+  border-color: #086f65;
+  background: #086f65;
+  box-shadow: inset 0 0 0 4px #086f65;
+}
+.auth-role:has(input:checked) .auth-radio::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: white;
+}
+@media (max-width: 359px) {
+  .auth-roles > div {
+    gap: 8px;
+  }
+}
+
+/* Sign-up steps 2 and 3 (Figma 32:286 Kode OTP, 32:330 Verifikasi berhasil). */
+.verify-page {
+  background: #f6f8f4;
+}
+.verify-main {
+  max-width: 412px;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 28px 30px 24px;
+  display: flex;
+  flex-direction: column;
+}
+.verify-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 24px;
+  font-size: 14px;
+  line-height: 20px;
+}
+.verify-back {
+  display: inline-flex;
+  gap: 8px;
+  color: #173d3b;
+  font-weight: 500;
+}
+a.verify-back {
+  margin: -10px;
+  padding: 10px;
+}
+.verify-count {
+  color: #5c706c;
+  font-weight: 500;
+}
+.verify-progress {
+  display: flex;
+  gap: 6px;
+  margin-top: 20px;
+}
+.verify-progress span {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: #dfeae4;
+}
+.verify-progress .done {
+  background: #086f65;
+}
+.verify-chip {
+  align-self: flex-start;
+  margin-top: 60px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: #e1efe7;
+  color: #086f65;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 14px;
+  letter-spacing: 0.8px;
+}
+.verify-main h1 {
+  margin-top: 20px;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 40px;
+  letter-spacing: 0;
+}
+.verify-lead {
+  margin-top: 20px;
+  color: #5c706c;
+  font-size: 14px;
+  line-height: 24px;
+}
+.verify-lead strong {
+  color: #173d3b;
+  font-size: 15px;
+  font-weight: 600;
+}
+.verify-lead .auth-link {
+  margin-left: 8px;
+  font-size: 13px;
+}
+.verify-main > .notice {
+  margin-top: 16px;
+}
+.verify-form {
+  display: flex;
+  flex-direction: column;
+  margin-top: 24px;
+}
+.otp-boxes {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.otp-boxes input {
+  width: 100%;
+  min-width: 0;
+  height: 60px;
+  border: 1px solid #dce8e1;
+  border-radius: 12px;
+  background: #fff;
+  color: #173d3b;
+  font-size: 24px;
+  font-weight: 600;
+  text-align: center;
+}
+.otp-boxes input:focus {
+  border: 2px solid #086f65;
+  background: #e1efe7;
+  outline: none;
+}
+.otp-boxes input[aria-invalid='true'] {
+  border-color: #9b3b1f;
+}
+.verify-form .field-error {
+  margin-top: 10px;
+}
+.verify-resend {
+  margin: 22px 0 22px;
+  color: #5c706c;
+  font-size: 12px;
+  line-height: 17px;
+  text-align: center;
+}
+.verify-resend strong {
+  margin-left: 4px;
+  color: #086f65;
+}
+.verify-resend .auth-link {
+  font-size: 13px;
+}
+.verify-note {
+  margin-top: 20px;
+  color: #5c706c;
+  font-size: 12px;
+  line-height: 19px;
+  text-align: center;
+}
+.verify-card {
+  margin-top: 28px;
+  padding: 20px 18px;
+  border-radius: 16px;
+  background: #e1efe7;
+}
+.verify-chip-label {
+  color: #086f65;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+.verify-phone {
+  margin: 10px 0 12px;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 28px;
+}
+.verify-card p:last-child {
+  color: #5c706c;
+  font-size: 12px;
+}
+.verify-continue {
+  display: grid;
+  place-items: center;
+  margin-top: 28px;
+}
+.verify-help {
+  margin-top: auto;
+  padding-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: #5c706c;
+  font-size: 13px;
+  text-align: center;
+}
+.verify-help .auth-link {
+  font-size: 13px;
+}

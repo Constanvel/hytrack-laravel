@@ -7,6 +7,7 @@ use App\Models\Queue;
 use App\Services\ServiceInsights;
 use App\Support\HospitalTime;
 use Carbon\CarbonImmutable;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -15,7 +16,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 /** Service Insights: aggregate waiting-time and performance figures. */
 class ManagementController extends Controller
 {
-    public function index(Request $request, ServiceInsights $insights): Response
+    public function index(Request $request, ServiceInsights $insights): Response|JsonResponse
     {
         [$date, $clinicId] = $this->filters($request);
 
@@ -24,7 +25,7 @@ class ManagementController extends Controller
             ->distinct()->orderByDesc('service_date')->limit(6)->pluck('service_date')
             ->prepend(HospitalTime::today());
 
-        return Inertia::render('Management', [
+        $props = [
             'dates' => $dates->map(fn (string $value) => [
                 'value' => $value,
                 'label' => CarbonImmutable::parse($value)->locale('id')->translatedFormat('j M Y'),
@@ -34,7 +35,10 @@ class ManagementController extends Controller
             'date' => $date,
             'clinicId' => $clinicId,
             'report' => $insights->report($date, $clinicId),
-        ]);
+        ];
+
+        // The Android app reads the same figures as JSON (routes/api.php).
+        return $request->is('api/*') ? response()->json($props) : Inertia::render('Management', $props);
     }
 
     public function export(Request $request, ServiceInsights $insights): StreamedResponse

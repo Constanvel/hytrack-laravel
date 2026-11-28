@@ -27,7 +27,8 @@ class Doctor extends Model
 
     public function polyclinic(): BelongsTo
     {
-        return $this->belongsTo(Polyclinic::class, 'polyclinic_id', 'polyclinic_id');
+        // Archived polyclinics included: a doctor's history still names its polyclinic.
+        return $this->belongsTo(Polyclinic::class, 'polyclinic_id', 'polyclinic_id')->withTrashed();
     }
 
     public function queues(): HasMany

@@ -1,0 +1,14 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="412" height="220" viewBox="0 0 412 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Aksen &#194;&#183; atmosfer mint" clip-path="url(#clip0_0_4)">
+<rect width="412" height="220" fill="url(#paint0_linear_0_4)"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_4" x1="206" y1="0" x2="206" y2="220" gradientUnits="userSpaceOnUse">
+<stop stop-color="#DDEFE7"/>
+<stop offset="1" stop-color="#F6F8F4" stop-opacity="0"/>
+</linearGradient>
+<clipPath id="clip0_0_4">
+<rect width="412" height="220" fill="white"/>
+</clipPath>
+</defs>
+</svg>

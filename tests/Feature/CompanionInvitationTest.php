@@ -89,6 +89,8 @@ class CompanionInvitationTest extends TestCase
             ->where('progress.place', 'Belum check-in')
             ->where('progress.timeline.0.label', 'Menunggu kedatangan')
             ->where('progress.endsAt', 'hari ini pukul 23.59')
+            ->where('progress.day', 'Hari ini')
+            ->where('progress.schedule', $this->doctor->scheduleLabel())
             ->missing('progress.checkInCode')
             ->missing('progress.checkInQr')
             ->missing('progress.doctor'));
@@ -195,5 +197,42 @@ class CompanionInvitationTest extends TestCase
         $this->post('/pantauan/'.$pending)->assertNotFound();
         $this->actingAs($this->patient)->get('/pendamping')->assertInertia(fn (AssertableInertia $page) => $page
             ->where('invitations.1.status', 'expired'));
+    }
+
+    public function test_signing_in_as_companion_opens_the_followed_visit(): void
+    {
+        $companion = $this->companion();
+        // Nothing followed yet: the companion list explains how to start.
+        $this->post('/masuk', ['username' => $companion->username, 'password' => 'password', 'as' => 'companion'])
+            ->assertRedirect('/pendampingan');
+        $this->post('/keluar');
+
+        $this->book();
+        $token = $this->invite();
+        $this->actingAs($companion)->post('/pantauan/'.$token);
+        $this->post('/keluar');
+
+        // One followed visit opens directly; "Pasien" still lands on the patient home.
+        $share = CompanionShare::sole();
+        $this->post('/masuk', ['username' => $companion->username, 'password' => 'password', 'as' => 'companion'])
+            ->assertRedirect('/pendampingan/'.$share->share_id);
+        // The choice lasts for the session: reopening the app returns to the followed visit.
+        $this->get('/')->assertRedirect('/pendampingan/'.$share->share_id);
+        $share->update(['status' => InvitationStatus::Revoked]);
+        $this->get('/')->assertOk()->assertInertia(fn ($page) => $page->component('Home'));
+        $this->post('/keluar');
+        $share->update(['status' => InvitationStatus::Accepted]);
+        $this->post('/masuk', ['username' => $companion->username, 'password' => 'password', 'as' => 'patient'])
+            ->assertRedirect('/');
+        $this->get('/')->assertOk()->assertInertia(fn ($page) => $page->component('Home'));
+        $this->post('/keluar');
+        $this->post('/masuk', ['username' => $companion->username, 'password' => 'password', 'as' => 'staff'])
+            ->assertSessionHasErrors('as');
+
+        // Staff accounts cannot use the patient sign-in at all, whatever they choose.
+        $staff = Staff::factory()->create()->user;
+        $this->post('/masuk', ['username' => $staff->username, 'password' => 'password', 'as' => 'companion'])
+            ->assertSessionHasErrors(['username' => 'Akun petugas dan manajemen masuk melalui halaman masuk internal.']);
+        $this->assertGuest();
     }
 }

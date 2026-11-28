@@ -1,5 +1,5 @@
 import { test, expect, chromium, type Page } from '@playwright/test';
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 
 /*
  * The demonstration from two separate sessions, in operational mode (no demo controls):
@@ -13,12 +13,15 @@ const STAFF_PASSWORD = 'hytrack-demo'; // seeded demo staff account "dina"
 const WIDTH = 640;
 const HEIGHT = 480;
 
+/** Patients (phone numbers) use /masuk; the staff account "dina" uses /masuk/internal. */
 async function signIn(page: Page, username: string, password: string) {
-  await page.goto('/masuk');
-  await page.getByLabel('Nomor ponsel').fill(username);
+  const staff = /[a-z]/i.test(username);
+  await page.goto(staff ? '/masuk/internal' : '/masuk');
+  if (staff) await page.getByText('Petugas', { exact: true }).click();
+  await page.getByLabel(staff ? 'ID pengguna atau email' : 'Nomor ponsel').fill(username);
   await page.getByLabel('Kata sandi', { exact: true }).fill(password);
-  await page.getByRole('button', { name: 'Masuk' }).click();
-  await expect(page).not.toHaveURL(/\/masuk$/);
+  await page.getByRole('button', { name: 'Masuk', exact: true }).click();
+  await expect(page).not.toHaveURL(/\/masuk(\/internal)?$/);
 }
 
 async function skipGuide(page: Page) {
@@ -73,7 +76,19 @@ test('patient books in one browser, staff scan and confirm in another', async ({
   await patient.getByLabel('Konfirmasi kata sandi').fill(PATIENT_PASSWORD);
   await patient.locator('.auth-consent input').check();
   await patient.getByRole('button', { name: 'Buat akun' }).click();
-  await expect(patient).not.toHaveURL(/\/daftar$/);
+  // Sign-up step 2/3: outside demo mode the code goes to the log (no SMS gateway yet).
+  await expect(patient).toHaveURL(/\/daftar\/verifikasi$/);
+  await expect(patient.getByText('+62 813 •••• 1357')).toBeVisible();
+  const code = [
+    ...readFileSync('storage/logs/laravel.log', 'utf8').matchAll(
+      /Kode OTP pendaftaran .*?"code":"(\d{6})"/g,
+    ),
+  ].pop()![1];
+  await patient.getByLabel('Digit 1 dari 6').focus();
+  await patient.keyboard.type(code);
+  await patient.getByRole('button', { name: 'Verifikasi & lanjutkan' }).click();
+  await patient.getByRole('link', { name: 'Lanjut ke beranda' }).click();
+  await expect(patient).toHaveURL(new RegExp(`${baseURL}/?$`));
   await patient.goto('/akun');
   await patient.getByRole('button', { name: 'Keluar' }).click();
   await expect(patient).toHaveURL(/\/masuk$/);
@@ -123,12 +138,12 @@ test('patient books in one browser, staff scan and confirm in another', async ({
   await expect(detail).toContainText('Belum check-in');
 
   // 4. Scan QR → match → "Konfirmasi hadir".
-  await staff.getByRole('button', { name: 'Scan QR', exact: true }).click();
+  await staff.getByRole('button', { name: 'Scan QR kedatangan', exact: true }).click();
   const result = staff.locator('.scan-card.result');
   await expect(result).toContainText('Rina Wulandari', { timeout: 20000 });
   await expect(result).toContainText(ticket);
   await expect(result).toContainText('Penyakit Dalam');
-  await staff.getByRole('button', { name: 'Konfirmasi hadir' }).click();
+  await staff.getByRole('button', { name: 'Konfirmasi check-in' }).click();
   await expect(staff.locator('.scan-status')).toContainText(`${ticket} berhasil check-in pukul`);
 
   // 5. The patient's screen changes on its own within one polling interval (3 s here).
@@ -157,7 +172,9 @@ test('patient books in one browser, staff scan and confirm in another', async ({
   const item = patient.locator('.history-list li').first();
   await expect(item).toContainText(ticket);
   await expect(item).toContainText('Sudah check-in');
-  await expect(item).toContainText(`Check-in tercatat`);
+  await item.getByRole('button', { name: 'Lihat detail' }).click();
+  await expect(item.locator('.history-detail')).toContainText('Check-in');
+  await expect(item.locator('.history-detail')).not.toContainText('Tidak tercatat');
 
   await signIn(staff, 'dina', STAFF_PASSWORD);
   await staff.getByRole('button', { name: 'Daftar booking' }).click();

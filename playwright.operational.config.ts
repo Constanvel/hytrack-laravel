@@ -37,6 +37,8 @@ export default defineConfig({
       DB_DATABASE: 'hytrack_laravel_test',
       SESSION_DRIVER: 'database',
       CACHE_STORE: 'array',
+      // Pending sign-ups must outlive one request of PHP's built-in server.
+      HYTRACK_SIGNUP_STORE: 'database',
       E2E_PORT: String(port),
       HYTRACK_DEMO_CONTROLS: 'false',
       // A short interval keeps the test quick; the rule checked is "within one interval".

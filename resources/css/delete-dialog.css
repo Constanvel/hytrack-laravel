@@ -1,0 +1,164 @@
+/* The confirmation for every delete (Figma 31:273). It lives on <body>, so it carries all
+   of its own styles. */
+.delete-dialog {
+  width: min(364px, calc(100% - 48px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 0;
+  border-radius: 22px;
+  background: #fff;
+  color: #173d3b;
+  text-align: center;
+  font-family: 'Inter', sans-serif;
+  box-shadow: 0 18px 48px rgba(10, 31, 28, 0.18);
+}
+.delete-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  animation: enter 0.18s ease-out;
+}
+.delete-dialog::backdrop {
+  background: rgba(10, 31, 28, 0.48);
+  animation: dim 0.18s ease-out;
+}
+.delete-dialog[open].closing {
+  animation: leave 0.15s ease-in forwards;
+}
+.delete-dialog.closing::backdrop {
+  animation: undim 0.15s ease-in forwards;
+}
+@keyframes leave {
+  to {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+}
+@keyframes dim {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes undim {
+  to {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .delete-dialog::backdrop {
+    animation: none !important;
+  }
+}
+.delete-mark {
+  flex: none;
+  align-self: center;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: #fcebe9;
+}
+.delete-mark img {
+  width: 28px;
+  height: 28px;
+}
+.delete-dialog h2 {
+  margin-top: 16px;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 31px;
+}
+.delete-dialog #delete-detail {
+  margin-top: 12px;
+  color: #5c706c;
+  font-size: 14px;
+  line-height: 20px;
+}
+.delete-target {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 36px;
+  padding: 9px 15px;
+  border: 1px solid #dce8e1;
+  border-radius: 12px;
+  background: #f6f8f4;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.delete-target strong {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 21px;
+}
+.delete-target span {
+  color: #5c706c;
+  font-size: 12px;
+  line-height: 18px;
+}
+.delete-note {
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+  color: #5c706c;
+  font-size: 12px;
+  line-height: 18px;
+}
+.delete-note.list {
+  padding-left: 18px;
+  list-style: disc;
+  text-align: left;
+}
+.delete-note.list li + li {
+  margin-top: 6px;
+}
+.delete-dialog .field-error {
+  margin-top: 12px;
+}
+.delete-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 32px;
+}
+.delete-actions button {
+  min-height: 52px;
+  padding: 14px 8px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+}
+.delete-actions .delete-cancel {
+  border-color: #086f65;
+  background: #fff;
+  color: #086f65;
+}
+.delete-actions .delete-cancel:hover:not([aria-disabled='true']) {
+  background: #f1f8f4;
+}
+.delete-actions .delete-confirm {
+  background: #b63832;
+  color: #fff;
+}
+.delete-actions .delete-confirm:hover:not([aria-disabled='true']) {
+  background: #9c2e29;
+}
+.delete-actions button[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+/* Focus lands on <main> after a deletion removes the button that had it. */
+main[tabindex='-1']:focus {
+  outline: none;
+}
+@media (max-width: 359px) {
+  .delete-dialog {
+    width: calc(100% - 32px);
+    padding: 20px 16px;
+  }
+}

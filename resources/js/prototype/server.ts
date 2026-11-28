@@ -22,6 +22,8 @@ export const PREFIX = '/prototipe';
 export interface State {
   user: User | null;
   step: number;
+  /** Signed in as Pendamping: "/" opens the companion view, as in routes/web.php. */
+  companion?: boolean;
 }
 export const initialState: State = { user: null, step: 0 };
 export interface Page {
@@ -46,7 +48,7 @@ const SAVED = 'Mode prototype: perubahan hanya contoh dan tidak disimpan.';
 
 /** Roles own their own area; everyone else is sent home, as Laravel's role middleware does. */
 function owner(path: string): 'patient' | 'staff' | 'manager' | 'guest' | 'any' {
-  if (path === '/masuk' || path === '/daftar') return 'guest';
+  if (['/masuk', '/masuk/internal', '/daftar', '/daftar/verifikasi'].includes(path)) return 'guest';
   if (path.startsWith('/pantauan/')) return 'any';
   if (path.startsWith('/petugas')) return 'staff';
   if (path.startsWith('/manajemen')) return 'manager';
@@ -56,6 +58,16 @@ function owner(path: string): 'patient' | 'staff' | 'manager' | 'guest' | 'any' 
 function lookup(state: State, path: string, query: URLSearchParams): Recorded | null {
   const user = state.user ?? 'guest';
   if (path === '/') return { component: 'Home', props: {} };
+  // Staff and manager sample accounts sign in here only, as in the real app.
+  if (path === '/masuk/internal') return { component: 'InternalLogin', props: {} };
+  // Sign-up steps 2 and 3: no SMS in the prototype, so the code is shown (any 6 digits pass).
+  if (path === '/daftar/verifikasi')
+    return {
+      component: 'RegisterOtp',
+      props: { phone: '+62 812 •••• 0842', resendIn: 45, expiresIn: 300, demoCode: '123456' },
+    };
+  if (path === '/daftar/selesai')
+    return { component: 'RegisterVerified', props: { phone: '+62 812 •••• 0842', next: '/' } };
   if (path.startsWith('/pantauan/'))
     return fixtures.pages[`${user === 'guest' ? 'guest' : 'ahmad'}|/pantauan/*`];
   if (/^\/pendampingan\/\d+$/.test(path)) path = `/pendampingan/${fixtures.shareId}`;
@@ -87,6 +99,7 @@ function render(state: State, url: string, flash: Flash = {}): Page {
   const area = owner(path);
   const user = state.user;
   if (!user && area !== 'guest' && area !== 'any') return render(state, '/masuk', flash);
+  if (user && path === '/' && state.companion) return render(state, '/pendampingan', flash);
   if (user) {
     const role = fixtures.users[user].auth.role as string;
     const allowed = area === 'any' || area === (role === 'patient' ? 'patient' : role);
@@ -98,7 +111,10 @@ function render(state: State, url: string, flash: Flash = {}): Page {
     user === 'siti' || user === 'ahmad'
       ? fixtures.steps[state.step].shared[user]
       : { ...fixtures.steps[state.step].shared.siti, visit: null, unread: 0, following: 0 };
-  const extra = page.component === 'Login' ? { demoAccounts: null, prototype: true } : {};
+  const extra =
+    page.component === 'Login' || page.component === 'InternalLogin'
+      ? { demoAccounts: null, prototype: true }
+      : {};
   return {
     component: page.component,
     props: {
@@ -147,17 +163,34 @@ export function respond(
   const route = path.split('?')[0];
   if (method === 'GET') return go(path);
 
-  if (route === '/masuk') {
+  if (route === '/masuk/internal') {
     s.user = accountFor(String(body.username ?? ''));
+    s.companion = false;
     return go(fixtures.users[s.user].home);
   }
-  if (route === '/daftar') {
+  if (route === '/masuk') {
+    s.user = accountFor(String(body.username ?? ''));
+    // "Masuk sebagai: Pendamping" opens the companion view, as AuthController does.
+    s.companion = body.as === 'companion' && fixtures.users[s.user].auth.role === 'patient';
+    if (s.companion) return go('/pendampingan');
+    return go(fixtures.users[s.user].home);
+  }
+  if (route === '/daftar') return go('/daftar/verifikasi');
+  if (route === '/daftar/verifikasi/kirim-ulang')
+    return back({ status: 'Kode baru telah dikirim.' });
+  if (route === '/daftar/verifikasi') {
     s.user = 'siti';
-    return go('/', { status: 'Mode prototype: Anda masuk sebagai pasien contoh, Siti Aminah.' });
+    s.companion = false;
+    return go('/daftar/selesai', {
+      status: 'Mode prototype: Anda masuk sebagai pasien contoh, Siti Aminah.',
+    });
   }
   if (route === '/keluar') {
+    // Internal accounts go back to their own sign-in page, as AuthController::destroy does.
+    const internal = s.user !== null && fixtures.users[s.user].auth.role !== 'patient';
     s.user = null;
-    return go('/masuk');
+    s.companion = false;
+    return go(internal ? '/masuk/internal' : '/masuk');
   }
   if (!s.user) return go('/masuk');
 
@@ -207,6 +240,8 @@ export function respond(
     return go('/pendampingan', { status: 'Anda berhenti memantau kunjungan ini.' });
   }
   if (route.startsWith('/data-pasien')) return go('/data-pasien', { status: SAVED });
+  // Master data is not part of the sample visit, so saving it must not move the visit on.
+  if (route.startsWith('/petugas/poliklinik')) return back({ status: SAVED });
   if (route === '/petugas/scan')
     return back(
       s.step > 0 && s.step < CHECKED_IN

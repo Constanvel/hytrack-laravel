@@ -29,6 +29,30 @@ class ServiceInsights
         $arrived = $queues->whereNotNull('checkin_at');
         $target = config('hytrack.wait_target_minutes');
         $count = fn (QueueStatus ...$statuses) => $queues->whereIn('queue_status', $statuses)->count();
+        // Each stage is a span from one timestamp to the next (Figma 43:2 frame 24).
+        $stages = collect([
+            'Check-in → dokter' => fn (Queue $queue) => [$queue->checkin_at, $queue->journey(JourneyStage::Consultation)?->started_at],
+            'Dokter → laboratorium' => fn (Queue $queue) => [$queue->journey(JourneyStage::Laboratory)?->started_at, $queue->journey(JourneyStage::Laboratory)?->completed_at],
+            'Resep → obat siap' => fn (Queue $queue) => [$queue->pharmacyOrder?->received_at, $queue->pharmacyOrder?->ready_at],
+        ])->map(function (callable $span, string $label) use ($queues) {
+            $spans = $queues->map($span)->filter(fn (array $span) => $this->minutes(...$span) !== null);
+
+            return [
+                'label' => $label,
+                'minutes' => $this->average($spans->map(fn (array $span) => $this->minutes(...$span))),
+                'hourly' => $spans
+                    ->groupBy(fn (array $span) => HospitalTime::local($span[0])->format('H').'.00')
+                    ->map(fn (Collection $hour, string $label) => [
+                        'hour' => $label,
+                        'wait' => $this->average($hour->map(fn (array $span) => $this->minutes(...$span))),
+                    ])
+                    ->sortKeys()->values()->all(),
+            ];
+        })->values();
+        $latest = $queues->flatMap(fn (Queue $queue) => [
+            $queue->checkin_at, $queue->pharmacyOrder?->received_at, $queue->pharmacyOrder?->completed_at,
+            ...$queue->journeys->flatMap(fn ($journey) => [$journey->started_at, $journey->completed_at]),
+        ])->filter()->max();
 
         return [
             'registered' => $queues->count(),
@@ -42,14 +66,8 @@ class ServiceInsights
                 $arrived->count(),
             ),
             'target' => $target,
-            'hourly' => $queues
-                ->filter(fn (Queue $queue) => $this->doctorWait($queue) !== null)
-                ->groupBy(fn (Queue $queue) => HospitalTime::local($queue->checkin_at)->format('H').'.00')
-                ->map(fn (Collection $hour, string $label) => [
-                    'hour' => $label,
-                    'wait' => $this->average($hour->map(fn (Queue $queue) => $this->doctorWait($queue))),
-                ])
-                ->sortKeys()->values()->all(),
+            'updatedAt' => $latest ? HospitalTime::local($latest)->format('H.i') : null,
+            'hourly' => $stages[0]['hourly'],
             'clinics' => $queues
                 ->groupBy('polyclinic_id')
                 ->map(fn (Collection $clinic) => [
@@ -58,15 +76,7 @@ class ServiceInsights
                     'wait' => $this->average($clinic->map(fn (Queue $queue) => $this->doctorWait($queue))->filter(fn ($wait) => $wait !== null)),
                 ])
                 ->sortByDesc('wait')->values()->all(),
-            'stages' => [
-                ['label' => 'Check-in → dokter', 'minutes' => $this->average($waits)],
-                ['label' => 'Dokter → laboratorium selesai', 'minutes' => $this->average($queues->map(
-                    fn (Queue $queue) => $this->minutes($queue->journey(JourneyStage::Laboratory)?->started_at, $queue->journey(JourneyStage::Laboratory)?->completed_at),
-                )->filter(fn ($value) => $value !== null))],
-                ['label' => 'Resep → obat siap', 'minutes' => $this->average($queues->map(
-                    fn (Queue $queue) => $this->minutes($queue->pharmacyOrder?->received_at, $queue->pharmacyOrder?->ready_at),
-                )->filter(fn ($value) => $value !== null))],
-            ],
+            'stages' => $stages->all(),
         ];
     }
 

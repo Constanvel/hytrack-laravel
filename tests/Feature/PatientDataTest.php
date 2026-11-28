@@ -123,4 +123,24 @@ class PatientDataTest extends TestCase
         $this->get('/data-pasien/tambah')->assertInertia(fn (AssertableInertia $page) => $page
             ->component('PatientForm')->where('patient', null));
     }
+
+    public function test_family_records_are_deleted_only_by_their_account(): void
+    {
+        $this->post('/data-pasien', $this->form);
+        $child = Patient::where('full_name', 'Rafi Pratama')->sole();
+
+        // The account's own record is the account: it cannot be deleted.
+        $this->delete("/data-pasien/{$this->owner->patient_id}")->assertSessionHasErrors('patient');
+        $this->assertModelExists($this->owner);
+
+        // Another account cannot reach the record at all.
+        $stranger = Patient::factory()->create()->user;
+        $this->actingAs($stranger)->delete("/data-pasien/{$child->patient_id}")->assertNotFound();
+        $this->assertModelExists($child);
+
+        $this->actingAs($this->owner->user)->delete("/data-pasien/{$child->patient_id}")
+            ->assertRedirect('/data-pasien')->assertSessionHas('inertia.flash_data.status', 'Data Rafi Pratama dihapus dari daftar Anda.');
+        $this->assertModelMissing($child);
+        $this->get('/data-pasien')->assertInertia(fn (AssertableInertia $page) => $page->has('patients', 1));
+    }
 }

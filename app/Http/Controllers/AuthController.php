@@ -5,11 +5,11 @@ namespace App\Http\Controllers;
 use App\Enums\UserRole;
 use App\Models\Patient;
 use App\Models\User;
-use Illuminate\Database\UniqueConstraintViolationException;
+use App\Services\CompanionInvitations;
+use App\Services\SignupVerification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -21,11 +21,12 @@ class AuthController extends Controller
         return Inertia::render('Login', [
             // Shown only in demo mode, where the seeded accounts are meant to be shared.
             'demoAccounts' => config('hytrack.demo_controls')
-                ? 'Akun demo — pasien: 0812-5550-0842 · pendamping: 0812-5550-0843 · petugas: dina · manajemen: manajer · kata sandi: '.config('hytrack.demo_password')
+                ? 'Akun demo — pasien: 0812-5550-0842 · pendamping: 0812-5550-0843 · kata sandi: '.config('hytrack.demo_password')
                 : null,
         ]);
     }
 
+    /** Patient sign-in. Staff and manager accounts use /masuk/internal only. */
     public function store(Request $request): RedirectResponse
     {
         $credentials = $request->validate([
@@ -35,11 +36,56 @@ class AuthController extends Controller
             'username.required' => 'Nomor ponsel wajib diisi.',
             'password.required' => 'Kata sandi wajib diisi.',
         ]);
+        // "Masuk sebagai" on the sign-in screen: where a patient account lands, not a separate role.
+        $as = $request->validate(['as' => ['nullable', 'in:patient,companion']])['as'] ?? 'patient';
         $credentials['username'] = $this->accountName($credentials['username']);
 
         // Deactivated accounts keep their history but can no longer sign in.
         if (! Auth::attempt([...$credentials, 'is_active' => true])) {
             throw ValidationException::withMessages(['username' => 'Nomor ponsel atau kata sandi salah.']);
+        }
+        if ($request->user()->role !== UserRole::Patient) {
+            Auth::logout();
+            throw ValidationException::withMessages(['username' => 'Akun petugas dan manajemen masuk melalui halaman masuk internal.']);
+        }
+
+        return $this->signedIn($request, $as === 'companion');
+    }
+
+    /** Figma 47:2 "Login · Petugas dan Manajemen": internal accounts choose their role first. */
+    public function createInternal(): Response
+    {
+        return Inertia::render('InternalLogin', [
+            'demoAccounts' => config('hytrack.demo_controls')
+                ? 'Akun demo — petugas: dina · dokter: rina · laboratorium: rani · farmasi: dinda · manajemen: manajer · kata sandi: '.config('hytrack.demo_password')
+                : null,
+        ]);
+    }
+
+    public function storeInternal(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'as' => ['required', 'in:staff,manager'],
+            'username' => ['required', 'string', 'max:50'],
+            'password' => ['required', 'string', 'max:255'],
+        ], [
+            'as.required' => 'Pilih peran Anda.',
+            'username.required' => 'ID pengguna wajib diisi.',
+            'password.required' => 'Kata sandi wajib diisi.',
+        ]);
+
+        if (! Auth::attempt(['username' => $data['username'], 'password' => $data['password'], 'is_active' => true])) {
+            throw ValidationException::withMessages(['username' => 'ID pengguna atau kata sandi salah.']);
+        }
+        // The chosen role must be the account's own; a patient account never enters here.
+        if ($request->user()->role->value !== $data['as']) {
+            $role = $request->user()->role;
+            Auth::logout();
+            throw ValidationException::withMessages(['as' => match ($role) {
+                UserRole::Patient => 'Akun pasien masuk melalui halaman masuk pasien.',
+                UserRole::Staff => 'Akun ini terdaftar sebagai Petugas. Pilih peran Petugas.',
+                UserRole::Manager => 'Akun ini terdaftar sebagai Manajemen. Pilih peran Manajemen.',
+            }]);
         }
 
         return $this->signedIn($request);
@@ -50,63 +96,67 @@ class AuthController extends Controller
         return Inertia::render('Register');
     }
 
-    /** Self sign-up creates a patient account; staff and manager accounts stay hospital-issued. */
-    public function storeAccount(Request $request): RedirectResponse
+    /** Step 1/3: check the form, then send the code. The account is created after step 2. */
+    public function storeAccount(Request $request, SignupVerification $signup): RedirectResponse
     {
-        $request->merge(['phone' => Patient::normalizePhone((string) $request->input('phone'))]);
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:100'],
-            'phone' => ['required', 'regex:/^628\d{7,11}$/'],
-            'password' => ['required', 'string', 'min:8', 'max:255', 'confirmed'],
-            'terms' => ['accepted'],
-        ], [
-            'name.required' => 'Nama lengkap wajib diisi.',
-            'name.max' => 'Nama lengkap maksimal 100 karakter.',
-            'phone.required' => 'Nomor ponsel wajib diisi.',
-            'phone.regex' => 'Masukkan nomor ponsel yang valid, mis. 0812-3456-7890.',
-            'password.required' => 'Kata sandi wajib diisi.',
-            'password.min' => 'Kata sandi minimal 8 karakter.',
-            'password.confirmed' => 'Konfirmasi kata sandi tidak sama.',
-            'terms.accepted' => 'Setujui Syarat & Ketentuan dan Kebijakan Privasi untuk melanjutkan.',
-        ]);
+        $request->session()->put('signup', $signup->start($signup->validated($request)));
 
-        if (Patient::whereNotNull('user_id')->wherePhone($data['phone'])->exists() || User::where('username', $data['phone'])->exists()) {
-            throw ValidationException::withMessages(['phone' => 'Nomor ponsel sudah terdaftar. Silakan masuk.']);
+        return redirect('/daftar/verifikasi');
+    }
+
+    /** Step 2/3, Figma "Kode OTP" (32:286). */
+    public function verification(Request $request, SignupVerification $signup): Response|RedirectResponse
+    {
+        $token = $request->session()->get('signup');
+        if (! $signup->exists($token)) {
+            return redirect('/daftar');
         }
 
-        try {
-            // users + patients in one transaction: never an account without a profile.
-            $user = DB::transaction(function () use ($data) {
-                $user = User::create([
-                    'username' => $data['phone'],
-                    'password_hash' => $data['password'], // hashed by the model's "hashed" cast
-                    'role' => UserRole::Patient,
-                ]);
-                Patient::create([
-                    'user_id' => $user->user_id,
-                    'full_name' => trim($data['name']),
-                    'phone_number' => Patient::formatPhone($data['phone']),
-                ]);
+        return Inertia::render('RegisterOtp', $signup->screen($token));
+    }
 
-                return $user;
-            });
-        } catch (UniqueConstraintViolationException) {
-            // Two sign-ups with the same number at the same moment: users.username is unique.
-            throw ValidationException::withMessages(['phone' => 'Nomor ponsel sudah terdaftar. Silakan masuk.']);
-        }
+    public function verify(Request $request, SignupVerification $signup): RedirectResponse
+    {
+        $code = $request->validate(['code' => ['required', 'digits:6']], [
+            'code.required' => 'Masukkan 6 digit kode OTP.',
+            'code.digits' => 'Masukkan 6 digit kode OTP.',
+        ])['code'];
+        $user = $signup->createAccount($signup->verify((string) $request->session()->get('signup'), $code));
+        $request->session()->forget('signup');
 
         Auth::login($user);
+        // Where the app would have gone (e.g. back to an invitation link), behind the success screen.
+        $request->session()->put('signup_next', $this->signedIn($request)->getTargetUrl());
 
-        return $this->signedIn($request);
+        return redirect('/daftar/selesai');
+    }
+
+    public function resend(Request $request, SignupVerification $signup): RedirectResponse
+    {
+        $signup->resend((string) $request->session()->get('signup'));
+
+        return back()->with('status', 'Kode baru telah dikirim.');
+    }
+
+    /** Step 3/3, Figma "Verifikasi berhasil" (32:330). */
+    public function verified(Request $request): Response
+    {
+        $user = $request->user();
+
+        return Inertia::render('RegisterVerified', [
+            'phone' => SignupVerification::mask($user->patient?->phone_number ?? $user->username),
+            'next' => $request->session()->get('signup_next', '/'),
+        ]);
     }
 
     public function destroy(Request $request): RedirectResponse
     {
+        $internal = $request->user()?->role !== UserRole::Patient;
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect('/masuk');
+        return redirect($internal ? '/masuk/internal' : '/masuk');
     }
 
     /** Patients sign in with their phone number; staff and managers keep their username. */
@@ -120,14 +170,26 @@ class AuthController extends Controller
             ->value('username') ?? $login;
     }
 
-    private function signedIn(Request $request): RedirectResponse
+    private function signedIn(Request $request, bool $asCompanion = false): RedirectResponse
     {
         $request->session()->regenerate();
+        $user = $request->user();
+        $role = $user->role;
+        // Remembered for the session, so reopening the app ("/") returns to the companion view.
+        $request->session()->put('companion', $asCompanion && $role === UserRole::Patient);
 
         // The intended URL was stored while signed out and may belong to another role.
-        $role = $request->user()->role;
         $intended = $request->session()->pull('url.intended');
+        if ($intended && $role->owns(parse_url($intended, PHP_URL_PATH) ?? '/')) {
+            return redirect($intended);
+        }
 
-        return redirect($intended && $role->owns(parse_url($intended, PHP_URL_PATH) ?? '/') ? $intended : $role->home());
+        // A companion is a patient account following someone else's visit: open that visit,
+        // or the list when there are several (or none yet). Staff and managers ignore the choice.
+        if ($request->session()->get('companion')) {
+            return redirect(app(CompanionInvitations::class)->home($user) ?? '/pendampingan');
+        }
+
+        return redirect($role->home());
     }
 }

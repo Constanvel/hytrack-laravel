@@ -202,3 +202,244 @@
   color: var(--warning-text);
   white-space: nowrap;
 }
+
+/* Antrean pasien, companion view (Figma 31:136). Same frame as sign-in: mint atmosphere on
+   top, waves at the end of the page; every card follows the 412px frame. */
+.companion-page {
+  min-height: 100dvh;
+  background:
+    url('/assets/atmos-mint.svg') left top / 100% 220px no-repeat,
+    url('/assets/wave-mint.svg') left 0 bottom -24px / 100% 170px no-repeat,
+    #f6f8f4;
+  font-family: 'Inter', sans-serif;
+  color: #173d3b;
+}
+.companion-main {
+  max-width: 412px;
+  margin: 0 auto;
+  padding: 32px 24px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.companion-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.companion-header .lockup span {
+  display: flex;
+  flex-direction: column;
+}
+.companion-badge {
+  flex: none;
+  margin-top: 10px;
+  padding: 6px 16px;
+  min-width: 116px;
+  border-radius: 15px;
+  background: #e1efe7;
+  color: #086f65;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+}
+.companion-intro h1 {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 36px;
+  letter-spacing: 0;
+}
+.companion-intro {
+  margin-bottom: 3px;
+}
+.companion-intro p {
+  margin-top: 7px;
+  color: #5c706c;
+  font-size: 14px;
+  line-height: 20px;
+}
+.companion-patient,
+.companion-info {
+  padding: 10px 15px 9px;
+  background: #fff;
+  border: 1px solid #dce8e1;
+  border-radius: 14px;
+}
+.companion-patient .eyebrow {
+  color: #5c706c;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 15px;
+}
+.companion-patient h2 {
+  margin-top: 5px;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 25px;
+  letter-spacing: 0;
+}
+.companion-patient p:last-child {
+  margin-top: 4px;
+  color: #5c706c;
+  font-size: 12px;
+  line-height: 18px;
+}
+.companion-queue {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px 18px;
+  border-radius: 18px;
+  background: #086f65;
+  color: #fff;
+}
+.companion-queue-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.companion-queue-head p {
+  color: #d7eee6;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 19px;
+}
+.companion-status {
+  flex: none;
+  min-width: 102px;
+  padding: 5px 12px;
+  border-radius: 13px;
+  background: #e1efe7;
+  color: #086f65;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+}
+.companion-ticket {
+  margin-top: 2px;
+  font-size: 60px;
+  font-weight: 700;
+  line-height: 74px;
+  white-space: nowrap;
+}
+.companion-clinic {
+  margin-top: 3px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #418f81;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+.companion-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 17px 0 0;
+}
+.companion-metrics dt {
+  color: #d7eee6;
+  font-size: 11px;
+  line-height: 16px;
+}
+.companion-metrics dd {
+  margin: 6px 0 0;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 27px;
+  white-space: nowrap;
+}
+.companion-refresh {
+  margin-top: 21px;
+  height: 38px;
+  border: 0;
+  border-radius: 10px;
+  background: #fff;
+  color: #086f65;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.companion-refresh:hover:not(:disabled) {
+  background: #e1efe7;
+}
+.companion-refresh:focus-visible,
+.companion-stop:focus-visible,
+.companion-header .lockup:focus-visible {
+  outline: 3px solid #bc6748;
+  outline-offset: 3px;
+}
+.companion-info {
+  padding: 11px 15px 18px;
+}
+.companion-info h2 {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  letter-spacing: 0;
+}
+.companion-info p {
+  margin-top: 9px;
+  color: #5c706c;
+  font-size: 13px;
+  line-height: 19px;
+}
+.companion-info .place {
+  margin-top: 10px;
+  color: #173d3b;
+  font-weight: 500;
+}
+.companion-limit {
+  padding: 12px 16px 13px;
+  border-radius: 14px;
+  background: #e1efe7;
+}
+.companion-limit h2 {
+  color: #086f65;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 19px;
+  letter-spacing: 0;
+}
+.companion-limit p {
+  margin-top: 8px;
+  /* Figma #5c706c is 4.4:1 on this mint; one step darker reaches WCAG AA. */
+  color: #566c65;
+  font-size: 12px;
+  line-height: 18px;
+}
+.companion-updated {
+  margin-top: -5px;
+  color: #5c706c;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+}
+.companion-stop {
+  align-self: center;
+  margin-top: -12px;
+  padding: 12px;
+  border: 0;
+  background: none;
+  color: #805216;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 17px;
+}
+.companion-stop:hover {
+  text-decoration: underline;
+}
+@media (max-width: 359px) {
+  .companion-main {
+    padding-inline: 16px;
+  }
+  .companion-ticket {
+    font-size: 52px;
+  }
+  .companion-metrics dd {
+    font-size: 17px;
+  }
+}

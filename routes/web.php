@@ -1,13 +1,17 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ClinicalController;
 use App\Http\Controllers\CompanionController;
 use App\Http\Controllers\HyaController;
 use App\Http\Controllers\ManagementController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PatientDataController;
+use App\Http\Controllers\PolyclinicController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\VisitController;
+use App\Services\CompanionInvitations;
+use App\Services\GeminiChat;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -15,8 +19,13 @@ use Inertia\Inertia;
 Route::middleware('guest')->group(function () {
     Route::get('/masuk', [AuthController::class, 'create'])->name('login');
     Route::post('/masuk', [AuthController::class, 'store'])->middleware('throttle:6,1');
+    Route::get('/masuk/internal', [AuthController::class, 'createInternal']);
+    Route::post('/masuk/internal', [AuthController::class, 'storeInternal'])->middleware('throttle:6,1');
     Route::get('/daftar', [AuthController::class, 'createAccount']);
     Route::post('/daftar', [AuthController::class, 'storeAccount'])->middleware('throttle:6,1');
+    Route::get('/daftar/verifikasi', [AuthController::class, 'verification']);
+    Route::post('/daftar/verifikasi', [AuthController::class, 'verify'])->middleware('throttle:10,1');
+    Route::post('/daftar/verifikasi/kirim-ulang', [AuthController::class, 'resend'])->middleware('throttle:10,1');
 });
 
 // Family Companion invitation link: public so guests can be asked to sign in, but throttled.
@@ -24,11 +33,19 @@ Route::get('/pantauan/{token}', [CompanionController::class, 'show'])->middlewar
 
 Route::middleware('auth')->group(function () {
     Route::post('/keluar', [AuthController::class, 'destroy']);
+    Route::get('/daftar/selesai', [AuthController::class, 'verified']);
 
-    // Staff and managers land on their own dashboard instead of the patient home.
-    Route::get('/', fn (Request $request) => $request->user()->role->value === 'patient'
-        ? Inertia::render('Home')
-        : redirect($request->user()->role->home()));
+    // Staff and managers land on their own dashboard instead of the patient home. Signed in as
+    // Pendamping, the app opens the followed visit while there is one, else the patient home.
+    Route::get('/', function (Request $request, CompanionInvitations $invitations) {
+        $user = $request->user();
+        if ($user->role->value !== 'patient') {
+            return redirect($user->role->home());
+        }
+        $companion = $request->session()->get('companion') ? $invitations->home($user) : null;
+
+        return $companion ? redirect($companion) : Inertia::render('Home');
+    });
 
     Route::middleware('role:patient')->group(function () {
         Route::get('/poliklinik', [PatientController::class, 'clinics']);
@@ -40,7 +57,8 @@ Route::middleware('auth')->group(function () {
         Route::inertia('/kunjungan', 'Visit');
         Route::inertia('/check-in', 'CheckIn');
         Route::inertia('/akun', 'Account');
-        Route::inertia('/hya', 'Hya');
+        // aiGuide tells the page whether Gemini answers, so the label stays honest.
+        Route::get('/hya', fn (GeminiChat $gemini) => Inertia::render('Hya', ['aiGuide' => $gemini->enabled()]));
         Route::inertia('/bantuan', 'Help');
         Route::inertia('/bantuan/check-in', 'CheckInGuide');
         Route::inertia('/bantuan/antrean', 'QueueGuide');
@@ -54,6 +72,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/data-pasien', [PatientDataController::class, 'store']);
         Route::get('/data-pasien/{patient}/ubah', [PatientDataController::class, 'edit'])->whereNumber('patient');
         Route::put('/data-pasien/{patient}', [PatientDataController::class, 'update'])->whereNumber('patient');
+        Route::delete('/data-pasien/{patient}', [PatientDataController::class, 'destroy'])->whereNumber('patient');
 
         // Family Companion, patient side: invite, list and revoke.
         Route::get('/pendamping', [CompanionController::class, 'access']);
@@ -81,9 +100,23 @@ Route::middleware('auth')->group(function () {
         Route::post('/antrean/{queue}/panggil', [StaffController::class, 'call']);
         Route::post('/antrean/{queue}/panggil-ulang', [StaffController::class, 'recall']);
         Route::post('/antrean/{queue}/tidak-hadir', [StaffController::class, 'noShow']);
-        Route::post('/antrean/{queue}/selesai-periksa', [StaffController::class, 'examined']);
-        Route::post('/antrean/{queue}/selesai-laboratorium', [StaffController::class, 'laboratoryDone']);
+        // Doctor (Figma 47:2 frames 31–32): draft, confirmation, referral to support services.
+        Route::post('/pemeriksaan/{queue}', [ClinicalController::class, 'save']);
+        Route::post('/pemeriksaan/{queue}/konfirmasi', [ClinicalController::class, 'confirm']);
+        Route::post('/pemeriksaan/{queue}/penunjang', [ClinicalController::class, 'refer']);
+        // Support services (frame 33): status, result file, send back to the doctor.
+        Route::post('/penunjang/{support}', [ClinicalController::class, 'updateSupport']);
+        Route::post('/penunjang/{support}/selesai', [ClinicalController::class, 'completeSupport']);
+        Route::get('/penunjang/{support}/hasil', [ClinicalController::class, 'result']);
+        // Pharmacy (frames 22, 34–37).
         Route::post('/farmasi/{order}/lanjut', [StaffController::class, 'advancePharmacy']);
+        Route::post('/farmasi/{order}/cek', [StaffController::class, 'savePharmacyChecks']);
+        Route::post('/farmasi/{order}/panggil', [StaffController::class, 'callPickup']);
+        Route::post('/farmasi/{order}/kembalikan', [StaffController::class, 'returnPrescription']);
+        // Master data: polyclinics (create, update, delete; the list is part of the dashboard).
+        Route::post('/poliklinik', [PolyclinicController::class, 'store']);
+        Route::put('/poliklinik/{polyclinic}', [PolyclinicController::class, 'update'])->whereNumber('polyclinic');
+        Route::delete('/poliklinik/{polyclinic}', [PolyclinicController::class, 'destroy'])->whereNumber('polyclinic');
     });
 
     Route::middleware('role:manager')->prefix('manajemen')->group(function () {

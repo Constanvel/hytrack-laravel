@@ -363,13 +363,6 @@ function BookingDetail({ booking, onClose }: { booking: Booking; onClose: () => 
               Panggil ulang
             </button>
             <button
-              className="button"
-              disabled={busy}
-              onClick={() => act(`${base}/selesai-periksa`)}
-            >
-              Selesai periksa, lanjut lab
-            </button>
-            <button
               className="button secondary"
               disabled={busy || booking.calledCount < 2}
               onClick={() =>
@@ -383,16 +376,15 @@ function BookingDetail({ booking, onClose }: { booking: Booking; onClose: () => 
             </button>
           </>
         )}
-        {booking.status === 'laboratory' && (
-          <button
-            className="button"
-            disabled={busy}
-            onClick={() => act(`${base}/selesai-laboratorium`)}
-          >
-            Selesai lab, lanjut ke farmasi
-          </button>
-        )}
       </div>
+      {/* Figma 47:2: the doctor confirms the examination; support staff send their results. */}
+      {(booking.status === 'serving' || booking.status === 'laboratory') && (
+        <p className="muted small">
+          {booking.status === 'serving'
+            ? 'Pemeriksaan dan resep dikonfirmasi oleh dokter di Pemeriksaan dokter.'
+            : 'Hasil penunjang dikirim petugas penunjang lalu ditinjau dokter.'}
+        </p>
+      )}
       {booking.status === 'booked' && !booking.checkInClosed && (
         <p className="muted small">
           Status masih Belum check-in. Tidak hadir baru dapat dicatat setelah batas{' '}

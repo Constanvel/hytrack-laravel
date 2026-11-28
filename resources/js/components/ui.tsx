@@ -30,13 +30,15 @@ export function ActionLink({
   href,
   children,
   secondary = false,
+  className = '',
 }: {
   href: string;
   children: ReactNode;
   secondary?: boolean;
+  className?: string;
 }) {
   return (
-    <Link className={`button ${secondary ? 'secondary' : ''}`} href={href}>
+    <Link className={`button ${secondary ? 'secondary' : ''} ${className}`} href={href}>
       {children}
     </Link>
   );
@@ -75,18 +77,44 @@ export function Notice({
     </div>
   );
 }
-export function Steps({ items }: { items: { title: string; detail: string }[] }) {
+/**
+ * Numbered steps in a marked card. `done` steps before it show a tick and `current` is filled,
+ * as in Figma 07 and 08; `numbered` gives the guide's plain "01" style (Figma 23).
+ */
+export function Steps({
+  items,
+  done = 0,
+  current,
+  numbered = false,
+}: {
+  items: { title: string; detail: string }[];
+  done?: number;
+  current?: number;
+  numbered?: boolean;
+}) {
   return (
-    <ol className="steps card">
-      {items.map((item, index) => (
-        <li key={item.title}>
-          <span className="step-number">{index + 1}</span>
-          <div>
-            <strong>{item.title}</strong>
-            <p className="small muted">{item.detail}</p>
-          </div>
-        </li>
-      ))}
+    <ol className={`steps card ${numbered ? 'numbered' : 'marked'}`}>
+      {items.map((item, index) => {
+        const state = index < done ? 'done' : index === current ? 'current' : undefined;
+        return (
+          <li
+            key={item.title}
+            className={state}
+            aria-current={state === 'current' ? 'step' : undefined}
+          >
+            <span className="step-number" aria-hidden={state === 'done'}>
+              {state === 'done' ? '✓' : numbered ? String(index + 1).padStart(2, '0') : index + 1}
+            </span>
+            <div>
+              <strong>
+                {state === 'done' && <span className="sr-only">Selesai: </span>}
+                {item.title}
+              </strong>
+              <p className="small muted">{item.detail}</p>
+            </div>
+          </li>
+        );
+      })}
     </ol>
   );
 }
